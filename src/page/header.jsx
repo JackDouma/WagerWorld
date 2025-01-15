@@ -7,11 +7,10 @@ function Header() {
     <header>
         <nav>
             <ul>
-                <li><a href="#">Home</a></li>
-                <li><a href="#">About</a></li>
+                <li><a href="/index">Home</a></li>
                 <div class="right">
-                    <li><a href="#"><i class="fas fa-sign-in-alt"></i>Login</a></li>
-                    <li><a href="#"><i class="fas fa-user-plus"></i>Sign Up</a></li>
+                    <li><a href="/signin"><i class="fas fa-sign-in-alt"></i>Login</a></li>
+                    <li><a href="/signup"><i class="fas fa-user-plus"></i>Sign Up</a></li>
                 </div>
             </ul>
         </nav>
