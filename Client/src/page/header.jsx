@@ -52,15 +52,33 @@ function Header() {
     <header>
       <nav>
         <ul>
-          <li><a href="/index">Home</a></li>
+          {!user ? 
+          // if not logged in
+          (
+            <>
+              <li><a href="/index">Home</a></li>
+              <li><a href="/createorg">Create ORG</a></li>
+              <li><a href="/joinorg">Join ORG</a></li>
+            </>
+          )
+          // if logged in
+          : (
+            <>
+              <li><a href="/index">Home</a></li>
+              <li><a href="/createorg">Create ORG</a></li>
+              <li><a href="/joinorg">Join ORG</a></li>
+            </>
+          )}
           <div className="right">
             {!user ? 
+            // if not logged in
             (
               <>
                 <li><a href="/signin"><i className="fas fa-sign-in-alt"></i>Sign In</a></li>
                 <li><a href="/signup"><i className="fas fa-user-plus"></i>Sign Up</a></li>
               </>
             ) 
+            // if logged in
             : (
               <>
                 <li>Welcome, {userName}</li>
