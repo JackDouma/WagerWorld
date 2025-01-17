@@ -57,8 +57,6 @@ function Header() {
           (
             <>
               <li><a href="/index">Home</a></li>
-              <li><a href="/createorg">Create ORG</a></li>
-              <li><a href="/joinorg">Join ORG</a></li>
             </>
           )
           // if logged in

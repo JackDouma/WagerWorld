@@ -5,7 +5,7 @@ function JoinOrg() {
 
   return (
     <main>
-        
+        <h1>Join Organization</h1>
     </main>
   )
 }
