@@ -13,6 +13,7 @@ function CreateOrg()
   const [error, setError] = useState('');
   const [user] = useAuthState(auth);
 
+  // when the user presses the create org button
   const createOrg = async () => {
     setError('');
 
@@ -49,7 +50,7 @@ function CreateOrg()
         .join('');
 
       // save org to orgs collection on firestore
-      const orgRef = doc(db, 'orgs', orgName);
+      const orgRef = doc(db, 'orgs', orgCode);
       await setDoc(orgRef, {
         name: orgName,
         code: orgCode,
@@ -62,6 +63,7 @@ function CreateOrg()
       await updateDoc(userRef, {
         org: {
           name: orgName,
+          code: orgCode,
           joinedAt: new Date(),
         },
       });
