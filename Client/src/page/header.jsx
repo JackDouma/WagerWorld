@@ -10,6 +10,7 @@ const db = getFirestore();
 function Header() {
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('')
+  const [userOrg, setUserOrg] = useState(null);
 
   // check if logged in or not
   useEffect(() => {
@@ -24,12 +25,14 @@ function Header() {
         if (userDoc.exists()) 
         {
           setUserName(userDoc.data().name);
+          setUserOrg(userDoc.data().org);
         }
       } 
       else 
       {
         setUser(null);
         setUserName('');
+        setUserOrg(null);
       }
     });
 
@@ -53,21 +56,30 @@ function Header() {
       <nav>
         <ul>
           <li><a href="/index">Home</a></li>
-          <div className="right">
-            {!user ? 
-            (
-              <>
+          {!user ? (
+            // if not logged in
+            <>
+              <div className="right">
                 <li><a href="/signin"><i className="fas fa-sign-in-alt"></i>Sign In</a></li>
                 <li><a href="/signup"><i className="fas fa-user-plus"></i>Sign Up</a></li>
-              </>
-            ) 
-            : (
-              <>
+              </div>
+            </>
+          ) : (
+            // if logged in
+            <>
+              {}
+              {!userOrg ? (
+                <>
+                  <li><a href="/createorg">Create ORG</a></li>
+                  <li><a href="/joinorg">Join ORG</a></li>
+                </>
+              ) : null}
+              <div className="right">
                 <li>Welcome, {userName}</li>
                 <li><a href="/index" onClick={signOutPress}><i className="fas fa-sign-out-alt"></i>Sign Out</a></li>
-              </>
-            )}
-          </div>
+              </div>
+            </>
+          )}
         </ul>
       </nav>
     </header>
