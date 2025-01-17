@@ -19,12 +19,10 @@ function Signup()
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [birthday, setBirthday] = useState('');
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
 
   // on create account button press
   const createAccountButton = async () => {
     setError('');
-    setSuccess('');
 
     // if not all fields are entered 
     if (!email || !password || !birthday) 
@@ -54,12 +52,14 @@ function Signup()
       });
 
       // display success and empty field info
-      setSuccess('Account created successfully!');
       setEmail('');
       setName('');
       setPassword('');
       setPasswordConfirm('');
       setBirthday('');
+
+      // on success bring to home
+      document.location.href="/";
     } 
     // handle firebase errors
     catch (err) 
@@ -122,7 +122,6 @@ function Signup()
         <button onClick={createAccountButton}>Create Account</button>
       </div>
       {error && <p className="error">{error}</p>}
-      {success && <p className="success">{success}</p>}
     </main>
   );
 }
