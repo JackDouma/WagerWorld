@@ -64,6 +64,7 @@ function CreateOrg()
         org: {
           name: orgName,
           code: orgCode,
+          owner: true, // TODO test if this works, just added it
           joinedAt: new Date(),
         },
       });

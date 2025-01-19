@@ -66,15 +66,17 @@ function Header() {
               </div>
             </>
           ) : (
-            // if logged in
+            // if logged in and not in org
             <>
-              {}
               {!userOrg ? (
                 <>
                   <li><a href="/createorg">Create ORG</a></li>
                   <li><a href="/joinorg">Join ORG</a></li>
-                </>
+                </> 
+              // if logged in and in org
               ) : null}
+              <li><a href="/org">My ORG</a></li>
+
               <div className="right">
                 <li>Welcome, {userName}</li>
                 <li><a href="/index" onClick={signOutPress}><i className="fas fa-sign-out-alt"></i>Sign Out</a></li>
