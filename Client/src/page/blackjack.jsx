@@ -14,6 +14,13 @@ class BlackjackScene extends Phaser.Scene {
     this.dealerCardCount = 0
     // object used for later (cuz its gotta be played, then flipped over later instead of right away)
     this.dealersSecond
+    this.playerCredits = 10_000
+    this.currentBet = 0
+    this.possibleBets = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000]
+    this.possibleBetButtons = []
+    this.totalCredits
+    this.currentBetText
+    this.placeBetsButton
   }
 
   preload() {
@@ -31,7 +38,6 @@ class BlackjackScene extends Phaser.Scene {
 
   create() {
     this.createDeck()
-    this.dealInitialCards()
     this.createUI()
   }
 
@@ -57,16 +63,41 @@ class BlackjackScene extends Phaser.Scene {
 
     this.add.text(centerX - 100, 50, 'Blackjack', { fontFamily: 'Arial', fontSize: '32px', fill: '#fff' })
 
-    this.hitButton = this.add
-      .text(centerX + 200, centerY - 75, 'Hit', { fontSize: '24px', fill: '#0f0' })
-      .setInteractive()
-      .on('pointerdown', () => this.hit())
+    this.totalCredits = this.add.text(centerX + 200, 25, `Credits: ${this.playerCredits}`, { fontFamily: 'Arial', fontSize: '24px', fill: '#fff' })
 
-    this.standButton = this.add
-      .text(centerX + 190, centerY + 50, 'Stand', { fontSize: '24px', fill: '#f00' })
-      .setInteractive()
-      .on('pointerdown', () => this.stand())
+    // creating buttons for each possible amount that can be bet
+    this.possibleBets.forEach((item, index) => {
+      this.possibleBetButtons.push(this.add.text(centerX + (index < 5 ? index * 50 : (index - 5) * 75), centerY + (index < 5 ? 150 : 200), item, { fontSize: '24px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => {
+        // if the button is pressed while the user has enough credits to bet that amount, then let it slide
+        if (this.playerCredits >= item)
+          this.bet(item)
+        // otherwise, show text that says not enough, and make it disappear after 3 seconds
+        else {
+          const text = this.add.text(centerX - 300, centerY + 240, 'Not enough credits', {
+            fontSize: '24px',
+            fill: 'red',
+          });
+          this.time.delayedCall(3000, () => {
+            text.destroy();
+          });
+        }
+      }))
+    })
 
+    this.currentBetText = this.add.text(centerX + 50, centerY + 240, `Current Bet: ${this.currentBet}`, { fontSize: '24px', fill: '#fff' })
+
+    // game starts once all bets are finalized
+    this.placeBetsButton = this.add.text(centerX + 250, centerY + 170, "Place Bets", { fontSize: '24px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.startGame())
+  }
+
+  startGame(){
+    const centerX = this.cameras.main.centerX
+    const centerY = this.cameras.main.centerY
+
+    this.possibleBetButtons.forEach((item, index) => {item.destroy()})
+    this.placeBetsButton.destroy()
+    
+    this.dealInitialCards()
     // visually dealing out the cards
     this.animateCard(100 + this.playerCardCount * 50, 400, `${this.playerHand[0].value}_of_${this.playerHand[0].suit}.png`, 0)
     this.playerCardCount++
@@ -76,6 +107,20 @@ class BlackjackScene extends Phaser.Scene {
     this.playerCardCount++
     this.dealersSecond = this.animateCard(100 + this.dealerCardCount * 50, 200, `card`, 3)
     this.dealerCardCount++
+
+    this.playerValueText = this.add.text(centerX - 300, centerY + 210, this.calculateHandValue(this.playerHand), { fontSize: '24px', fill: '#fff' })
+    this.dealerValueText = this.add.text(centerX - 300, centerY - 225, this.isPlayerTurn ? (isNaN(this.dealerHand[0].value) ? 10 : this.dealerHand[0].value) : 
+      this.calculateHandValue(this.dealerHand), { fontSize: '24px', fill: '#fff' })
+
+    this.hitButton = this.add
+      .text(centerX + 200, centerY - 75, 'Hit', { fontSize: '24px', fill: '#0f0' })
+      .setInteractive()
+      .on('pointerdown', () => this.hit())
+
+    this.standButton = this.add
+      .text(centerX + 190, centerY + 50, 'Stand', { fontSize: '24px', fill: '#f00' })
+      .setInteractive()
+      .on('pointerdown', () => this.stand())
   }
 
   animateCard(handX, handY, newTexture, order) {
@@ -127,6 +172,17 @@ class BlackjackScene extends Phaser.Scene {
     return card
   }
 
+
+  bet(value) {
+    // another check to make sure the user cannot go into debt
+    if (value <= this.playerCredits) {
+      this.currentBet += value
+      this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
+      this.playerCredits -= value
+      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
+    }
+  }
+
   // manages all blackjack counting logic :)
   calculateHandValue(hand) {
     let value = 0
@@ -160,8 +216,9 @@ class BlackjackScene extends Phaser.Scene {
     this.playerCardCount++
 
     const playerValue = this.calculateHandValue(this.playerHand)
+    this.playerValueText.setText(playerValue)
     if (playerValue > 21)
-      this.endGame('Player Busts! Dealer Wins!')
+      this.endGame('You Lose...')
   }
 
   stand() {
@@ -190,6 +247,7 @@ class BlackjackScene extends Phaser.Scene {
 
   dealerTurn() {
     let dealerValue = this.calculateHandValue(this.dealerHand)
+    this.dealerValueText.setText(dealerValue)
 
     // dealer will draw cards until they get a total of at least 17
     while (dealerValue < 17) {
@@ -197,6 +255,7 @@ class BlackjackScene extends Phaser.Scene {
       this.animateCard(100 + this.dealerCardCount * 50, 200, `${this.dealerHand[this.dealerHand.length - 1].value}_of_${this.dealerHand[this.dealerHand.length - 1].suit}.png`, 0)
       this.dealerCardCount++
       dealerValue = this.calculateHandValue(this.dealerHand)
+      this.dealerValueText.setText(dealerValue)
     }
 
     this.checkWinner()
@@ -215,12 +274,43 @@ class BlackjackScene extends Phaser.Scene {
   }
 
   endGame(message) {
-    this.add.text(this.cameras.main.centerX - 120, this.cameras.main.centerY + 225, message, {
+    const centerX = this.cameras.main.centerX
+    const centerY = this.cameras.main.centerY
+
+    if(message.includes('Win')){
+      this.playerCredits += this.currentBet * 2
+      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
+    }
+    else if(message.includes('Push')){
+      this.playerCredits += this.currentBet
+      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
+    }
+    this.currentBet = 0
+    this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
+    
+    this.add.text(centerX - 200, centerY + 225, message, {
       fontSize: '32px',
       fill: '#fff',
     })
-    this.hitButton.disableInteractive()
-    this.standButton.disableInteractive()
+
+    this.hitButton.destroy()
+    this.standButton.destroy()
+    this.playAgainButton = this.add
+      .text(centerX + 150, centerY - 75, 'Play Again', { fontSize: '24px', fill: '#0f0' })
+      .setInteractive()
+      .on('pointerdown', () => {
+        this.playerCardCount = 0
+        this.dealerCardCount = 0
+        this.isPlayerTurn = true
+        this.registry.destroy()
+        this.events.off()
+        this.scene.restart()
+      })
+
+    this.quitButton = this.add
+      .text(centerX + 190, centerY + 50, 'Quit', { fontSize: '24px', fill: '#f00' })
+      .setInteractive()
+      .on('pointerdown', () => window.location.href = '/')
   }
 }
 
@@ -237,6 +327,9 @@ const BlackjackGame = () => {
       backgroundColor: '#2d2d2d',
       parent: 'phaser-game',
       scene: BlackjackScene,
+      scale: {
+        autoCenter: Phaser.Scale.CENTER_HORIZONTALLY
+      },
     }
 
     const game = new Phaser.Game(config)
