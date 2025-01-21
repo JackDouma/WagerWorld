@@ -1,12 +1,61 @@
-import '../css/admin.css'
+import { useState, useEffect } from 'react';
+import { collection, getDocs, getFirestore } from 'firebase/firestore';
+import { auth, app } from '../../firebase';
 
-function AdminPage() {
+import '../css/admin.css';
 
-  return (
-    <main>
+const db = getFirestore(app);
+
+function AdminPage() 
+{
+    const [orgs, setOrgs] = useState([]);
+
+    useEffect(() => {
+        const fetchOrgs = async () => {
+        try {
+            const orgsCollection = collection(db, 'orgs');
+            const orgsSnapshot = await getDocs(orgsCollection);
+            const orgsData = orgsSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data()
+            }));
+            setOrgs(orgsData);
+        } 
+        catch (error)
+         {
+            console.error('Error fetching orgs:', error);
+        }
+        };
+
+        fetchOrgs();
+    }, []);
+
+    return (
+        <main className="admin-page">
         <h1>Admin</h1>
-    </main>
-  )
+        <button className="create-org-button">Create Org</button>
+        <table className="orgs-table">
+            <thead>
+            <tr>
+                <th>Name</th>
+                <th>Created At</th>
+                <th>Members</th>
+                <th>Action</th>
+            </tr>
+            </thead>
+            <tbody>
+            {orgs.map((org) => (
+                <tr key={org.id}>
+                <td>{org.name}</td>
+                <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
+                <td>{org.members?.length || 0}</td>
+                <td>Delete | Edit</td>
+                </tr>
+            ))}
+            </tbody>
+        </table>
+        </main>
+    );
 }
 
-export default AdminPage
+export default AdminPage;
