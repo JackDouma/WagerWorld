@@ -57,6 +57,7 @@ function Header() {
         <ul>
           <li><a href="/index">Home</a></li>
           <li><a href="/blackjack">Blackjack</a></li>
+          <li><a href="/joinroom">Rooms</a></li>
           {!user ? (
             // if not logged in
             <>

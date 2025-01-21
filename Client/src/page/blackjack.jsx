@@ -3,7 +3,7 @@ import Phaser from 'phaser'
 
 class BlackjackScene extends Phaser.Scene {
 
-  constructor() {
+  constructor() {``
     super({ key: 'BlackjackScene' })
     this.cardScale = 0.25
     this.deck = []
