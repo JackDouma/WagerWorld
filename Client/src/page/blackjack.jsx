@@ -18,6 +18,7 @@ class BlackjackScene extends Phaser.Scene {
     this.currentBet = 0
     this.possibleBets = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000]
     this.possibleBetButtons = []
+    this.possibleRemoveBetButtons = []
     this.totalCredits
     this.currentBetText
     this.placeBetsButton
@@ -57,6 +58,31 @@ class BlackjackScene extends Phaser.Scene {
     this.dealerHand.push(this.deck.pop())
   }
 
+  addBetButtons(amount, x, y){
+    const centerX = this.cameras.main.centerX
+    const centerY = this.cameras.main.centerY
+    this.possibleBetButtons.push(this.add.text(x, y, amount, { fontSize: '48px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => {
+      // if the button is pressed while the user has enough credits to bet that amount, then let it slide
+      if (this.playerCredits >= amount)
+        this.bet(amount)
+      // otherwise, show text that says not enough, and make it disappear after 3 seconds
+      else {
+        const text = this.add.text(centerX - 300, centerY + 240, 'Not enough credits', {
+          fontSize: '24px',
+          fill: 'red',
+        })
+        this.time.delayedCall(3000, () => {
+          text.destroy()
+        })
+      }
+    }))
+    this.possibleRemoveBetButtons.push(this.add
+      .text(x + 10, y + 50, `Remove`, { fontSize: '18px', fill: '#f00' })
+      .setInteractive()
+      .on('pointerdown', () => this.removeBet(amount))
+    )
+  }
+
   createUI() {
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
@@ -67,21 +93,7 @@ class BlackjackScene extends Phaser.Scene {
 
     // creating buttons for each possible amount that can be bet
     this.possibleBets.forEach((item, index) => {
-      this.possibleBetButtons.push(this.add.text(centerX + (index < 5 ? index * 50 : (index - 5) * 75), centerY + (index < 5 ? 150 : 200), item, { fontSize: '24px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => {
-        // if the button is pressed while the user has enough credits to bet that amount, then let it slide
-        if (this.playerCredits >= item)
-          this.bet(item)
-        // otherwise, show text that says not enough, and make it disappear after 3 seconds
-        else {
-          const text = this.add.text(centerX - 300, centerY + 240, 'Not enough credits', {
-            fontSize: '24px',
-            fill: 'red',
-          });
-          this.time.delayedCall(3000, () => {
-            text.destroy();
-          });
-        }
-      }))
+      this.addBetButtons(item, (centerX - 300) + (index < 5 ? index * 100 : (index - 5) * 135), (centerY - 200) + (index < 5 ? 125 : 225))
     })
 
     this.currentBetText = this.add.text(centerX + 50, centerY + 240, `Current Bet: ${this.currentBet}`, { fontSize: '24px', fill: '#fff' })
@@ -95,6 +107,7 @@ class BlackjackScene extends Phaser.Scene {
     const centerY = this.cameras.main.centerY
 
     this.possibleBetButtons.forEach((item, index) => {item.destroy()})
+    this.possibleRemoveBetButtons.forEach((item, index) => {item.destroy()})
     this.placeBetsButton.destroy()
     
     this.dealInitialCards()
@@ -179,6 +192,16 @@ class BlackjackScene extends Phaser.Scene {
       this.currentBet += value
       this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
       this.playerCredits -= value
+      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
+    }
+  }
+
+  removeBet(value) {
+    // another check to make sure the user cannot go into debt
+    if (value <= this.currentBet) {
+      this.currentBet -= value
+      this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
+      this.playerCredits += value
       this.totalCredits.setText(`Credits: ${this.playerCredits}`)
     }
   }
