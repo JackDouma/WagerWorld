@@ -5,7 +5,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from '../page/header.jsx';
 import CreateOrg from '../page/createorg.jsx';
 import NotFound from '../page/notfound.jsx';
-import OrgRestrictedRoute from '../component/OrgRestrictedRoute.jsx';
+import AdminOnlyRoute from '../component/AdminOnlyRoute.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -15,9 +15,9 @@ createRoot(document.getElementById('root')).render(
         <Route
           path="/createorg"
           element={
-            <OrgRestrictedRoute>
+            <AdminOnlyRoute>
               <CreateOrg />
-            </OrgRestrictedRoute>
+            </AdminOnlyRoute>
           }
         />
         <Route path="/404" element={<NotFound />} />

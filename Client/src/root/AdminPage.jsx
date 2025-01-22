@@ -1,11 +1,10 @@
-import { StrictMode } from 'react';
-import React from 'react';
-import { createRoot } from 'react-dom/client';
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import Header from '../page/header.jsx';
-import JoinOrg from '../page/joinorg.jsx';
+import AdminPage from '../page/admin.jsx'
+import Header from '../page/header.jsx'
 import NotFound from '../page/notfound.jsx';
-import OrgRestrictedRoute from '../component/OrgRestrictedRoute.jsx';
+import AdminOnlyRoute from '../component/AdminOnlyRoute.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,15 +12,15 @@ createRoot(document.getElementById('root')).render(
       <Header />
       <Routes>
         <Route
-          path="/joinorg"
+          path="/admin"
           element={
-            <OrgRestrictedRoute>
-              <JoinOrg />
-            </OrgRestrictedRoute>
+            <AdminOnlyRoute>
+              <AdminPage />
+            </AdminOnlyRoute>
           }
         />
         <Route path="/404" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   </StrictMode>
-);
+)
