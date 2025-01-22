@@ -22,7 +22,7 @@ function AdminPage()
             setOrgs(orgsData);
         } 
         catch (error)
-         {
+        {
             console.error('Error fetching orgs:', error);
         }
         };
@@ -33,7 +33,11 @@ function AdminPage()
     return (
         <main className="admin-page">
         <h1>Admin</h1>
-        <button className="create-org-button">Create Org</button>
+
+        <div className="create-org-container">
+            <a href="/createorg" className="create-org-button">Create Org</a>
+        </div>
+
         <table className="orgs-table">
             <thead>
             <tr>

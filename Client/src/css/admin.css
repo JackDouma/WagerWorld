@@ -12,15 +12,16 @@
     color: #FF8C00;
 }
   
-  /* button */
+/* button */
 .create-org-button {
-    display: block;
+    display: inline-block;
     margin: 0 auto 20px auto;
     padding: 10px 20px;
     font-size: 1.2rem;
     background-color: #FFA500;
     color: #fff;
-    border: none;
+    text-align: center;
+    text-decoration: none;
     border-radius: 5px;
     cursor: pointer;
     transition: background-color 0.3s ease;
@@ -30,6 +31,11 @@
     background-color: #FF8C00;
 }
   
+.create-org-container {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 20px;
+}
 /* table */
 .orgs-table {
     width: 100%;
