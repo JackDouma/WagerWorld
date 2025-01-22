@@ -9,7 +9,7 @@ class CardRoom extends Room {
         this.maxClients = options.maxPlayers || 4;
         
         // Add logging to track player count
-        console.log(`Room created. Current player count: ${this.state.players.size}`);
+        console.log(`Room created. Current player count: ${this.state.players.length}`);
 
         // Initialize deck
         this.initializeDeck();
@@ -25,6 +25,7 @@ class CardRoom extends Room {
         this.onMessage("playCard", (client, message) => {
             if (this.state.currentTurn !== client.sessionId) return;
             const player = this.state.players.get(client.sessionId);
+
             if (!player) return;
 
             const cardIndex = player.hand.findIndex(card => card.id === message.cardId);
@@ -40,12 +41,16 @@ class CardRoom extends Room {
         this.onMessage("drawCard", (client, message) => {
             if (this.state.currentTurn !== client.sessionId) return;
             const player = this.state.players.get(client.sessionId);
+            console.log('players hand', player.hand);
+            console.log('deck', this.state.deck);
+            console.log('player', player);
             if (!player) return;
 
             if (this.state.deck.length > 0) {
                 const card = this.state.deck.pop();
                 player.hand.push(card);
             }
+
 
 
         });

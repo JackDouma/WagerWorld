@@ -20,13 +20,31 @@ const RoomConnection = () => {
       fetchAvailableRooms(colyseusClient);
     }, 5000);
 
+    if (!currentRoom) return;
+
+  const handleStateChange = (state) => {
+    if (state.playerHands) {
+      // Assuming state.playerHands[sessionId] contains the current player's hand
+      const myHand = state.playerHands[currentRoom.sessionId];
+      if (myHand) {
+        setCards(myHand);
+      }
+    }
+  };
+
+  currentRoom.onStateChange(handleStateChange);
+
     return () => {
       clearInterval(interval);
       if (currentRoom) {
         currentRoom.leave();
       }
+      currentRoom.removeAllListeners();
     };
-  }, []);
+
+
+    
+  }, [currentRoom]);
 
   const fetchAvailableRooms = async (client) => {
     try {
@@ -101,6 +119,11 @@ const RoomConnection = () => {
           >
            Ready
           </button>
+          <button 
+            onClick={() => currentRoom.send('drawCard', ) }
+            className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded ml-2">
+            Draw Card
+            </button>
           <div className="mt-4">
             <h2 className="text-xl font-semibold mb-2">Your Cards:</h2>
             <ul className="list-disc list-inside">
