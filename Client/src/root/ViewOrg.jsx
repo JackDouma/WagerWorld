@@ -3,9 +3,9 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Header from '../page/header.jsx';
-import CreateOrg from '../page/createorg.jsx';
+import ViewOrg from '../page/org.jsx';
 import NotFound from '../page/notfound.jsx';
-import AdminOnlyRoute from '../component/AdminOnlyRoute.jsx';
+import NoOrgRestrictedRoute from '../component/NoOrgRestrictedRoute.jsx';
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -13,11 +13,11 @@ createRoot(document.getElementById('root')).render(
       <Header />
       <Routes>
         <Route
-          path="/createorg"
+          path="/org"
           element={
-            <AdminOnlyRoute>
-              <CreateOrg />
-            </AdminOnlyRoute>
+            <NoOrgRestrictedRoute>
+                <ViewOrg />
+            </NoOrgRestrictedRoute>
           }
         />
         <Route path="/404" element={<NotFound />} />
