@@ -34,7 +34,7 @@ function ViewOrg() {
             if (userDoc.exists()) 
             {
                 const userData = userDoc.data();
-                const orgCode = userData.org?.code;
+                const orgCode = userData.org?.orgId;
 
                 if (orgCode) 
                 {
@@ -46,7 +46,7 @@ function ViewOrg() {
                         const orgData = orgDoc.data();
 
                         setOrgName(orgData.name || 'Unknown Organization');
-                        setOrgCode(orgData.code || 'Unknown Code');
+                        setOrgCode(orgDoc.id || 'Unknown Code');
 
                         setMembers(
                             (orgData.members || []).map((member) => ({
