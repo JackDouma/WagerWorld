@@ -20,31 +20,34 @@ const RoomConnection = () => {
       fetchAvailableRooms(colyseusClient);
     }, 5000);
 
-    if (!currentRoom) return;
-
-  const handleStateChange = (state) => {
-    if (state.playerHands) {
-      // Assuming state.playerHands[sessionId] contains the current player's hand
-      const myHand = state.playerHands[currentRoom.sessionId];
-      if (myHand) {
-        setCards(myHand);
-      }
-    }
-  };
-
-  currentRoom.onStateChange(handleStateChange);
-
     return () => {
       clearInterval(interval);
       if (currentRoom) {
         currentRoom.leave();
       }
-      currentRoom.removeAllListeners();
+    };
+  }, []);
+
+  useEffect(() => {
+
+    if(!currentRoom) return;
+
+    const handleStateChange = (state) => {
+      // Get current player's hand
+      const player = state.players.get(currentRoom.sessionId);
+      if (player?.hand) {
+        setCards([...player.hand]);
+      }
     };
 
 
-    
-  }, [currentRoom]);
+    currentRoom.onStateChange(handleStateChange);
+    handleStateChange(currentRoom.state);
+  
+    return () => {
+      currentRoom.onStateChange.remove(handleStateChange);
+    };
+  }, [currentRoom])
 
   const fetchAvailableRooms = async (client) => {
     try {
@@ -60,7 +63,7 @@ const RoomConnection = () => {
       const room = await client.create('card_room');
       setCurrentRoom(room);
       setError('');
-      
+
       room.onLeave(() => {
         setCurrentRoom(null);
       });
@@ -72,12 +75,7 @@ const RoomConnection = () => {
   const joinRoom = async (roomId) => {
     try {
       const room = await client.joinById(roomId);
-      setCurrentRoom(room);
-      setError('');
-      
-      room.onLeave(() => {
-        setCurrentRoom(null);
-      });
+      navigate(`/room/${roomId}`);  // Navigate to CardRoom component
     } catch (e) {
       setError('Failed to join room');
     }
@@ -90,45 +88,59 @@ const RoomConnection = () => {
     }
   };
 
+  const drawCard = () => {
+    if (currentRoom) {
+      currentRoom.send('drawCard');
+    }
+  };
+
+  const ready = () => {
+    if (currentRoom) {
+      currentRoom.send('ready');
+    }
+  };
+
   const cards = currentRoom?.state?.players?.get(client.sessionId)?.hand || [];
 
   return (
     <div className="p-4 max-w-md mx-auto">
       <h1 className="text-2xl font-bold mb-4">Colyseus Rooms</h1>
-      
+
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
         </div>
       )}
-      
+
       {currentRoom ? (
         <div className="bg-green-100 border border-green-400 p-4 rounded mb-4">
           <p className="font-semibold">Connected to room: {currentRoom.id}</p>
           <p className="mb-2">Players: {currentRoom.state?.players?.size}</p>
-          <button 
+          <button
             onClick={leaveRoom}
             className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
           >
             Leave Room
           </button>
-          <button 
-            onClick={() => currentRoom.send('ready') }
+          <button
+            onClick={ready}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded ml-2"
-            
+
           >
-           Ready
+            Ready
           </button>
-          <button 
-            onClick={() => currentRoom.send('drawCard', ) }
+          <button
+            onClick={drawCard}
             className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded ml-2">
             Draw Card
-            </button>
+          </button>
           <div className="mt-4">
             <h2 className="text-xl font-semibold mb-2">Your Cards:</h2>
             <ul className="list-disc list-inside">
               {cards.map((card, index) => (
-                <li key={index}>{card}</li>
+                <li key={index}>
+                  {card.rank} of {card.suit}
+                </li>
               ))}
             </ul>
           </div>
@@ -137,7 +149,7 @@ const RoomConnection = () => {
         <div className="space-y-4">
           <div>
             <h2 className="text-lg font-semibold mb-2">Create New Room</h2>
-            <button 
+            <button
               onClick={createRoom}
               className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
             >
@@ -155,7 +167,7 @@ const RoomConnection = () => {
                 placeholder="Enter Room ID"
                 className="border p-2 rounded flex-1"
               />
-              <button 
+              <button
                 onClick={() => joinRoom(roomId)}
                 className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
               >
@@ -173,7 +185,7 @@ const RoomConnection = () => {
                     <p className="font-medium">Room: {room.roomId}</p>
                     <p className="text-sm text-gray-600">Clients: {room.clients}</p>
                   </div>
-                  <button 
+                  <button
                     onClick={() => joinRoom(room.roomId)}
                     className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
                   >

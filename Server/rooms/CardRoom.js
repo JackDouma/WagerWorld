@@ -39,20 +39,15 @@ class CardRoom extends Room {
         });
 
         this.onMessage("drawCard", (client, message) => {
+            console.log('drawCard', client.sessionId);
             if (this.state.currentTurn !== client.sessionId) return;
             const player = this.state.players.get(client.sessionId);
-            console.log('players hand', player.hand);
-            console.log('deck', this.state.deck);
-            console.log('player', player);
             if (!player) return;
 
             if (this.state.deck.length > 0) {
                 const card = this.state.deck.pop();
                 player.hand.push(card);
             }
-
-
-
         });
 
 
@@ -62,24 +57,23 @@ class CardRoom extends Room {
         const suits = ['hearts', 'diamonds', 'clubs', 'spades'];
         const ranks = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
         
-        const deck = new ArraySchema();
         let id = 0;
+        const deckArray = [];
         
         for (const suit of suits) {
             for (const rank of ranks) {
-                deck.push(new Card(suit, rank, `${id++}`));
+                deckArray.push(new Card(suit, rank, `${id++}`));
             }
         }
 
-        // Shuffle deck
-        for (let i = deck.length - 1; i > 0; i--) {
+        // Shuffle using a regular array first
+        for (let i = deckArray.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
-            const temp = deck[i];
-            deck[i] = deck[j];
-            deck[j] = temp;
+            [deckArray[i], deckArray[j]] = [deckArray[j], deckArray[i]];
         }
 
-        this.state.deck = deck;
+        // Convert to ArraySchema
+        this.state.deck = new ArraySchema(...deckArray);
     }
 
     checkGameStart() {
