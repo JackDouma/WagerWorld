@@ -127,10 +127,10 @@ class BlackjackScene extends Phaser.Scene {
     // setting the possible positions that the players can be
     this.allPositionCoordinates.push([this.scale.width - this.scale.width / 50, this.scale.height / 4])
     this.allPositionCoordinates.push([this.scale.width - this.scale.width / 50, (this.scale.height / 4) * 2.75])
-    this.allPositionCoordinates.push([centerX + (this.scale.width / 3), this.scale.height - this.scale.height / 30])
-    this.allPositionCoordinates.push([centerX + (this.scale.width / 7), this.scale.height - this.scale.height / 30])
-    this.allPositionCoordinates.push([centerX - (this.scale.width / 7), this.scale.height - this.scale.height / 30])
-    this.allPositionCoordinates.push([centerX - (this.scale.width / 3), this.scale.height - this.scale.height / 30])
+    this.allPositionCoordinates.push([centerX + (this.scale.width / 3.5), this.scale.height - this.scale.height / 30])
+    this.allPositionCoordinates.push([centerX + (this.scale.width / 10), this.scale.height - this.scale.height / 30])
+    this.allPositionCoordinates.push([centerX - (this.scale.width / 10), this.scale.height - this.scale.height / 30])
+    this.allPositionCoordinates.push([centerX - (this.scale.width / 3.5), this.scale.height - this.scale.height / 30])
     this.allPositionCoordinates.push([this.scale.width / 50, (this.scale.height / 4) * 2.75])
     this.allPositionCoordinates.push([this.scale.width / 50, this.scale.height / 4])
 
@@ -179,8 +179,8 @@ class BlackjackScene extends Phaser.Scene {
     const centerY = this.cameras.main.centerY
 
     // removing the betting buttons
-    this.possibleBetButtons.forEach((item, index) => {item.destroy()})
-    this.possibleRemoveBetButtons.forEach((item, index) => {item.destroy()})
+    this.possibleBetButtons.forEach((item) => {item.destroy()})
+    this.possibleRemoveBetButtons.forEach((item) => {item.destroy()})
     this.placeBetsButton.destroy()
 
     this.dealInitialCards()
