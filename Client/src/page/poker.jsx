@@ -18,14 +18,16 @@ class PokerScene extends Phaser.Scene {
     this.playerCardCounts = []
     this.riverCardCount = 0
     this.playerCredits = 10_000
-    this.currentBet = 0
-    this.totalBet = 0
     this.possibleBets = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000]
     this.possibleBetButtons = []
     this.possibleRemoveBetButtons = []
     this.totalCredits
     this.currentBetText
     this.placeBetsButton
+    this.currentBet = 0
+    this.totalBets = []
+    this.overallHighestCurrentBet = 0
+    this.highestCurrentBet = 0
   }
 
   // loading all the image assets
@@ -94,7 +96,7 @@ class PokerScene extends Phaser.Scene {
     }).setOrigin(0.5, 0.5).setActive(false).setVisible(false))
     // adding buttons to remove the displayed bet amount and put it back in the account
     this.possibleRemoveBetButtons.push(this.add
-      .text(x + 10, y + 50, `Remove`, { fontSize: '18px', fill: '#f00' })
+      .text(x + 10, y + 50, `Remove`, { fontSize: '24px', fill: '#f00' })
       .setInteractive()
       .on('pointerdown', () => this.removeBet(amount)).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
     )
@@ -114,6 +116,9 @@ class PokerScene extends Phaser.Scene {
     else
       for(var i = 0; i < this.amountOfPlayers; i++)
         this.allPhysicalPositions[i].setPosition(this.allPositionCoordinates[i + 3][0], this.allPositionCoordinates[i + 3][1])
+    // creating slots for all the player's current bets
+    for(var i = 0; i < this.amountOfPlayers; i++)
+      this.totalBets.push(0)
   }
 
   // creating all the elements on the screen before the actual game-play
@@ -138,25 +143,26 @@ class PokerScene extends Phaser.Scene {
     // adding the player slots
     this.editPlayerSlots()
 
+    // top texts
     this.add.text(centerX, this.scale.height / 20, 'Poker', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
-
     this.totalCredits = this.add.text(centerX + (this.scale.width / 5), this.scale.height / 20, `Credits: ${this.playerCredits}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
-    this.currentBetText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Total Pot: ${this.totalBet}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
+    this.currentBetText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Total Pot: ${this.totalBets[this.playerIndex]}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
+    // start / leave buttons
     this.startGameButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 4.5), "Start Game", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.startGame()).setOrigin(0.5, 0.5)
     this.quitButton = this.add.text(centerX + (this.scale.width / 6), centerY + (this.scale.height / 4.5), 'Quit', { fontSize: '72px', fill: '#f00' }).setInteractive().on('pointerdown', () => window.location.href = '/').setOrigin(0.5, 0.5)
-
     
     // creating buttons for each possible amount that can be bet
     this.possibleBets.forEach((item, index) => {
       this.addBetButtons(item, (centerX - (this.scale.width / 4)) + (index < 5 ? index * (this.scale.width / 8) : (index - 5) * (this.scale.width / 6)), (centerY - (this.scale.height / 2.5)) + (index < 5 ? (this.scale.height / 5) : (this.scale.height / 2.5)))
     })
 
-    // game starts once all bets are finalized
-    this.placeBetsButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 4.5), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.addBetToPot()).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
-    this.cancelBetButton = this.add.text(centerX + (this.scale.width / 6), centerY + (this.scale.height / 4.5), "Cancel", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => console.log('TODO')).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
+    // creating buttons to add / remove bets
+    this.placeBetsButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 5.5), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.addBetToPot(this.playerIndex)).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
+    this.cancelBetButton = this.add.text(centerX + (this.scale.width / 6), centerY + (this.scale.height / 5.5), "Cancel", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => {this.raiseFlag = false; this.changeBettingOptions()}).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
   }
 
+  // method to make sure all the cards rotate as specified depending on where on the table they need to go
   doesRotate(index){
     if(this.amountOfPlayers >= 7)
       if (index < 2)
@@ -176,10 +182,28 @@ class PokerScene extends Phaser.Scene {
       return 1
   }
 
+  // method to show the amount of money each player has bet total during the game
+  showWagers(){
+    this.playerBetValues = []
+    for (var i = 0; i < this.amountOfPlayers; i++){
+      // showing the numeric value of the player's cards
+      var horiz = 0, vert = 0
+      if (this.doesRotate(i) == 1)
+        vert = -(this.scale.height / 4.5)
+      else if (this.doesRotate(i) == 0)
+        horiz = -(this.scale.width / 8)
+      else
+        horiz = (this.scale.width / 8)
+
+      this.playerBetValues.push(this.add.text(this.allPhysicalPositions[i].x + horiz, this.allPhysicalPositions[i].y + vert, '0', { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5))
+    }
+  }
+
   startGame(){
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
 
+    // remove the start and quit buttons
     this.startGameButton.destroy()
     this.quitButton.setVisible(false).setActive(false)
 
@@ -201,17 +225,8 @@ class PokerScene extends Phaser.Scene {
       this.playerCardCounts[i]++
     }
 
-    // showing the numeric value of the player's cards
-    var horiz = 0, vert = 0
-    if (this.doesRotate(this.playerIndex) == 1)
-      vert = -(this.scale.height / 4.5)
-    else if (this.doesRotate(this.playerIndex) == 0)
-      horiz = -(this.scale.width / 8)
-    else
-      horiz = (this.scale.width / 8)
-
-    this.playerValueText = this.add.text(this.allPhysicalPositions[this.playerIndex].x + horiz, this.allPhysicalPositions[this.playerIndex].y + vert,
-      this.totalBet, { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
+    // showing all wagers (each starts at 0, except for big and small blinds)
+    this.showWagers()
 
     // creating the raise, call, check and fold buttons
     this.betButton = this.add
@@ -222,17 +237,20 @@ class PokerScene extends Phaser.Scene {
     this.callButton = this.add
       .text(centerX - (this.scale.width / 9), centerY + (this.scale.height / 7), 'Call', { fontSize: '48px', fill: '#0f0' })
       .setInteractive()
-      .on('pointerdown', () => this.hit(this.playerIndex)).setOrigin(0.5,0.5)
+      .on('pointerdown', () => this.call(this.playerIndex)).setOrigin(0.5,0.5)
 
     this.checkButton = this.add
       .text(centerX + (this.scale.width / 9), centerY + (this.scale.height / 7), 'Check', { fontSize: '48px', fill: '#0f0' })
       .setInteractive()
-      .on('pointerdown', () => this.hit(this.playerIndex)).setOrigin(0.5,0.5)
+      .on('pointerdown', () => this.check(this.playerIndex)).setOrigin(0.5,0.5)
 
     this.foldButton = this.add
       .text(centerX + (this.scale.width / 3.5), centerY + (this.scale.height / 7), 'Fold', { fontSize: '48px', fill: '#f00' })
       .setInteractive()
       .on('pointerdown', () => this.fold(this.playerIndex)).setOrigin(0.5,0.5)
+
+    // for testing purposes
+    this.b = true
   }
 
   animateCard(handX, handY, newTexture, order, rotate) {
@@ -280,7 +298,7 @@ class PokerScene extends Phaser.Scene {
             },
           })
         }
-        // just 
+        // just doing the rotations, no flips here
         else{
           this.tweens.add({
               targets: card,
@@ -314,10 +332,22 @@ class PokerScene extends Phaser.Scene {
     }
   }
 
-  addBetToPot(){
-    this.totalBet += this.currentBet
-    this.currentBetText.setText(`Total Pot: ${this.totalBet}`)
+  // method to actually add a value to the total pot
+  addBetToPot(player){
+    this.totalBets[player] += this.currentBet
+    this.overallHighestCurrentBet = this.overallHighestCurrentBet < this.currentBet ? this.currentBet : 0
+    this.currentBetText.setText(`Total Pot: ${this.totalBets.reduce((a, b) => {return a + b})}`)
+    this.playerBetValues[player].setText(this.totalBets[player])
     this.currentBet = 0
+    this.raiseFlag = false
+    this.changeBettingOptions()
+    this.passTurn(player)
+    // for testing purposes
+    if(this.b){
+      this.b = false
+      this.currentBet = 1000
+      this.addBetToPot(1)
+    }
   }
 
   // manages all blackjack counting logic :)
@@ -344,19 +374,32 @@ class PokerScene extends Phaser.Scene {
     return value
   }
 
+  // method for the specified player to pass the turn to the next player, or dealer
+  passTurn(index){
+    this.isPlayersTurn[index] = false
+    this.isPlayersTurn[index == this.amountOfPlayers - 1 ? 0 : index + 1] = true
+  }
+
+  // method to show or remove the betting options (0 ~ 10k, and place bets / cancel buttons)
+  changeBettingOptions(){
+    this.betButton.setVisible(!this.raiseFlag).setActive(!this.raiseFlag)
+    this.callButton.setVisible(!this.raiseFlag).setActive(!this.raiseFlag)
+    this.checkButton.setVisible(!this.raiseFlag).setActive(!this.raiseFlag)
+    this.foldButton.setVisible(!this.raiseFlag).setActive(!this.raiseFlag)
+
+    this.possibleBetButtons.forEach((item) => {item.setVisible(this.raiseFlag).setActive(this.raiseFlag)})
+    this.possibleRemoveBetButtons.forEach((item) => {item.setVisible(this.raiseFlag).setActive(this.raiseFlag)})
+    this.placeBetsButton.setVisible(this.raiseFlag).setActive(this.raiseFlag)
+    this.cancelBetButton.setVisible(this.raiseFlag).setActive(this.raiseFlag)
+  }
+
+  // method for the designated player to make a raise to the pot (not yet fully implemented)
   raise(player) {
     // if (!this.isPlayersTurn[player]) return
     if (!this.isPlayersTurn.includes(true)) return
 
-    this.betButton.setVisible(false).setActive(false)
-    this.callButton.setVisible(false).setActive(false)
-    this.checkButton.setVisible(false).setActive(false)
-    this.foldButton.setVisible(false).setActive(false)
-
-    this.possibleBetButtons.forEach((item) => {item.setVisible(true).setActive(true)})
-    this.possibleRemoveBetButtons.forEach((item) => {item.setVisible(true).setActive(true)})
-    this.placeBetsButton.setVisible(true).setActive(true)
-    this.cancelBetButton.setVisible(true).setActive(true)
+    this.raiseFlag = true
+    this.changeBettingOptions()
 
     // this.playerHands[player].push(this.deck.pop())
     // this.animateCard(this.allPhysicalPositions[player].x + (this.doesRotate(player) == 1 ? this.playerCardCounts[player] * (this.scale.width / 50) : 0) - (this.doesRotate(player) == 0 ? (this.scale.width / 20) : (this.doesRotate(player) == 2 ? -(this.scale.width / 20) : 0)), 
@@ -366,11 +409,28 @@ class PokerScene extends Phaser.Scene {
     // this.playerCardCounts[player]++
 
     // const playerValue = this.calculateHandValue(this.playerHands[player])
-    // this.playerValueText.setText(playerValue)
+    // this.playerBetValues[player].setText(playerValue)
     // if (playerValue > 21)
     //   this.endGame('You Lose...')
   }
 
+  // method for the designated player to call
+  call(player){
+    this.bet(Math.max(...this.totalBets) - this.totalBets[player])
+    // if the player already the highest better, then nothing will work
+    if(this.currentBet == 0)
+      return
+    this.addBetToPot(player)
+  }
+
+  // method for the designated player to check to the next player 
+  check(player){
+    // if the player has not matched the highest bet, then nothing will work
+    if(this.overallHighestCurrentBet < this.highestCurrentBet) return;
+    this.passTurn(player)
+  }
+
+  // method for the designated player to fold (not implemented yet)
   fold(player) {
     // if (!this.isPlayersTurn[player]) return
     if (!this.isPlayersTurn.includes(true)) return
@@ -380,77 +440,81 @@ class PokerScene extends Phaser.Scene {
       this.dealerTurn()
     else
       this.isPlayersTurn[player + 1] = true
+
+    passTurn(index)
   }
 
-  dealerTurn() {
-    const centerX = this.cameras.main.centerX
-    let dealerValue = this.calculateHandValue(this.dealerHand)
-    this.dealerValueText.setText(dealerValue)
+  // Random stuff brought over from blackjack
 
-    // dealer will draw cards until they get a total of at least 17
-    while (dealerValue < 17) {
-      this.dealerHand.push(this.deck.pop())
-      this.animateCard(centerX - 100 + this.dealerCardCount * 50, 250, `${this.dealerHand[this.dealerHand.length - 1].value}_of_${this.dealerHand[this.dealerHand.length - 1].suit}.png`, 0)
-      this.dealerCardCount++
-      dealerValue = this.calculateHandValue(this.dealerHand)
-      this.dealerValueText.setText(dealerValue)
-    }
+  // dealerTurn() {
+  //   const centerX = this.cameras.main.centerX
+  //   let dealerValue = this.calculateHandValue(this.dealerHand)
+  //   this.dealerValueText.setText(dealerValue)
 
-    this.checkWinner()
-  }
+  //   // dealer will draw cards until they get a total of at least 17
+  //   while (dealerValue < 17) {
+  //     this.dealerHand.push(this.deck.pop())
+  //     this.animateCard(centerX - 100 + this.dealerCardCount * 50, 250, `${this.dealerHand[this.dealerHand.length - 1].value}_of_${this.dealerHand[this.dealerHand.length - 1].suit}.png`, 0)
+  //     this.dealerCardCount++
+  //     dealerValue = this.calculateHandValue(this.dealerHand)
+  //     this.dealerValueText.setText(dealerValue)
+  //   }
 
-  checkWinner() {
-    const playerValue = this.calculateHandValue(this.playerHands[this.playerIndex])
-    const dealerValue = this.calculateHandValue(this.dealerHand)
+  //   this.checkWinner()
+  // }
 
-    if (dealerValue > 21 || playerValue > dealerValue)
-      this.endGame('You Win!')
-    else if (playerValue < dealerValue)
-      this.endGame('You Lose...')
-    else
-      this.endGame("That's a Push")
-  }
+  // checkWinner() {
+  //   const playerValue = this.calculateHandValue(this.playerHands[this.playerIndex])
+  //   const dealerValue = this.calculateHandValue(this.dealerHand)
 
-  endGame(message) {
-    const centerX = this.cameras.main.centerX
-    const centerY = this.cameras.main.centerY
+  //   if (dealerValue > 21 || playerValue > dealerValue)
+  //     this.endGame('You Win!')
+  //   else if (playerValue < dealerValue)
+  //     this.endGame('You Lose...')
+  //   else
+  //     this.endGame("That's a Push")
+  // }
 
-    if(message.includes('Win')){
-      this.playerCredits += this.currentBet * 2
-      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
-    }
-    else if(message.includes('Push')){
-      this.playerCredits += this.currentBet
-      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
-    }
-    this.currentBet = 0
-    this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
+  // endGame(message) {
+  //   const centerX = this.cameras.main.centerX
+  //   const centerY = this.cameras.main.centerY
+
+  //   if(message.includes('Win')){
+  //     this.playerCredits += this.currentBet * 2
+  //     this.totalCredits.setText(`Credits: ${this.playerCredits}`)
+  //   }
+  //   else if(message.includes('Push')){
+  //     this.playerCredits += this.currentBet
+  //     this.totalCredits.setText(`Credits: ${this.playerCredits}`)
+  //   }
+  //   this.currentBet = 0
+  //   this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
     
-    this.add.text(centerX, centerY + (this.scale.height / 20), message, {
-      fontSize: '60px',
-      fill: '#fff',
-    }).setOrigin(0.5, 0.5)
+  //   this.add.text(centerX, centerY + (this.scale.height / 20), message, {
+  //     fontSize: '60px',
+  //     fill: '#fff',
+  //   }).setOrigin(0.5, 0.5)
 
-    this.betButton.destroy()
-    this.callButton.destroy()
-    this.checkButton.destroy()
-    this.foldButton.destroy()
-    this.playAgainButton = this.add
-      .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Play Again', { fontSize: '48px', fill: '#0f0' })
-      .setInteractive()
-      .on('pointerdown', () => {
-        this.playerHands = []
-        this.playerCardCounts = []
-        this.riverCardCount = 0
-        this.isPlayersTurn = []
-        this.allPhysicalPositions = []
-        this.registry.destroy()
-        this.events.off()
-        this.scene.restart()
-      }).setOrigin(0.5, 0.5)
+  //   this.betButton.destroy()
+  //   this.callButton.destroy()
+  //   this.checkButton.destroy()
+  //   this.foldButton.destroy()
+  //   this.playAgainButton = this.add
+  //     .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Play Again', { fontSize: '48px', fill: '#0f0' })
+  //     .setInteractive()
+  //     .on('pointerdown', () => {
+  //       this.playerHands = []
+  //       this.playerCardCounts = []
+  //       this.riverCardCount = 0
+  //       this.isPlayersTurn = []
+  //       this.allPhysicalPositions = []
+  //       this.registry.destroy()
+  //       this.events.off()
+  //       this.scene.restart()
+  //     }).setOrigin(0.5, 0.5)
 
-    this.quitButton.setVisible(true).setActive(true)
-  }
+  //   this.quitButton.setVisible(true).setActive(true)
+  // }
 }
 
 // putting it all in a React component
