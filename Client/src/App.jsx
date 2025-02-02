@@ -22,7 +22,7 @@ function App() {
             <Route path="/index" element={<Index />} />
             <Route path="/org">
                 <Route index element={<NoOrgRestrictedRoute><ViewOrg /></NoOrgRestrictedRoute>} />
-                <Route path=":id" element={<ViewOrgById />} />
+                <Route path=":orgCode" element={<ViewOrgById />} />
             </Route>
             <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
             <Route path="/blackjack" element={<BlackJack />} />

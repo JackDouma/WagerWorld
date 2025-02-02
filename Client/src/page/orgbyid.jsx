@@ -10,10 +10,11 @@ const auth = getAuth();
 
 function ViewOrgById() {
   const [orgName, setOrgName] = useState('');
-  const [orgCode, setOrgCode] = useState('');
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+ 
+  const { orgCode } = useParams()
 
   useEffect(() => {
         const fetchOrgData = async () => {
@@ -21,15 +22,13 @@ function ViewOrgById() {
         try {
             const currentUser = auth.currentUser;
 
-            console.log(currentUser);
+            console.log(orgCode);
             
-            if (!currentUser) 
-            {
-                document.location.href = '/';
-                return;
-            }
-
-            const { orgCode } = useParams()
+            // if (!currentUser) 
+            // {
+            //     document.location.href = '/';
+            //     return;
+            // }
 
             const orgDocRef = doc(db, 'orgs', orgCode);
             const orgDoc = await getDoc(orgDocRef);
