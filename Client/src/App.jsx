@@ -11,6 +11,7 @@ import ViewOrg from './page/org.jsx';
 import NoOrgRestrictedRoute from './component/NoOrgRestrictedRoute.jsx';
 import ViewOrgById from './page/orgbyid.jsx';
 import BlackJack from './page/blackjack.jsx';
+import Poker from './page/poker.jsx';
 
 function App() {
     return (
@@ -25,6 +26,7 @@ function App() {
             </Route>
             <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
             <Route path="/blackjack" element={<BlackJack />} />
+            <Route path="/poker" element={<Poker />} />
             <Route path="/signup" element={<Signup />} />
             <Route path="/signin" element={<Signin />} />
             <Route path="/createorg" element={<AdminOnlyRoute><CreateOrg /></AdminOnlyRoute>} />
