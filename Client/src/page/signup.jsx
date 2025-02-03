@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getFirestore } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, query, where, getFirestore, arrayUnion, updateDoc, increment } from 'firebase/firestore';
 import { auth, app } from '../../firebase';
 
-import '../css/signup.css'
 
 const db = getFirestore(app)
 
@@ -42,14 +41,46 @@ function Signup()
       // create user with email and password
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       const user = userCredential.user;
-
-      // save user info to firestore
-      await setDoc(doc(db, 'users', user.uid), {
+      
+      // Create JSON object for user details
+      let userJSON = {
         email: user.email,
         name: name,
         birthday: birthday,
         createdAt: new Date(),
-      });
+      };
+
+      // Check Firestore for an organization with a domain matching the users email.
+      const emailDomain = user.email.split("@")[1];
+      const orgCollectionRef = collection(db, "orgs");
+      const orgQuerySnapshot = await getDocs(query(orgCollectionRef, where("domain", "==", emailDomain)));
+
+      if (!orgQuerySnapshot.empty) 
+      {
+        const orgDocSnapshot = orgQuerySnapshot.docs[0];
+        const orgData = orgDocSnapshot.data()
+        const orgRef = doc(db, "orgs", orgDocSnapshot.id);
+
+        userJSON.org = {
+          joinedAt: new Date(),
+          orgId: orgDocSnapshot.id,
+          orgName: orgData.name
+        }
+
+        // add 1 to org members
+        await updateDoc(orgRef, {
+          memberCount: increment(1),
+          member: arrayUnion({
+            id: user.uid,
+            name: name,
+            email: email,
+            joinedAt: new Date(),
+          }),
+        });
+      }
+
+      // save user info to firestore
+      await setDoc(doc(db, 'users', user.uid), userJSON);
 
       // display success and empty field info
       setEmail('');
