@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import '../css/notfound.css'
 
 function NotFound() {
 

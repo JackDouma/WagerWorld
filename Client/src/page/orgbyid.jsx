@@ -3,7 +3,6 @@ import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { useParams } from 'react-router-dom';
 
-import '../css/org.css';
 
 const db = getFirestore();
 const auth = getAuth();

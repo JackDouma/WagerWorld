@@ -12,6 +12,8 @@ import NoOrgRestrictedRoute from './component/NoOrgRestrictedRoute.jsx';
 import ViewOrgById from './page/orgbyid.jsx';
 import BlackJack from './page/blackjack.jsx';
 import Poker from './page/poker.jsx';
+import "./styles.css";
+
 
 function App() {
     return (

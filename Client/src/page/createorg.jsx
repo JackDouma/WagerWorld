@@ -4,7 +4,6 @@ import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 
-import '../css/createorg.css';
 
 const db = getFirestore();
 

@@ -3,7 +3,6 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocs, collection, query, where, getFirestore } from 'firebase/firestore';
 import { auth, app } from '../../firebase';
 
-import '../css/signup.css'
 
 const db = getFirestore(app)
 

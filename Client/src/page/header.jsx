@@ -3,8 +3,6 @@ import { auth } from '../../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
 
-import '../css/header.css';
-
 const db = getFirestore();
 
 function Header() 
