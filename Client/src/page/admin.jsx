@@ -50,7 +50,7 @@ function AdminPage()
                         <tr key={org.id}>
                             <td>{org.name}</td>
                             <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
-                            <td>{org.members?.length || 0}</td>
+                            <td>{org.memberCount}</td>
                             <td>Delete | Edit</td>
                         </tr>
                     ))}
