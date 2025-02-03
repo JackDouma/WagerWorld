@@ -7,101 +7,11 @@ import '../css/org.css';
 const db = getFirestore();
 const auth = getAuth();
 
-function ViewOrg() {
-  const [orgName, setOrgName] = useState('');
-  const [orgCode, setOrgCode] = useState('');
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-        const fetchOrgData = async () => {
-
-        try {
-            const currentUser = auth.currentUser;
-
-            if (!currentUser) 
-            {
-                document.location.href = '/';
-                return;
-            }
-
-            const userId = currentUser.uid;
-
-            const userDocRef = doc(db, 'users', userId);
-            const userDoc = await getDoc(userDocRef);
-
-            if (userDoc.exists()) 
-            {
-                const userData = userDoc.data();
-                const orgCode = userData.org?.orgId;
-
-                if (orgCode) 
-                {
-                    const orgDocRef = doc(db, 'orgs', orgCode);
-                    const orgDoc = await getDoc(orgDocRef);
-
-                    if (orgDoc.exists()) 
-                    {
-                        const orgData = orgDoc.data();
-
-                        setOrgName(orgData.name || 'Unknown Organization');
-                        setOrgCode(orgDoc.id || 'Unknown Code');
-
-                        setMembers(
-                            (orgData.members || []).map((member) => ({
-                            ...member,
-
-                            // convert firestore data to JS date
-                            joinedAt: member.joinedAt?.toDate(),
-                            }))
-                        );
-                    } 
-                } 
-            } 
-        } 
-        catch (err)
-        {
-            console.error('ERROR:', err);
-        } 
-        finally 
-        {
-            setLoading(false);
-        }
-    };
-
-    fetchOrgData();
-  }, []);
-
+function ViewOrg() 
+{
   return (
     <main>
-      <h1>Organization: {orgName}</h1>
-      <h2>Code: {orgCode}</h2>
-      {loading && <p>Loading...</p>}
-      {!loading && members.length > 0 && (
-        <div>
-          <h3>Members:</h3>
-          <table>
-            <thead>
-              <tr>
-                <th>Name</th>
-                <th>Joined At</th>
-                <th>Balance</th>
-              </tr>
-            </thead>
-            <tbody>
-              {members.map((member, index) => (
-                <tr key={index}>
-                  <td>{member.name}</td>
-                  <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
-                  <td>0</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
-      {!loading && members.length === 0 && <p>No members found.</p>}
+      <h1>Organization Required</h1>
     </main>
   );
 }
