@@ -194,7 +194,7 @@ class BlackjackScene extends Phaser.Scene {
     }
     
     // dealing the dealer's first card
-    this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `${this.dealerHand[0].value}_of_${this.dealerHand[0].suit}.png`, 1, 1)
+    this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `${this.dealerHand[0].value}_of_${this.dealerHand[0].suit}.png`, 1, 1, false)
     this.dealerCardCount++
 
     // dealing out the second card to each player
@@ -206,7 +206,7 @@ class BlackjackScene extends Phaser.Scene {
     }
 
     // dealing the dealer's second card
-    this.dealersSecond = this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `card`, 3, false)
+    this.dealersSecond = this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `card`, 3, 1, false)
     this.dealerCardCount++
 
     // showing the numeric value of the player's cards
@@ -393,7 +393,8 @@ class BlackjackScene extends Phaser.Scene {
     // dealer will draw cards until they get a total of at least 17
     while (dealerValue < 17) {
       this.dealerHand.push(this.deck.pop())
-      this.animateCard(centerX - 100 + this.dealerCardCount * 50, 250, `${this.dealerHand[this.dealerHand.length - 1].value}_of_${this.dealerHand[this.dealerHand.length - 1].suit}.png`, 0, false)
+      // this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `card`, 3, 1, false)
+      this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `${this.dealerHand[this.dealerHand.length - 1].value}_of_${this.dealerHand[this.dealerHand.length - 1].suit}.png`, 0, 1, false)
       this.dealerCardCount++
       dealerValue = this.calculateHandValue(this.dealerHand)
       this.dealerValueText.setText(dealerValue)
