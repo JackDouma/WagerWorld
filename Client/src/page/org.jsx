@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
-import '../css/org.css';
 
 const db = getFirestore();
 const auth = getAuth();

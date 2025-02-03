@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { collection, getDocs, getFirestore } from 'firebase/firestore';
 import { auth, app } from '../../firebase';
-
-import '../css/admin.css';
+import { useNavigate } from "react-router-dom";
 
 const db = getFirestore(app);
 
 function AdminPage() 
 {
     const [orgs, setOrgs] = useState([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchOrgs = async () => {
@@ -32,32 +32,30 @@ function AdminPage()
 
     return (
         <main className="admin-page">
-        <h1>Admin</h1>
+            <h1>Admin</h1>
 
-        <div className="create-org-container">
-            <a href="/createorg" className="create-org-button">Create Org</a>
-        </div>
+            <button onClick={() => navigate("/createorg")}>Create Org</button>
 
-        <table className="orgs-table">
-            <thead>
-            <tr>
-                <th>Name</th>
-                <th>Created At</th>
-                <th>Members</th>
-                <th>Action</th>
-            </tr>
-            </thead>
-            <tbody>
-            {orgs.map((org) => (
-                <tr key={org.id}>
-                <td>{org.name}</td>
-                <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
-                <td>{org.members?.length || 0}</td>
-                <td>Delete | Edit</td>
-                </tr>
-            ))}
-            </tbody>
-        </table>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Created At</th>
+                        <th>Members</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {orgs.map((org) => (
+                        <tr key={org.id}>
+                            <td>{org.name}</td>
+                            <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
+                            <td>{org.memberCount}</td>
+                            <td>Delete | Edit</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </main>
     );
 }

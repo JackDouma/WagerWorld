@@ -46,7 +46,7 @@ function OrgRestrictedRoute({ children })
     // redirect to 404 if the user is not in org
     if (!isInOrg) 
     {
-        return <Navigate to="/404" />;
+        return <Navigate to="/notfound" />;
     }
 
   return children;

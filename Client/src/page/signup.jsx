@@ -1,9 +1,8 @@
 import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc, getDoc, getDocs, collection, query, where, getFirestore } from 'firebase/firestore';
+import { doc, setDoc, getDoc, getDocs, collection, query, where, getFirestore, arrayUnion, updateDoc, increment } from 'firebase/firestore';
 import { auth, app } from '../../firebase';
 
-import '../css/signup.css'
 
 const db = getFirestore(app)
 
@@ -56,14 +55,28 @@ function Signup()
       const orgCollectionRef = collection(db, "orgs");
       const orgQuerySnapshot = await getDocs(query(orgCollectionRef, where("domain", "==", emailDomain)));
 
-      if (!orgQuerySnapshot.empty) {
+      if (!orgQuerySnapshot.empty) 
+      {
         const orgDocSnapshot = orgQuerySnapshot.docs[0];
         const orgData = orgDocSnapshot.data()
+        const orgRef = doc(db, "orgs", orgDocSnapshot.id);
+
         userJSON.org = {
           joinedAt: new Date(),
           orgId: orgDocSnapshot.id,
           orgName: orgData.name
         }
+
+        // add 1 to org members
+        await updateDoc(orgRef, {
+          memberCount: increment(1),
+          member: arrayUnion({
+            id: user.uid,
+            name: name,
+            email: email,
+            joinedAt: new Date(),
+          }),
+        });
       }
 
       // save user info to firestore
