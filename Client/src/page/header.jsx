@@ -78,7 +78,7 @@ function Header()
               )}
 
               {userOrg && ( // is in org
-                <li><a href="/org">My ORG</a></li>
+                <li><a href={`/org/${userOrg.orgId}`}>My ORG</a></li>
               )}
 
               <div className="right">

@@ -47,6 +47,7 @@ h1 {
   border: 2px solid black;
   background: white;
   cursor: pointer;
+  color: black;
 }
 
 .roomContainer button:hover {
