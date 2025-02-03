@@ -62,6 +62,7 @@ function Header()
         <ul>
           <li><a href="/index">Home</a></li>
           <li><a href="/blackjack">Blackjack</a></li>
+          <li><a href="/poker">Poker</a></li>
           {!user ? (
             // not logged in
             <div className="right">
@@ -77,7 +78,7 @@ function Header()
               )}
 
               {userOrg && ( // is in org
-                <li><a href="/org">My ORG</a></li>
+                <li><a href={`/org/${userOrg.orgId}`}>My ORG</a></li>
               )}
 
               <div className="right">
