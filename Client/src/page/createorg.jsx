@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { doc, setDoc, collection, addDoc, getFirestore } from 'firebase/firestore';
+import { doc, setDoc, collection, addDoc, getFirestore, arrayUnion } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../../firebase';
 
-import '../css/createorg.css';
 
 const db = getFirestore();
 
@@ -41,6 +40,18 @@ function CreateOrg()
                 name: orgName,
                 domain,
                 createdAt: new Date(),
+                memberCount: 1,
+                owner: {
+                    ownerId: ownerId,
+                    ownerName: ownerName,
+                    ownerEmail: ownerEmail,
+                },
+                member: arrayUnion({
+                    id: ownerId,
+                    name: ownerName,
+                    email: ownerEmail,
+                    joinedAt: new Date(),
+                }),
             });
 
             // add owner
@@ -48,6 +59,7 @@ function CreateOrg()
                 name: ownerName,
                 email: ownerEmail,
                 owner: true,
+                createdAt: new Date(),
                 org: {
                     orgId: orgRef.id,
                     orgName: orgName,
