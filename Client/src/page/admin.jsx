@@ -40,22 +40,22 @@ function AdminPage()
 
         <table className="orgs-table">
             <thead>
-            <tr>
-                <th>Name</th>
-                <th>Created At</th>
-                <th>Members</th>
-                <th>Action</th>
-            </tr>
+                <tr>
+                    <th>Name</th>
+                    <th>Created At</th>
+                    <th>Members</th>
+                    <th>Action</th>
+                </tr>
             </thead>
             <tbody>
-            {orgs.map((org) => (
-                <tr key={org.id}>
-                <td>{org.name}</td>
-                <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
-                <td>{org.members?.length || 0}</td>
-                <td>Delete | Edit</td>
-                </tr>
-            ))}
+                {orgs.map((org) => (
+                    <tr key={org.id}>
+                        <td>{org.name}</td>
+                        <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
+                        <td>{org.members?.length || 0}</td>
+                        <td>Delete | Edit</td>
+                    </tr>
+                ))}
             </tbody>
         </table>
         </main>

@@ -13,10 +13,17 @@ main
     align-items: center;
     padding: 20px;
 }
+
+main h1
+{
+    font-size: 50px;
+    color: #FF8C00;;
+}
   
 .form 
 {
     display: flex;
+    align-items: center;
     flex-direction: column;
     gap: 10px;
     margin-bottom: 10px;
@@ -28,18 +35,18 @@ input, button
     font-size: 16px;
 }
   
-button 
+.form button 
 {
-    background-color: #007bff;
+    background-color: #FFA500;
     color: white;
     border: none;
     cursor: pointer;
     border-radius: 5px;
 }
   
-button:hover 
+.form button:hover 
 {
-    background-color: #0056b3;
+    background-color: #FF8C00;
 }
   
 .error 
