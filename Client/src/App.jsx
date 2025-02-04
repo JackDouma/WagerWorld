@@ -10,6 +10,7 @@ import CreateOrg from './page/createorg.jsx';
 import ViewOrg from './page/org.jsx';
 import NoOrgRestrictedRoute from './component/NoOrgRestrictedRoute.jsx';
 import ViewOrgById from './page/orgbyid.jsx';
+import RoomPage from './page/roomPage.jsx';
 import BlackJack from './page/blackjack.jsx';
 import Poker from './page/poker.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
                 <Route path="/blackjack" element={<BlackJack />} />
                 <Route path="/poker" element={<Poker />} />
+                <Route path="/room/:roomId" element={<RoomPage />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/signin" element={<Signin />} />
                 <Route path="/createorg" element={<AdminOnlyRoute><CreateOrg /></AdminOnlyRoute>} />
