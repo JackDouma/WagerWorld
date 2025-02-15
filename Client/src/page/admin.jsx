@@ -79,7 +79,7 @@ function AdminPage()
                             <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
                             <td>{org.memberCount}</td>
                             <td>
-                                <a onClick={() => handleDelete(org.id, org.owner.ownerId)} className="link">Delete</a> | <a onClick={() => handleEdit(org.id)} className="link">Edit</a>
+                                <a onClick={() => handleDelete(org.id, org.owner.ownerId)} className="link">Delete</a> | <a href={`/editorg/${org.id}`} className="link">Edit</a>
                             </td>
                         </tr>
                     ))}

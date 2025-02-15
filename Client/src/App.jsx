@@ -7,9 +7,11 @@ import AdminOnlyRoute from './component/AdminOnlyRoute.jsx';
 import Signup from './page/signup.jsx';
 import Signin from './page/signin.jsx';
 import CreateOrg from './page/createorg.jsx';
+import EditOrg from './page/editorg.jsx';
 import ViewOrg from './page/org.jsx';
 import NoOrgRestrictedRoute from './component/NoOrgRestrictedRoute.jsx';
 import ViewOrgById from './page/orgbyid.jsx';
+import EditOrgById from './page/editorgbyid.jsx';
 import RoomPage from './page/roomPage.jsx';
 import BlackJack from './page/blackjack.jsx';
 import Poker from './page/poker.jsx';
@@ -42,6 +44,17 @@ function App() {
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/signin" element={<Signin />} />
                 <Route path="/createorg" element={<AdminOnlyRoute><CreateOrg /></AdminOnlyRoute>} />
+                <Route path="/editorg">
+                    <Route index element={<AdminOnlyRoute><EditOrg /></AdminOnlyRoute>} />
+                    <Route 
+                        path=":orgId" 
+                        element={
+                            <AdminOnlyRoute>
+                                <EditOrgById />
+                            </AdminOnlyRoute>
+                        }
+                    />
+                </Route>
                 <Route path="/404" element={<NotFound />} />
                 <Route path="*" element={<NotFound />} />
             </Routes>
