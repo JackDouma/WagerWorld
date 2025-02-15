@@ -1,13 +1,15 @@
-import { useEffect, useState } from 'react';
-import { doc, getDoc, getFirestore } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
-import { useParams } from 'react-router-dom';
+import { useEffect, useState } from "react";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { useParams } from "react-router-dom";
+import { useNavigate } from 'react-router-dom';
+import { Client } from 'colyseus.js';
 
 const db = getFirestore();
 const auth = getAuth();
 
 function ViewOrgById() {
-  const [orgName, setOrgName] = useState('');
+  const [orgName, setOrgName] = useState("");
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -19,13 +21,13 @@ function ViewOrgById() {
       try {
         const currentUser = auth.currentUser;
 
-        const orgDocRef = doc(db, 'orgs', orgCode);
+        const orgDocRef = doc(db, "orgs", orgCode);
         const orgDoc = await getDoc(orgDocRef);
 
         if (orgDoc.exists()) {
           const orgData = orgDoc.data();
 
-          setOrgName(orgData.name || 'Unknown Organization');
+          setOrgName(orgData.name || "Unknown Organization");
 
           setMembers(
             (orgData.member || []).map((member) => ({
@@ -36,8 +38,8 @@ function ViewOrgById() {
           );
         }
       } catch (err) {
-        console.error('ERROR:', err);
-        setError('Error loading organization data');
+        console.error("ERROR:", err);
+        setError("Error loading organization data");
       } finally {
         setLoading(false);
       }
@@ -45,6 +47,48 @@ function ViewOrgById() {
 
     fetchOrgData();
   }, [orgCode]);
+
+  const [roomId, setRoomId] = useState("");
+  const [availableRooms, setAvailableRooms] = useState([]);
+  const [client, setClient] = useState(null);
+  const navigate = useNavigate();
+
+  const createRoom = async () => {
+    const room = await client.create("card_room"); // Replace "your_room_name" with your room type
+    navigate(`/room/${room.id}`);
+  };
+
+  const joinRoom = () => {
+    if (roomId) {
+      navigate(`/room/${roomId}`);
+    } else {
+      alert("Please enter a valid room ID.");
+    }
+  };
+
+  const fetchAvailableRooms = async (client) => {
+    try {
+      const rooms = await client.getAvailableRooms('card_room');
+      setAvailableRooms(rooms);
+    } catch (e) {
+      setError('Failed to fetch rooms');
+    }
+  };
+
+    useEffect(() => {
+      const colyseusClient = new Client('ws://localhost:2567');
+      setClient(colyseusClient);
+  
+      // Get initial room listing
+      fetchAvailableRooms(colyseusClient);
+  
+      // Refresh room list periodically
+      const interval = setInterval(() => {
+        fetchAvailableRooms(colyseusClient);
+      }, 5000);
+    }, []);
+
+
 
   return (
     <main>
@@ -56,35 +100,86 @@ function ViewOrgById() {
       </div>
 
       <div>
-          <h2>Available Rooms</h2>
-          <table>
-            <thead>
-              <tr>
-                <th>Host</th>
-                <th>Type</th>
-                <th>Players</th>
-                <th>Games</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-                <tr>
-                  <td>Justin</td>
-                  <td>Public</td>
-                  <td>7/20</td>
-                  <td>Poker(2), Blackjack(2), Crazy 8s(1)</td>
-                  <td>Join</td>
-                </tr>
-                <tr>
-                  <td>Eric</td>
-                  <td>Private</td>
-                  <td>4/20</td>
-                  <td>Poker(1), Blackjack(1)</td>
-                  <td>Join</td>
-                </tr>
-            </tbody>
-          </table>
+        <h2>Available Rooms</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Host</th>
+              <th>Type</th>
+              <th>Players</th>
+              <th>Games</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Justin</td>
+              <td>Public</td>
+              <td>7/20</td>
+              <td>Poker(2), Blackjack(2), Crazy 8s(1)</td>
+              <td>Join</td>
+            </tr>
+            <tr>
+              <td>Eric</td>
+              <td>Private</td>
+              <td>4/20</td>
+              <td>Poker(1), Blackjack(1)</td>
+              <td>Join</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div className="space-y-4">
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Create New Room</h2>
+            <button
+              onClick={createRoom}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
+            >
+              Create Room
+            </button>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Join Existing Room</h2>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={roomId}
+                onChange={(e) => setRoomId(e.target.value)}
+                placeholder="Enter Room ID"
+                className="border p-2 rounded flex-1"
+              />
+              <button
+                onClick={() => joinRoom(roomId)}
+                className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+              >
+                Join
+              </button>
+            </div>
+          </div>
+
+          <div>
+            <h2 className="text-lg font-semibold mb-2">Available Rooms</h2>
+            <div className="space-y-2">
+              {availableRooms.map((room) => (
+                <div key={room.roomId} className="border p-2 rounded flex justify-between items-center">
+                  <div>
+                    <p className="font-medium">Room: {room.roomId}</p>
+                    <p className="text-sm text-gray-600">Clients: {room.clients}</p>
+                  </div>
+                  <button
+                    onClick={() => joinRoom(room.roomId)}
+                    className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
+                  >
+                    Join
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
+      
 
       {loading && <p>Loading...</p>}
       {error && <p>{error}</p>}
