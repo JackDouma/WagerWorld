@@ -121,6 +121,23 @@ table th {
 table td {
     font-size: 0.9rem;
 }
+table td {
+    font-size: 0.9rem;
+}
+
+.link
+{
+    color: black;
+    font-style: italic;
+    font-size: 1rem;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
   
 .form 
 {
@@ -134,7 +151,21 @@ input
 {
     padding: 10px;
     font-size: 16px;
+    width: 100%;
+    border: 1px solid black;
+    border-radius: 5px;
+    box-sizing: border-box;
 }
+label 
+{
+    font-size: 1rem;
+    font-weight: bold;
+    margin-bottom: 5px;
+    text-align: center;
+    display: block;
+    color: black;
+}
+
 .error 
 {
     color: red;

@@ -40,6 +40,11 @@ function CreateOrg()
                 name: orgName,
                 domain,
                 createdAt: new Date(),
+                adultOnly: true,
+                allowPoker: true,
+                allowRoulette: true,
+                allowBlackJack: true,
+                allowCrazy8s: true,
                 memberCount: 1,
                 owner: {
                     ownerId: ownerId,

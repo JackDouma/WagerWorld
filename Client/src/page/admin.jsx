@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { collection, getDocs, getFirestore } from 'firebase/firestore';
+import { collection, getDocs, getFirestore, deleteDoc, doc } from 'firebase/firestore';
 import { auth, app } from '../../firebase';
 import { useNavigate } from "react-router-dom";
+import { getAuth, deleteUser } from 'firebase/auth';
 
 const db = getFirestore(app);
 
@@ -30,6 +31,32 @@ function AdminPage()
         fetchOrgs();
     }, []);
 
+    const handleDelete = async (id, ownerId) => {
+        try {
+            const orgDoc = doc(db, 'orgs', id);
+            const userDoc = doc(db, 'users', ownerId);
+            const authUser = getAuth().currentUser;
+
+            // delete org and owner account
+            await deleteDoc(orgDoc);
+            await deleteDoc(userDoc);
+            
+            
+            // delete the user auth account
+            if (authUser && authUser.uid === ownerId) 
+            {
+                await deleteUser(authUser);
+            }
+
+            // remove deleted org from state
+            setOrgs(orgs.filter((org) => org.id !== id));
+        } 
+        catch (error) 
+        {
+            console.error('ERROR: ', error);
+        }
+    };
+
     return (
         <main className="admin-page">
             <h1>Admin</h1>
@@ -51,7 +78,9 @@ function AdminPage()
                             <td>{org.name}</td>
                             <td>{new Date(org.createdAt?.seconds * 1000).toLocaleDateString()}</td>
                             <td>{org.memberCount}</td>
-                            <td>Delete | Edit</td>
+                            <td>
+                                <a onClick={() => handleDelete(org.id, org.owner.ownerId)} className="link">Delete</a> | <a href={`/editorg/${org.id}`} className="link">Edit</a>
+                            </td>
                         </tr>
                     ))}
                 </tbody>
