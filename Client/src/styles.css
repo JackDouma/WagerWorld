@@ -121,6 +121,23 @@ table th {
 table td {
     font-size: 0.9rem;
 }
+table td {
+    font-size: 0.9rem;
+}
+
+.link
+{
+    color: black;
+    font-style: italic;
+    font-size: 1rem;
+    text-decoration: none;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.link:hover {
+    text-decoration: underline;
+}
   
 .form 
 {
