@@ -10,7 +10,7 @@ function OrgRestrictedRoute({ children }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isInOrg, setIsInOrg] = useState(false);
     const [userOrgId, setUserOrgId] = useState(null);
-    const { orgCode } = useParams(); // Get the orgCode from the URL
+    const { orgId } = useParams();
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
@@ -31,7 +31,7 @@ function OrgRestrictedRoute({ children }) {
                     setUserOrgId(orgId);
 
                     // check if user is in right org
-                    if (orgId && orgId === orgCode) 
+                    if (orgId && orgId === orgId) 
                     {
                         setIsInOrg(true);
                     }
@@ -46,7 +46,7 @@ function OrgRestrictedRoute({ children }) {
         });
 
         return () => unsubscribe();
-    }, [orgCode]);
+    }, [orgId]);
 
     if (isLoading) 
     {
@@ -60,7 +60,7 @@ function OrgRestrictedRoute({ children }) {
     }
 
     // 404 if user is not part of org they are trying to go to
-    if (!isInOrg || userOrgId !== orgCode)
+    if (!isInOrg || userOrgId !== orgId)
     {
         return <Navigate to="/404" />;
     }
