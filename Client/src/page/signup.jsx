@@ -19,6 +19,15 @@ function Signup()
   const [birthday, setBirthday] = useState('');
   const [error, setError] = useState('');
 
+  // Returns true if birthday is before today - 18 years.
+  function is18OrOlder(birthday) {
+    const birthdayAsDate = new Date(Date.parse(birthday));
+    const todayMinus18Years = new Date();
+    todayMinus18Years.setFullYear((new Date()).getFullYear() - 18);
+
+    return birthdayAsDate <= todayMinus18Years;
+  }
+
   // on create account button press
   const createAccountButton = async () => {
     setError('');
@@ -38,28 +47,30 @@ function Signup()
     }
 
     try {
-      // create user with email and password
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-      
       // Create JSON object for user details
       let userJSON = {
-        email: user.email,
+        email: email,
         name: name,
         birthday: birthday,
         createdAt: new Date(),
       };
 
       // Check Firestore for an organization with a domain matching the users email.
-      const emailDomain = user.email.split("@")[1];
+      const emailDomain = email.split("@")[1];
       const orgCollectionRef = collection(db, "orgs");
       const orgQuerySnapshot = await getDocs(query(orgCollectionRef, where("domain", "==", emailDomain)));
 
-      if (!orgQuerySnapshot.empty) 
+      const orgExists = !orgQuerySnapshot.empty;
+
+      // I had to move the account create logic since it should only happen if the user meets age requirements of the org if one exists.
+      // Because of this the if statement needed to be broken up so that the first half runs before account creation and the second half runs after.
+      // This is a pretty hacky fix, as orgRef is not properly initialized if the org doesn't exist. I'll fix it later -Tyler.
+      var orgRef;
+      if (orgExists) 
       {
         const orgDocSnapshot = orgQuerySnapshot.docs[0];
         const orgData = orgDocSnapshot.data()
-        const orgRef = doc(db, "orgs", orgDocSnapshot.id);
+        orgRef = doc(db, "orgs", orgDocSnapshot.id);
 
         userJSON.org = {
           joinedAt: new Date(),
@@ -67,6 +78,18 @@ function Signup()
           orgName: orgData.name
         }
 
+        // Check if user is of age for organization. Set error if not.
+        if (!is18OrOlder(birthday) && orgData.adultOnly) {
+          setError("ERROR: You must be 18 or older to create an account with this organization.");
+          return;
+        }
+      }
+
+      // create user with email and password
+      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+      
+      if (orgExists) {
         // add 1 to org members
         await updateDoc(orgRef, {
           memberCount: increment(1),
