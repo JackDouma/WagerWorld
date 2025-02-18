@@ -1,4 +1,4 @@
-function ViewOrg() 
+function EditOrg() 
 {
   return (
     <main>
@@ -7,4 +7,4 @@ function ViewOrg()
   );
 }
 
-export default ViewOrg;
+export default EditOrg;

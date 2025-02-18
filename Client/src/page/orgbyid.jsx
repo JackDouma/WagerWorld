@@ -14,14 +14,14 @@ function ViewOrgById() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  const { orgCode } = useParams();
+  const { orgId } = useParams();
 
   useEffect(() => {
     const fetchOrgData = async () => {
       try {
         const currentUser = auth.currentUser;
 
-        const orgDocRef = doc(db, "orgs", orgCode);
+        const orgDocRef = doc(db, "orgs", orgId);
         const orgDoc = await getDoc(orgDocRef);
 
         if (orgDoc.exists()) {
@@ -46,7 +46,7 @@ function ViewOrgById() {
     };
 
     fetchOrgData();
-  }, [orgCode]);
+  }, [orgId]);
 
   const [roomId, setRoomId] = useState("");
   const [availableRooms, setAvailableRooms] = useState([]);

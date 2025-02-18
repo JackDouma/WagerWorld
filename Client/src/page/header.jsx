@@ -10,6 +10,7 @@ function Header()
   const [user, setUser] = useState(null);
   const [userName, setUserName] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
 
   // check if logged in or not
@@ -27,6 +28,7 @@ function Header()
           const userData = userDoc.data();
           setUserName(userData.name || '');
           setIsAdmin(userData.admin === true);
+          setIsOwner(userData.owner === true);
           setUserOrg(userData.org || null);
         }
       } 
@@ -35,6 +37,7 @@ function Header()
         setUser(null);
         setUserName('');
         setIsAdmin(false);
+        setIsOwner(false);
         setUserOrg(null);
       }
     });
@@ -71,12 +74,16 @@ function Header()
             // logged in
             <>
               
-              {isAdmin && ( // is admin
+              {isAdmin && (
                 <li><a href="/admin">Admin</a></li>
               )}
 
-              {userOrg && ( // is in org
+              {userOrg && (
                 <li><a href={`/org/${userOrg.orgId}`}>My ORG</a></li>
+              )}
+
+              {isOwner && (
+                <li><a href={`/orgsettings/${userOrg.orgId}`}>ORG Settings</a></li>
               )}
 
               <div className="right">
