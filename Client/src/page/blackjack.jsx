@@ -1,20 +1,22 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Phaser from 'phaser'
+import { Client, Room } from 'colyseus.js';
 
 class BlackjackScene extends Phaser.Scene {
 
   // constructor to initialize all the scene variables
   constructor() {
     super({ key: 'BlackjackScene' })
+    this.started = false
     this.cardScale = 0.15
     this.allPhysicalPositions = []
     this.allPositionCoordinates = []
     this.deck = []
-    this.amountOfPlayers = 1
+    this.amountOfPlayers = 0
     this.playerIndex
-    this.playerHands = []
+    this.playerHands = new Map()
     this.dealerHand = []
-    this.isPlayersTurn = []
+    this.currentTurn
     this.playerCardCounts = []
     this.dealerCardCount = 0
     // object used for later (cuz its gotta be played, then flipped over later instead of right away)
@@ -27,6 +29,8 @@ class BlackjackScene extends Phaser.Scene {
     this.totalCredits
     this.currentBetText
     this.placeBetsButton
+    this.client = new Client("ws://localhost:2567")
+    this.room = Room
   }
 
   // loading all the image assets
@@ -45,13 +49,83 @@ class BlackjackScene extends Phaser.Scene {
   }
 
   // method to create the scene
-  create() {
+  async create() {
+
+    console.log("Joining room...");
+
+    try {
+      this.room = await this.client.joinOrCreate("blackjack");
+      console.log("Joined successfully!");
+    } catch (e) {
+      console.error(e);
+    }
+
+    this.room.onStateChange((state) => {
+      console.log("State updated:", state);
+      // console.log(this.room.sessionId)
+      if (state.gamePhase == "playing" && !this.started){
+        this.startGame()
+        this.currentTurn = this.room.sessionId
+        this.started = true
+      }
+    });
+
+    this.room.onMessage('playerJoin', (message) => {
+      console.log(`Player ${message.sessionId} joined the room`);
+      if (message.sessionId === this.room.sessionId) {
+        this.playerCredits = message.totalCredits
+        this.totalCredits.setText(`Credits: ${this.playerCredits}`)
+      }
+      if(this.room.state.gamePhase == "waiting") {
+        this.playerCardCounts.push(0)
+        this.amountOfPlayers = message.size
+        if (this.playerIndex === undefined) this.playerIndex = this.amountOfPlayers - 1
+        this.editPlayerSlots()
+      }
+    })
+
+    this.room.onMessage("playerLeft", (message) => {
+      console.log(`Player ${message.sessionId} left the room`);
+  
+      // Find the removed player and update UI
+      this.playerCardCounts.pop(); // Remove last entry
+      this.amountOfPlayers = message.size
+      this.editPlayerSlots();
+    });
+
+    this.room.onMessage("hitResult", (message) => {
+      const player = message.index
+      this.playerHands.set(message.sessionId, message.hand)
+      const hand = this.playerHands.get(message.sessionId)
+      this.animateCard(this.allPhysicalPositions[player].x + (this.doesRotate(player) == 1 ? this.playerCardCounts[player] * (this.scale.width / 50) : 0) - (this.doesRotate(player) == 0 ? (this.scale.width / 20) : (this.doesRotate(player) == 2 ? -(this.scale.width / 20) : 0)), 
+          this.allPhysicalPositions[player].y + (this.doesRotate(player) != 1 ? this.playerCardCounts[player] * (this.scale.height / 30) : 0) - (this.doesRotate(player) == 1 ? (this.scale.width / 18) : 0), 
+          `${hand[hand.length - 1].rank}_of_${hand[hand.length - 1].suit}.png`, 0, this.doesRotate(player), false)
+  
+      // this.animateCard(this.allPhysicalPositions[player].x + this.playerCardCounts[player] * 50, this.allPhysicalPositions[player].y, `${this.playerHands[player][this.playerHands[player].length - 1].rank}_of_${this.playerHands[player][this.playerHands[player].length - 1].suit}.png`, 0, player < 2 || player > 5 ? true : false, false)
+      this.playerCardCounts[player]++
+  
+      const playerValue = this.calculateHandValue(this.playerHands.get(this.room.sessionId))
+      this.playerValueText.setText(playerValue)
+      if (playerValue > 21) {
+        this.room.send("playerBusts")
+      }
+    })
+
+    this.room.onMessage("standResult", (message) => {
+      this.currentTurn = message.nextPlayer
+      if (this.currentTurn == "dealer")
+        this.room.send("dealerTurn")
+    })
+
+    this.room.onMessage("dealerResult", (message) => {
+      this.dealerHand = message.dealerHand
+      console.log('results from dealer: ', message.playerResults)
+      this.dealerTurn(message.playerResults, message.winnings)
+    })
+
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
     // randomizing player count and user position randomly for now
-    this.amountOfPlayers = 8 /*Math.floor(Math.random() * (8)) + 1*/
-    this.playerIndex = this.amountOfPlayers - 1/*Math.floor(Math.random() * (this.amountOfPlayers)) + 1*/
-    for (var i = 0; i < this.amountOfPlayers; i++)
-      this.playerCardCounts.push(0)
+    // this.amountOfPlayers = this.room.state.players.size /*Math.floor(Math.random() * (8)) + 1*/
     this.createDeck()
     this.createUI()
   }
@@ -62,18 +136,6 @@ class BlackjackScene extends Phaser.Scene {
     const suits = ["spades", "clubs", "diamonds", "hearts"]
     this.deck = suits.flatMap((suit) => values.map((value) => ({ suit, value })))
     Phaser.Utils.Array.Shuffle(this.deck)
-  }
-
-  // dealing cards to all the players and dealer
-  dealInitialCards() {
-    for (var i = 0; i < this.amountOfPlayers; i++){
-      this.playerHands.push([this.deck.pop()])
-    }
-    this.dealerHand = [this.deck.pop()]
-    for (var i = 0; i < this.amountOfPlayers; i++){
-      this.playerHands[i].push(this.deck.pop())
-    }
-    this.dealerHand.push(this.deck.pop())
   }
 
   // adding the buttons to make a bet
@@ -105,7 +167,9 @@ class BlackjackScene extends Phaser.Scene {
 
   // dynamically changing player slots based on however many people are in the room (maximum of 8)
   editPlayerSlots(){
-    if(this.amountOfPlayers >= 7) 
+    for (var i = 0; i < 8; i++)
+      this.allPhysicalPositions[i].setPosition(this.cameras.main.centerX, -100);
+    if(this.amountOfPlayers >= 7)
       for(var i = 0; i < this.amountOfPlayers; i++)
         this.allPhysicalPositions[i].setPosition(this.allPositionCoordinates[i][0], this.allPositionCoordinates[i][1])
     else if (this.amountOfPlayers >= 5)
@@ -138,12 +202,9 @@ class BlackjackScene extends Phaser.Scene {
     for (var i = 0; i < 8; i++)
       this.allPhysicalPositions.push(this.add.text(centerX, -100, `Player ${i + 1}`, { fontFamily: 'Arial', fontSize: '32px', fill: '#fff' }).setOrigin(0.5, 0.5).setAngle(this.doesRotate(i) == 0 ? -90 : this.doesRotate(i) == 2 ? 90 : 0))
 
-    // adding the player slots
-    this.editPlayerSlots()
-
     this.add.text(centerX, this.scale.height / 20, 'Blackjack', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
-    this.totalCredits = this.add.text(centerX + (this.scale.width / 5), this.scale.height / 20, `Credits: ${this.playerCredits}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
+    this.totalCredits = this.add.text(centerX + (this.scale.width / 5), this.scale.height / 20, 'Credits: Loading...', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
     this.currentBetText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Current Bet: ${this.currentBet}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
     // creating buttons for each possible amount that can be bet
@@ -152,7 +213,7 @@ class BlackjackScene extends Phaser.Scene {
     })
 
     // game starts once all bets are finalized
-    this.placeBetsButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 4.5), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.startGame())
+    this.placeBetsButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 4.5), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.room.send("bet", { value: this.currentBet }))
   }
 
   doesRotate(index){
@@ -174,6 +235,15 @@ class BlackjackScene extends Phaser.Scene {
       return 1
   }
 
+  
+  // dealing cards to all the players and dealer
+  dealInitialCards() {
+    this.room.state.players.keys().forEach((item) => this.playerHands.set(item, this.room.state.players.get(item).hand))
+    this.dealerHand = this.room.state.dealer.hand
+    console.log(this.playerHands)
+    console.log(this.room.state.dealer)
+  }
+
   startGame(){
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
@@ -184,26 +254,41 @@ class BlackjackScene extends Phaser.Scene {
     this.placeBetsButton.destroy()
 
     this.dealInitialCards()
+    var i = 0
     // visually dealing out the first card to each player
-    for (var i = 0; i < this.amountOfPlayers; i++){
-      this.isPlayersTurn[i] = i == 0 ? true : false
-      const string = `${this.playerHands[i][0].value}_of_${this.playerHands[i][0].suit}.png`
+    this.playerHands.keys().forEach((key) => {
+      const string = `${this.playerHands.get(key)[0].rank}_of_${this.playerHands.get(key)[0].suit}.png`
       this.animateCard(this.allPhysicalPositions[i].x - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)),
         this.allPhysicalPositions[i].y - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), string, 0, this.doesRotate(i), i != this.playerIndex)
       this.playerCardCounts[i]++
-    }
+      i++
+    })
+    // for (var i = 0; i < this.amountOfPlayers; i++){
+    //   const string = `${this.playerHands[i][0].rank}_of_${this.playerHands[i][0].suit}.png`
+    //   this.animateCard(this.allPhysicalPositions[i].x - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)),
+    //     this.allPhysicalPositions[i].y - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), string, 0, this.doesRotate(i), i != this.playerIndex)
+    //   this.playerCardCounts[i]++
+    // }
     
     // dealing the dealer's first card
-    this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `${this.dealerHand[0].value}_of_${this.dealerHand[0].suit}.png`, 1, 1, false)
+    this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `${this.dealerHand[0].rank}_of_${this.dealerHand[0].suit}.png`, 1, 1, false)
     this.dealerCardCount++
 
     // dealing out the second card to each player
-    for (var i = 0; i < this.amountOfPlayers; i++){
-      const string = `${this.playerHands[i][1].value}_of_${this.playerHands[i][1].suit}.png`
+    i = 0
+    this.playerHands.keys().forEach((key) => {
+      const string = `${this.playerHands.get(key)[1].rank}_of_${this.playerHands.get(key)[1].suit}.png`
       this.animateCard(this.allPhysicalPositions[i].x + (this.doesRotate(i) == 1 ? this.playerCardCounts[i] * (this.scale.width / 50) : 0) - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)), 
         this.allPhysicalPositions[i].y + (this.doesRotate(i) != 1 ? this.playerCardCounts[i] * (this.scale.height / 30) : 0) - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), string, 2, this.doesRotate(i), i != this.playerIndex)
       this.playerCardCounts[i]++
-    }
+      i++
+    })
+    // for (var i = 0; i < this.amountOfPlayers; i++){
+    //   const string = `${this.playerHands[i][1].rank}_of_${this.playerHands[i][1].suit}.png`
+    //   this.animateCard(this.allPhysicalPositions[i].x + (this.doesRotate(i) == 1 ? this.playerCardCounts[i] * (this.scale.width / 50) : 0) - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)), 
+    //     this.allPhysicalPositions[i].y + (this.doesRotate(i) != 1 ? this.playerCardCounts[i] * (this.scale.height / 30) : 0) - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), string, 2, this.doesRotate(i), i != this.playerIndex)
+    //   this.playerCardCounts[i]++
+    // }
 
     // dealing the dealer's second card
     this.dealersSecond = this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `card`, 3, 1, false)
@@ -219,7 +304,7 @@ class BlackjackScene extends Phaser.Scene {
     else
       horiz = (this.scale.width / 9)
     this.playerValueText = this.add.text(this.allPhysicalPositions[this.playerIndex].x + horiz, this.allPhysicalPositions[this.playerIndex].y + vert,
-      this.calculateHandValue(this.playerHands[this.playerIndex]), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
+      this.calculateHandValue(this.playerHands.get(this.room.sessionId)), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
     // creating the hit and stand button
     this.hitButton = this.add
@@ -231,8 +316,6 @@ class BlackjackScene extends Phaser.Scene {
       .text(centerX + (this.scale.width / 5), centerY + (this.scale.height / 6), 'Stand', { fontSize: '48px', fill: '#f00' })
       .setInteractive()
       .on('pointerdown', () => this.stand(this.playerIndex)).setOrigin(0.5,0.5)
-
-    console.log(this.playerIndex)
   }
 
   animateCard(handX, handY, newTexture, order, rotate, tint) {
@@ -285,7 +368,7 @@ class BlackjackScene extends Phaser.Scene {
         }
         // show the value of the dealer's card if once it's finished
         else{
-          this.dealerValueText = this.add.text(card.x - (this.scale.width / 12), card.y, this.isPlayersTurn.includes(true) ? (isNaN(this.dealerHand[0].value) ? 10 : this.dealerHand[0].value) : 
+          this.dealerValueText = this.add.text(card.x - (this.scale.width / 12), card.y, this.currentTurn != "dealer" ? (isNaN(this.dealerHand[0].rank) ? 10 : this.dealerHand[0].rank) : 
             this.calculateHandValue(this.dealerHand), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
         }
       },
@@ -321,13 +404,13 @@ class BlackjackScene extends Phaser.Scene {
     let aces = 0
 
     hand.forEach((card) => {
-      if (['jack', 'queen', 'king'].includes(card.value)) {
+      if (['jack', 'queen', 'king'].includes(card.rank)) {
         value += 10
-      } else if (card.value === 'ace') {
+      } else if (card.rank === 'ace') {
         value += 11
         aces += 1
       } else {
-        value += parseInt(card.value, 10)
+        value += parseInt(card.rank, 10)
       }
     })
 
@@ -336,31 +419,26 @@ class BlackjackScene extends Phaser.Scene {
       aces -= 1
     }
 
-    return value
+    return value || 0
   }
 
   hit(player) {
-    // if (!this.isPlayersTurn[player]) return
-    if (!this.isPlayersTurn.includes(true)) return
+    console.log(this.currentTurn)
+    if (this.currentTurn != this.room.sessionId) return
 
-    this.playerHands[player].push(this.deck.pop())
-    this.animateCard(this.allPhysicalPositions[player].x + (this.doesRotate(player) == 1 ? this.playerCardCounts[player] * (this.scale.width / 50) : 0) - (this.doesRotate(player) == 0 ? (this.scale.width / 20) : (this.doesRotate(player) == 2 ? -(this.scale.width / 20) : 0)), 
-        this.allPhysicalPositions[player].y + (this.doesRotate(player) != 1 ? this.playerCardCounts[player] * (this.scale.height / 30) : 0) - (this.doesRotate(player) == 1 ? (this.scale.width / 18) : 0), 
-        `${this.playerHands[player][this.playerHands[player].length - 1].value}_of_${this.playerHands[player][this.playerHands[player].length - 1].suit}.png`, 0, this.doesRotate(player), false)
-
-    // this.animateCard(this.allPhysicalPositions[player].x + this.playerCardCounts[player] * 50, this.allPhysicalPositions[player].y, `${this.playerHands[player][this.playerHands[player].length - 1].value}_of_${this.playerHands[player][this.playerHands[player].length - 1].suit}.png`, 0, player < 2 || player > 5 ? true : false, false)
-    this.playerCardCounts[player]++
-
-    const playerValue = this.calculateHandValue(this.playerHands[player])
-    this.playerValueText.setText(playerValue)
-    if (playerValue > 21)
-      this.endGame('You Lose...')
+    this.room.send("hit", { index: player })
   }
 
   stand(player) {
-    // if (!this.isPlayersTurn[player]) return
-    if (!this.isPlayersTurn.includes(true)) return
+    if (this.currentTurn != this.room.sessionId) return
 
+    this.room.send("stand", { index: player })
+
+    this.currentTurn = "dealer"
+  }
+
+  dealerTurn(playerResults, winnings) {
+    if (this.currentTurn != "dealer") return
     // another animation specifically for the dealer's second card
     // essentially the same as the once used previously in animateCard()
     this.tweens.add({
@@ -369,7 +447,7 @@ class BlackjackScene extends Phaser.Scene {
       duration: 200,
       ease: 'Linear',
       onComplete: () => {
-        this.dealersSecond.setTexture(`${this.dealerHand[1].value}_of_${this.dealerHand[1].suit}.png`)
+        this.dealersSecond.setTexture(`${this.dealerHand[1].rank}_of_${this.dealerHand[1].suit}.png`)
         this.tweens.add({
           targets: this.dealersSecond,
           scaleX: this.cardScale,
@@ -378,57 +456,42 @@ class BlackjackScene extends Phaser.Scene {
         })
       },
     })
-    this.isPlayersTurn[player] = false
-    if (player == this.amountOfPlayers - 1)
-      this.dealerTurn()
-    else
-      this.isPlayersTurn[player + 1] = true
-  }
 
-  dealerTurn() {
     const centerX = this.cameras.main.centerX
     let dealerValue = this.calculateHandValue(this.dealerHand)
     this.dealerValueText.setText(dealerValue)
 
     // dealer will draw cards until they get a total of at least 17
-    while (dealerValue < 17) {
-      this.dealerHand.push(this.deck.pop())
-      // this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `card`, 3, 1, false)
-      this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `${this.dealerHand[this.dealerHand.length - 1].value}_of_${this.dealerHand[this.dealerHand.length - 1].suit}.png`, 0, 1, false)
+    for (var i = 2; i < this.dealerHand.length; i++){
+      console.log("adding card number " + i)
+      this.animateCard(centerX - (this.scale.width / 20) + this.dealerCardCount * 50, this.scale.width / 6, `${this.dealerHand[i].rank}_of_${this.dealerHand[i].suit}.png`, 0, 1, false)
       this.dealerCardCount++
       dealerValue = this.calculateHandValue(this.dealerHand)
       this.dealerValueText.setText(dealerValue)
     }
 
-    this.checkWinner()
-  }
+    this.playerCredits = winnings[this.room.sessionId]
+    this.totalCredits.setText(`Credits: ${this.playerCredits}`)
 
-  checkWinner() {
-    const playerValue = this.calculateHandValue(this.playerHands[this.playerIndex])
-    const dealerValue = this.calculateHandValue(this.dealerHand)
+    this.currentBet = 0
+    this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
+    console.log("HELLO))))")
 
-    if (dealerValue > 21 || playerValue > dealerValue)
+    const result = playerResults[this.room.sessionId]
+    if (result == 0)
       this.endGame('You Win!')
-    else if (playerValue < dealerValue)
+    else if (result == 1)
       this.endGame('You Lose...')
-    else
+    else if (result == 2)
       this.endGame("That's a Push")
   }
 
   endGame(message) {
+    // WILL NEED TO BE REMOVED FOR MORE THAN 1 PLAYER
+    this.room.send("endGame")
+    this.currentTurn = "done"
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
-
-    if(message.includes('Win')){
-      this.playerCredits += this.currentBet * 2
-      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
-    }
-    else if(message.includes('Push')){
-      this.playerCredits += this.currentBet
-      this.totalCredits.setText(`Credits: ${this.playerCredits}`)
-    }
-    this.currentBet = 0
-    this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
     
     this.add.text(centerX, centerY + (this.scale.height / 20), message, {
       fontSize: '60px',
@@ -440,15 +503,17 @@ class BlackjackScene extends Phaser.Scene {
     this.playAgainButton = this.add
       .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Play Again', { fontSize: '48px', fill: '#0f0' })
       .setInteractive()
-      .on('pointerdown', () => {
-        this.playerHands = []
+      .on('pointerdown', async () => {
+        await this.room.leave()
+        this.playerHands = new Map()
         this.playerCardCounts = []
         this.dealerCardCount = 0
-        this.isPlayersTurn = []
+        this.currentTurn = ""
         this.allPhysicalPositions = []
         this.registry.destroy()
         this.events.off()
         this.scene.restart()
+        this.started = false
       }).setOrigin(0.5, 0.5)
 
     this.quitButton = this.add
