@@ -5,6 +5,7 @@ const { Server } = require('@colyseus/core');
 const { WebSocketTransport } = require('@colyseus/ws-transport');
 const { MyRoom } = require('./rooms/MyRoom');
 const { CardRoom } = require('./rooms/CardRoom');
+const { BlackjackRoom } = require('./rooms/BlackjackRoom');
 
 const app = express();
 const port = process.env.PORT || 2567;
@@ -20,6 +21,7 @@ const gameServer = new Server({
 // Register your room handlers
 gameServer.define('card_room', CardRoom);
 
+gameServer.define('blackjack', BlackjackRoom);
 
 // Express static file serving
 app.use(express.static('public'));
