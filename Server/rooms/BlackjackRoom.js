@@ -55,9 +55,6 @@ class BlackjackRoom extends Room {
       console.log(client.sessionId + " busts")
       const player = this.state.players.get(client.sessionId);
       if (player) {
-        player.totalCredits -= player.bet
-        player.bet = 0
-        // DO SOMETHING HERE
         this.nextTurn()
       }
     })
@@ -262,23 +259,27 @@ class BlackjackRoom extends Room {
 
   dealerTurn() {
     let dealerValue = this.calculateHandValue(this.state.dealer.hand)
-    
-    while (dealerValue < 17) {
-      console.log("Dealer hits")
-
-      if (this.state.deck.length === 0) {
-        console.log("Deck is empty! Dealer cannot draw more cards.");
-        break;
+    const allPlayersLower = [...this.state.players.values()].every(player => 
+      this.calculateHandValue(player.hand) < dealerValue
+    );
+    if (!allPlayersLower) {
+      while (dealerValue < 17) {
+        console.log("Dealer hits")
+  
+        if (this.state.deck.length === 0) {
+          console.log("Deck is empty! Dealer cannot draw more cards.");
+          break;
+        }
+  
+        const card = this.state.deck.pop();
+        if (!card) {  
+          console.log("Error: Drew an undefined card. Stopping dealer turn.");
+          break;
+        }
+        this.state.dealer.hand.push(card);
+        dealerValue = this.calculateHandValue(this.state.dealer.hand)
+        console.log(dealerValue)
       }
-
-      const card = this.state.deck.pop();
-      if (!card) {  
-        console.log("Error: Drew an undefined card. Stopping dealer turn.");
-        break;
-      }
-      this.state.dealer.hand.push(card);
-      dealerValue = this.calculateHandValue(this.state.dealer.hand)
-      console.log(dealerValue)
     }
 
     const results = {}
@@ -286,7 +287,11 @@ class BlackjackRoom extends Room {
 
     this.state.players.keys().forEach((item) => {
       const playerValue = this.calculateHandValue(this.state.players.get(item).hand)
-      if (dealerValue > 21 || playerValue > dealerValue){
+      if (playerValue > 21) {
+        results[item] = 3
+        this.state.players.get(item).totalCredits -= this.state.players.get(item).bet
+      }
+      else if (dealerValue > 21 || playerValue > dealerValue){
         results[item] = 0
         this.state.players.get(item).totalCredits += this.state.players.get(item).bet
       }
@@ -296,8 +301,6 @@ class BlackjackRoom extends Room {
       }
       else if (playerValue == dealerValue)
         results[item] = 2
-      else
-        results[item] = 3
       this.state.players.get(item).bet = 0
       payouts[item] = this.state.players.get(item).totalCredits
     })

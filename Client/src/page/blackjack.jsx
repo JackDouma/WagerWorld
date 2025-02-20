@@ -310,12 +310,12 @@ class BlackjackScene extends Phaser.Scene {
     this.hitButton = this.add
       .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Hit', { fontSize: '48px', fill: '#0f0' })
       .setInteractive()
-      .on('pointerdown', () => this.hit(this.playerIndex)).setOrigin(0.5,0.5)
+      .on('pointerdown', () => this.hit(this.playerIndex)).setOrigin(0.5,0.5).setActive(false).setVisible(false)
 
     this.standButton = this.add
       .text(centerX + (this.scale.width / 5), centerY + (this.scale.height / 6), 'Stand', { fontSize: '48px', fill: '#f00' })
       .setInteractive()
-      .on('pointerdown', () => this.stand(this.playerIndex)).setOrigin(0.5,0.5)
+      .on('pointerdown', () => this.stand(this.playerIndex)).setOrigin(0.5,0.5).setActive(false).setVisible(false)
   }
 
   animateCard(handX, handY, newTexture, order, rotate, tint) {
@@ -370,6 +370,8 @@ class BlackjackScene extends Phaser.Scene {
         else{
           this.dealerValueText = this.add.text(card.x - (this.scale.width / 12), card.y, this.currentTurn != "dealer" ? (isNaN(this.dealerHand[0].rank) ? 10 : this.dealerHand[0].rank) : 
             this.calculateHandValue(this.dealerHand), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
+          this.hitButton.setActive(true).setVisible(true)
+          this.standButton.setActive(true).setVisible(true)
         }
       },
     })
@@ -434,6 +436,7 @@ class BlackjackScene extends Phaser.Scene {
 
     this.room.send("stand", { index: player })
 
+    // REMOVE FOR MULTIPLAYER
     this.currentTurn = "dealer"
   }
 
@@ -480,7 +483,7 @@ class BlackjackScene extends Phaser.Scene {
     const result = playerResults[this.room.sessionId]
     if (result == 0)
       this.endGame('You Win!')
-    else if (result == 1)
+    else if (result == 1 || result == 3)
       this.endGame('You Lose...')
     else if (result == 2)
       this.endGame("That's a Push")
