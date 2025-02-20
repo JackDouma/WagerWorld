@@ -10,11 +10,14 @@ import Signin from './page/signin.jsx';
 import CreateOrg from './page/createorg.jsx';
 import EditOrg from './page/editorg.jsx';
 import ViewOrg from './page/org.jsx';
+
 import NoOrgRestrictedRoute from './component/NoOrgRestrictedRoute.jsx';
 import ViewOrgById from './page/orgbyid.jsx';
 import ViewOrgSettingsById from './page/orgsettingsbyid.jsx';
 import ViewOrgSettings from './page/orgsettings.jsx';
 import EditOrgById from './page/editorgbyid.jsx';
+import ViewUser from './page/user.jsx';
+import ViewUserById from './page/userbyid.jsx';
 import RoomPage from './page/roomPage.jsx';
 import BlackJack from './page/blackjack.jsx';
 import Poker from './page/poker.jsx';
@@ -37,6 +40,17 @@ function App() {
                             <OrgRestrictedRoute>
                                 <ViewOrgById />
                             </OrgRestrictedRoute>
+                        }
+                    />
+                </Route>
+                <Route path="/user">
+                    <Route index element={<NoOrgRestrictedRoute><ViewUser /></NoOrgRestrictedRoute>} />
+                    <Route 
+                        path=":userId" 
+                        element={
+                            <NoOrgRestrictedRoute>
+                                <ViewUserById />
+                            </NoOrgRestrictedRoute>
                         }
                     />
                 </Route>
