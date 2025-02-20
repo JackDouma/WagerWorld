@@ -21,8 +21,9 @@ function RoomPage() {
 
         // Listen for state changes
         joinedRoom.onStateChange((state) => {
-        console.log("State changed:", state);
+          console.log("State changed:", state);
           const player = state.players[joinedRoom.sessionId];
+          console.log(player)
           if (player) {
             setPlayerHand(player.hand || []);
           }
