@@ -253,8 +253,8 @@ class BlackjackRoom extends Room {
       this.state.currentTurn = playerIds[currentIndex + 1];
     
     this.broadcast("standResult", { nextPlayer: this.state.currentTurn });
-    if (this.state.currentTurn == "dealer")
-      this.dealerTurn()
+    // if (this.state.currentTurn == "dealer")
+      // this.dealerTurn()
   }
 
   dealerTurn() {

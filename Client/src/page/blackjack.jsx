@@ -30,6 +30,7 @@ class BlackjackScene extends Phaser.Scene {
     this.currentBetText
     this.placeBetsButton
     this.client = new Client("ws://localhost:2567")
+    // this.client = new Client("ws://157.230.66.14:2567")
     this.room = Room
   }
 
@@ -80,6 +81,7 @@ class BlackjackScene extends Phaser.Scene {
         this.playerCardCounts.push(0)
         this.amountOfPlayers = message.size
         if (this.playerIndex === undefined) this.playerIndex = this.amountOfPlayers - 1
+        this.allPhysicalPositions[this.playerIndex].setText(message.sessionId);
         this.editPlayerSlots()
       }
     })
