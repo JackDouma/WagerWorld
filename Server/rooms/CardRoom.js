@@ -7,6 +7,14 @@ class CardRoom extends Room {
         this.setState(new CardGameState());
         this.maxClients = options.maxPlayers || 4;
 
+        // Add timeout for room if nobody joins (needed for /create-room endpoint)
+        this.emptyRoomTimeout = setTimeout(() => {
+            if (this.clients.length === 0) {
+                console.log(`Room ${this.roomId} destroyed due to inactivity.`);
+                this.disconnect();
+            }
+        }, 30000) // 30 second timeout
+
         // Add logging to track player count
         console.log(`Room created. Current player count: ${this.state.players.size}`);
 

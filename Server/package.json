@@ -4,6 +4,7 @@
     "@colyseus/schema": "^2.0.36",
     "@colyseus/ws-transport": "^0.15.3",
     "colyseus.js": "^0.15.26",
+    "cors": "^2.8.5",
     "express": "^4.21.2"
   },
   "scripts": {
