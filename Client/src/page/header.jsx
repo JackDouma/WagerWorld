@@ -87,7 +87,7 @@ function Header()
               )}
 
               <div className="right">
-                <li>Welcome, {userName}</li>
+                <l1><a href={`/user/${user?.uid}`} ><i class="fa-solid fa-user"></i></a></l1>
                 <li><a href="/index" onClick={signOutPress}><i className="fas fa-sign-out-alt"></i> Sign Out</a></li>
               </div>
             </>

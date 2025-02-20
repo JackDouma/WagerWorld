@@ -5,7 +5,7 @@ import { auth } from '../../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 const db = getFirestore();
 
-function OrgRestrictedRoute({ children }) 
+function NoOrgRestrictedRoute({ children }) 
 {
     const [isLoading, setIsLoading] = useState(true);
     const [isInOrg, setIsInOrg] = useState(false);
@@ -46,10 +46,10 @@ function OrgRestrictedRoute({ children })
     // redirect to 404 if the user is not in org
     if (!isInOrg) 
     {
-        return <Navigate to="/notfound" />;
+        return <Navigate to="/404" />;
     }
 
   return children;
 }
 
-export default OrgRestrictedRoute;
+export default NoOrgRestrictedRoute;
