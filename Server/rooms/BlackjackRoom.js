@@ -9,8 +9,16 @@ const { ArraySchema } = require("@colyseus/schema");
 class BlackjackRoom extends Room {
   onCreate(options) {
     this.setState(new BlackjackState());
-    
+
     this.maxClients = options.maxPlayers || 8;
+
+    // Add timeout that destroys room if no players join (needed for /create-room endpoint)
+    this.emptyRoomTimeout = setTimeout(() => {
+      if (this.clients.length === 0) {
+        console.log(`Room ${this.roomId} destroyed due to inactivity.`);
+        this.disconnect();
+      }
+    }, 30000);
 
     // Add logging to track player count
     console.log(
@@ -251,7 +259,7 @@ class BlackjackRoom extends Room {
       this.state.currentTurn = "dealer"
     else
       this.state.currentTurn = playerIds[currentIndex + 1];
-    
+
     this.broadcast("standResult", { nextPlayer: this.state.currentTurn });
     // if (this.state.currentTurn == "dealer")
       // this.dealerTurn()
@@ -259,20 +267,20 @@ class BlackjackRoom extends Room {
 
   dealerTurn() {
     let dealerValue = this.calculateHandValue(this.state.dealer.hand)
-    const allPlayersLower = [...this.state.players.values()].every(player => 
+    const allPlayersLower = [...this.state.players.values()].every(player =>
       this.calculateHandValue(player.hand) < dealerValue
     );
     if (!allPlayersLower) {
       while (dealerValue < 17) {
         console.log("Dealer hits")
-  
+
         if (this.state.deck.length === 0) {
           console.log("Deck is empty! Dealer cannot draw more cards.");
           break;
         }
-  
+
         const card = this.state.deck.pop();
-        if (!card) {  
+        if (!card) {
           console.log("Error: Drew an undefined card. Stopping dealer turn.");
           break;
         }
