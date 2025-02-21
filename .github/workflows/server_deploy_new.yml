@@ -1,6 +1,7 @@
 name: WagerWorld NodeJS Continuous Deployment For VPS
 
 on:
+  workflow_dispatch:
   push:
     branches:
     - prod
