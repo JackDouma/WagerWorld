@@ -122,91 +122,61 @@ function ViewOrgById() {
         <main>
         <h1>{orgName}</h1>
 
-        <div className="roomOptions">
-            <button>Create Room</button>
-            <button>Join Room</button>
-        </div>
-
         <div>
-            <h2>Available Rooms</h2>
-            <table>
-            <thead>
-                <tr>
-                <th>Host</th>
-                <th>Type</th>
-                <th>Players</th>
-                <th>Games</th>
-                <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                <td>Justin</td>
-                <td>Public</td>
-                <td>7/20</td>
-                <td>Poker(2), Blackjack(2), Crazy 8s(1)</td>
-                <td>Join</td>
-                </tr>
-                <tr>
-                <td>Eric</td>
-                <td>Private</td>
-                <td>4/20</td>
-                <td>Poker(1), Blackjack(1)</td>
-                <td>Join</td>
-                </tr>
-            </tbody>
-            </table>
+            <div>
+                <h2>Create New Room</h2>
+                <button onClick={createRoom}>Create Room</button>
+            </div>
+
+            <div>
+                <h2>Public Rooms</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>Host</th>
+                            <th>Game</th>
+                            <th>Players</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {availableRooms.length > 0 ? (
+                            availableRooms.map((room) => (
+                                <tr key={room.roomId}>
+                                    {/* TODO: Make all of these dynamic */}
+                                    <td>Public</td>
+                                    <td>Temp</td>
+                                    <td>Temp</td>
+                                    <td>{room.clients}</td>
+                                    <td><a href={`/room/${room.roomId}`}>Join</a></td>
+                                </tr>
+                            ))
+                        ) : (
+                            <tr>
+                                <td colSpan="5">No public rooms available.</td>
+                            </tr>
+                        )}
+                    </tbody>
+                </table>
+            </div>
+
+            <div>
+                <h2>Join Room by Code</h2>
+
+                <div>
+                    <input
+                        type="text"
+                        value={roomId}
+                        onChange={(e) => setRoomId(e.target.value)}
+                        placeholder="Enter Room ID"
+                    />
+                    
+                    <button onClick={() => joinRoom(roomId)}>Join</button>
+                </div>
+            </div>
+
         </div>
-        <div className="space-y-4">
-            <div>
-                <h2 className="text-lg font-semibold mb-2">Create New Room</h2>
-                <button
-                onClick={createRoom}
-                className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-                >
-                Create Room
-                </button>
-            </div>
-
-            <div>
-                <h2 className="text-lg font-semibold mb-2">Join Existing Room</h2>
-                <div className="flex gap-2">
-                <input
-                    type="text"
-                    value={roomId}
-                    onChange={(e) => setRoomId(e.target.value)}
-                    placeholder="Enter Room ID"
-                    className="border p-2 rounded flex-1"
-                />
-                <button
-                    onClick={() => joinRoom(roomId)}
-                    className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
-                >
-                    Join
-                </button>
-                </div>
-            </div>
-
-            <div>
-                <h2 className="text-lg font-semibold mb-2">Available Rooms</h2>
-                <div className="space-y-2">
-                {availableRooms.map((room) => (
-                    <div key={room.roomId} className="border p-2 rounded flex justify-between items-center">
-                    <div>
-                        <p className="font-medium">Room: {room.roomId}</p>
-                        <p className="text-sm text-gray-600">Clients: {room.clients}</p>
-                    </div>
-                    <button
-                        onClick={() => joinRoom(room.roomId)}
-                        className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded text-sm"
-                    >
-                        Join
-                    </button>
-                    </div>
-                ))}
-                </div>
-            </div>
-            </div>
         
 
         {loading && <p>Loading...</p>}
@@ -224,14 +194,14 @@ function ViewOrgById() {
                 </tr>
                 </thead>
                 <tbody>
-                {members.map((member, index) => (
-                    <tr key={index}>
-                    <td><a href={`/user/${member.id}`}>{member.name}</a></td>
-                    <td>{member.email}</td>
-                    <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
-                    <td>0</td> {/* Assuming balance is 0 for now */}
-                    </tr>
-                ))}
+                    {members.map((member, index) => (
+                        <tr key={index}>
+                            <td><a href={`/user/${member.id}`}>{member.name}</a></td>
+                            <td>{member.email}</td>
+                            <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
+                            <td>0</td> {/* TODO: Add Balance leaderboard */}
+                        </tr>
+                    ))}
                 </tbody>
             </table>
             </div>
