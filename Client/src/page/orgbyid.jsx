@@ -17,6 +17,18 @@ function ViewOrgById() {
     const { orgId } = useParams();
 
     useEffect(() => {
+        const colyseusClient = new Client('ws://localhost:2567');
+
+        setClient(colyseusClient);
+
+        // Get initial room listing
+        fetchAvailableRooms(colyseusClient);
+
+        // Refresh room list periodically
+        const interval = setInterval(() => {
+            fetchAvailableRooms(colyseusClient);
+        }, 5000);
+        
         const fetchOrgData = async () => {
         try {
             const currentUser = auth.currentUser;
@@ -54,8 +66,39 @@ function ViewOrgById() {
     const navigate = useNavigate();
 
     const createRoom = async () => {
-        const room = await client.create("card_room"); // Replace "your_room_name" with your room type
-        navigate(`/room/${room.id}`);
+        // Make a POST request that creates a room and returns its ID.
+        // TODO: Move this all to a separate file and function so that this can be done easily across all of our pages.
+        const postData = {
+            roomType: "card_room",
+            maxPlayers: 8
+        };
+
+        try {
+            const response = await fetch('http://localhost:2567/create-room', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(postData)
+            });
+
+            const jsonResponse = await response.json();
+
+            console.log(response.ok);
+            console.log(jsonResponse.roomId);
+            if (response.ok && jsonResponse.roomId) {
+                console.log("Room created successfully! Redirecting...");
+                navigate(`/room/${jsonResponse.roomId}`);
+            }
+            else {
+                console.error("Error creating room or invalid response:", jsonResponse);
+            }
+        } catch (error) {
+            console.error('Error making POST request:', error);
+        }
+
+        // const room = await client.create("card_room"); // Replace "your_room_name" with your room type
+        // navigate(`/room/${room.id}`);
     };
 
     const joinRoom = () => {
@@ -74,21 +117,6 @@ function ViewOrgById() {
         setError('Failed to fetch rooms');
         }
     };
-
-        useEffect(() => {
-        const colyseusClient = new Client('ws://localhost:2567');
-        setClient(colyseusClient);
-    
-        // Get initial room listing
-        fetchAvailableRooms(colyseusClient);
-    
-        // Refresh room list periodically
-        const interval = setInterval(() => {
-            fetchAvailableRooms(colyseusClient);
-        }, 5000);
-        }, []);
-
-
 
     return (
         <main>
