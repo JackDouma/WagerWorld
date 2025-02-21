@@ -1,0 +1,26 @@
+name: WagerWorld NodeJS Continuous Deployment For VPS
+
+on:
+  push:
+    branches:
+    - prod
+
+jobs:
+  # A test job should probably be added here to ensure we don't break prod. For now it will be skipped.
+
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/prod' # Ensures the job only runs when prod is updated. Be sure to remove this if you want the job to run on other branches.
+    steps:
+      - name: DigitalOcean Droplet Deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.HOST }} # Points to the VPS
+          username: ${{ secrets.CDUSERNAME }} # The username to use for SSHing onto the VPS
+          key: ${{ secrets.SSHKEY }} # SSH Private Key for webserve user
+          script: |
+            cd ~/WagerWorld/Server
+            git pull
+            npm prune
+            npm install
+            pm2 restart all
