@@ -17,6 +17,18 @@ function ViewOrgById() {
     const { orgId } = useParams();
 
     useEffect(() => {
+        const colyseusClient = new Client('ws://localhost:2567');
+
+        setClient(colyseusClient);
+
+        // Get initial room listing
+        fetchAvailableRooms(colyseusClient);
+
+        // Refresh room list periodically
+        const interval = setInterval(() => {
+            fetchAvailableRooms(colyseusClient);
+        }, 5000);
+        
         const fetchOrgData = async () => {
         try {
             const currentUser = auth.currentUser;
