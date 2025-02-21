@@ -16,6 +16,7 @@ jobs:
         uses: appleboy/ssh-action@master
         with:
           host: ${{ secrets.HOST }} # Points to the VPS
+          username: ${{ secrets.CDUSERNAME }} # The username to use for SSHing onto the VPS
           key: ${{ secrets.SSHKEY }} # SSH Private Key for webserve user
           script: |
             cd ~/WagerWorld/Server
