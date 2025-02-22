@@ -25,4 +25,9 @@ jobs:
             git pull
             npm prune
             npm install
+            cd ~/WagerWorld/Client
+            npm prune
+            npm install
+            npm run build
+            sudo ~/deploy_webserve.sh # Spooky!
             pm2 restart all
