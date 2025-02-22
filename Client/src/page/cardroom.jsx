@@ -5,7 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 const CardRoom = () => {
   const { roomId } = useParams();
   const navigate = useNavigate();
-  const [client] = useState(new Client(`ws://${import.meta.env.VITE_COLYSEUS_HOST}:${import.meta.env.VITE_COLYSEUS_PORT}`));
+  const [client] = useState(new Client(`${import.meta.env.VITE_COLYSEUS_URL}`));
   const [currentRoom, setCurrentRoom] = useState(null);
   const [error, setError] = useState('');
   const [cards, setCards] = useState([]);

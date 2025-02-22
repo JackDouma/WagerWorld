@@ -17,7 +17,7 @@ function ViewOrgById() {
     const { orgId } = useParams();
 
     useEffect(() => {
-        const colyseusClient = new Client(`ws://${import.meta.env.VITE_COLYSEUS_HOST}:${import.meta.env.VITE_COLYSEUS_PORT}`);
+        const colyseusClient = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
 
         setClient(colyseusClient);
 
@@ -74,7 +74,7 @@ function ViewOrgById() {
         };
 
         try {
-            const response = await fetch(`http://${import.meta.env.VITE_COLYSEUS_HOST}:${import.meta.env.VITE_COLYSEUS_PORT}/create-room`, {
+            const response = await fetch(`${import.meta.env.VITE_COLYSEUS_HTTP_URL}/create-room`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'

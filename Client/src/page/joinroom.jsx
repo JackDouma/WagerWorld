@@ -9,7 +9,7 @@ const RoomConnection = () => {
   const [error, setError] = useState('');
 
   useEffect(() => {
-    const colyseusClient = new Client(`ws://${import.meta.env.VITE_COLYSEUS_HOST}:${import.meta.env.VITE_COLYSEUS_PORT}`);
+    const colyseusClient = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
     setClient(colyseusClient);
 
     // Get initial room listing
