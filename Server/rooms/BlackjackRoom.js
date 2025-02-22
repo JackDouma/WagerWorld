@@ -43,7 +43,7 @@ class BlackjackRoom extends Room {
         if (player) {
           player.bet = message.value
           player.isReady = true;
-          this.checkGameStart();
+          this.checkGameStart(client.sessionId);
         }
     })
 
@@ -54,8 +54,9 @@ class BlackjackRoom extends Room {
         const card = this.state.deck.pop();
         if (card) {
           player.hand.push(card);
+          player.handValue = this.calculateHandValue(player.hand)
         }
-        this.broadcast("hitResult", { sessionId: client.sessionId, hand: player.hand, result: this.calculateHandValue(player.hand), index: message.index })
+        this.broadcast("hitResult", { sessionId: client.sessionId, hand: player.hand, index: message.index })
       }
     })
 
@@ -63,7 +64,7 @@ class BlackjackRoom extends Room {
       console.log(client.sessionId + " busts")
       const player = this.state.players.get(client.sessionId);
       if (player) {
-        this.nextTurn()
+        this.nextTurn(true)
       }
     })
 
@@ -71,7 +72,7 @@ class BlackjackRoom extends Room {
       console.log(client.sessionId + " stands")
       const player = this.state.players.get(client.sessionId);
       if (player) {
-        this.nextTurn()
+        this.nextTurn(false)
       }
     })
 
@@ -176,7 +177,7 @@ class BlackjackRoom extends Room {
     this.state.deck = new ArraySchema(...deckArray);
   }
 
-  checkGameStart() {
+  checkGameStart(sessionId) {
     const allReady = Array.from(this.state.players.values()).every(
       (player) => player.isReady
     );
@@ -185,10 +186,14 @@ class BlackjackRoom extends Room {
       console.log(`Player ${player.name} is ready: ${player.isReady}`);
     }
     console.log(`All players ready: ${allReady}`);
-    // if (allReady && this.state.players.size >= 2) {
+    if (allReady) {
       console.log("Starting game...");
       this.startGame();
-    // }
+    }
+    else {
+      console.log("waiting...")
+      this.broadcast("waitForOthers", { user: sessionId })
+    }
   }
 
   startGame() {
@@ -214,6 +219,7 @@ class BlackjackRoom extends Room {
         if (card) {
           player.hand.push(card);
           player.handValue = this.calculateHandValue(player.hand)
+          console.log(player.handValue)
         }
       }
 
@@ -252,7 +258,8 @@ class BlackjackRoom extends Room {
     return value || 0
   }
 
-  nextTurn() {
+  nextTurn(playerBusts) {
+    const prevTurn = this.state.currentTurn
     const playerIds = Array.from(this.state.players.keys());
     const currentIndex = playerIds.indexOf(this.state.currentTurn);
     if (currentIndex === playerIds.length - 1)
@@ -260,9 +267,9 @@ class BlackjackRoom extends Room {
     else
       this.state.currentTurn = playerIds[currentIndex + 1];
 
-    this.broadcast("standResult", { nextPlayer: this.state.currentTurn });
-    if (this.state.currentTurn == "dealer")
-      this.dealerTurn()
+    console.log(this.state.currentTurn)
+
+    this.broadcast("nextTurn", { nextPlayer: this.state.currentTurn, busted: playerBusts, prevPlayer: prevTurn, score: this.state.players.get(prevTurn).handValue });
   }
 
   dealerTurn() {
@@ -293,7 +300,9 @@ class BlackjackRoom extends Room {
     const results = {}
     const payouts = {}
 
+
     this.state.players.keys().forEach((item) => {
+      console.log(item + " started with " + this.state.players.get(item).totalCredits + " and bet " + this.state.players.get(item).bet)
       const playerValue = this.calculateHandValue(this.state.players.get(item).hand)
       if (playerValue > 21) {
         results[item] = 3
@@ -326,7 +335,8 @@ class BlackjackRoom extends Room {
     console.log(
       `Player joined: ${player.name}. Current player count: ${this.state.players.size}`
     );
-    this.broadcast("playerJoin", { sessionId: client.sessionId, size: this.state.players.size, totalCredits: player.totalCredits });
+    console.log(this.state.players)
+    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players });
   }
 
   onLeave(client) {
@@ -341,7 +351,7 @@ class BlackjackRoom extends Room {
 
     console.log(`Player left. Remaining players: ${this.state.players.size}`);
 
-    this.broadcast("playerLeft", { sessionId: client.sessionId, size: this.state.players.size });
+    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players });
 
     // End the game if there aren't enough players
     if (this.state.players.size < 2 && this.state.gamePhase === "playing") {
