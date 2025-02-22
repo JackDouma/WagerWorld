@@ -42,6 +42,7 @@ class BlackjackRoom extends Room {
         const player = this.state.players.get(client.sessionId);
         if (player) {
           player.bet = message.value
+          player.totalCredits -= player.bet
           player.isReady = true;
           this.checkGameStart(client.sessionId);
         }
@@ -76,6 +77,22 @@ class BlackjackRoom extends Room {
       }
     })
 
+    this.onMessage("currentTurnDisconnect", (client, message) => {
+      console.log("DC: " + this.state.currentTurn)
+      const playerIds = Array.from(this.state.players.keys());
+      const currentIndex = playerIds.indexOf(this.state.currentTurn);
+      console.log("DC INDEX: " + currentIndex)
+      if (currentIndex === playerIds.length - 1)
+        this.state.currentTurn = "dealer"
+      else
+        this.state.currentTurn = message.nextPlayer
+
+      console.log(this.state.currentTurn)
+
+      this.broadcast("handleDisconnection", { nextPlayer: this.state.currentTurn });
+
+    })
+
     this.onMessage("dealerTurn", (client, message) => {
       if (this.state.gamePhase == "playing")
         this.dealerTurn()
@@ -85,59 +102,11 @@ class BlackjackRoom extends Room {
       this.state.gamePhase = "done";
     })
 
-    // Handle "playCard" message
-    this.onMessage("playCard", (client, message) => {
-      if (this.state.currentTurn !== client.sessionId) return;
-
-      const player = this.state.players.get(client.sessionId);
-      if (!player) return;
-
-      const cardIndex = player.hand.findIndex(
-        (card) => card.id === message.cardId
-      );
-      if (cardIndex === -1) {
-        console.log("Invalid card ID:", message.cardId);
-        return;
-      }
-
-      // Move card from hand to discard pile
-      const [card] = player.hand.splice(cardIndex, 1);
-      card.faceUp = true;
-      this.state.discardPile.push(card);
-
-      this.nextTurn();
-      this.broadcastGameStateUpdate();
-    });
-
-    // Handle "drawCard" message
-    this.onMessage("drawCard", (client, message) => {
-      console.log("drawCard", client.sessionId);
-      if (this.state.currentTurn !== client.sessionId) return;
-
-      const player = this.state.players.get(client.sessionId);
-      if (!player) return;
-
-      if (this.state.deck.length === 0) {
-        console.log("Deck is empty!");
-        // Optionally reshuffle discard pile into deck
-        if (this.state.discardPile.length > 0) {
-          this.reshuffleDeck();
-        } else {
-          console.log("No cards left to draw.");
-          return;
-        }
-      }
-
-      const card = this.state.deck.pop();
-      player.hand.push(card);
-
-      this.broadcastGameStateUpdate();
-    });
-
-    // Debugging tool
-    this.onMessage("debug", (client, message) => {
-      console.log("Current Room State:", this.state.toJSON());
-    });
+    this.onMessage("resetGame", (client) => {
+      console.log("resetting...")
+      this.state.owner = ''
+      this.broadcast("resetGame", {client: client.sessionId})
+    })
   }
 
   initializeDeck() {
@@ -302,22 +271,20 @@ class BlackjackRoom extends Room {
 
 
     this.state.players.keys().forEach((item) => {
-      console.log(item + " started with " + this.state.players.get(item).totalCredits + " and bet " + this.state.players.get(item).bet)
+      console.log(item + " started with " + (this.state.players.get(item).totalCredits + this.state.players.get(item).bet) + " and bet " + this.state.players.get(item).bet)
       const playerValue = this.calculateHandValue(this.state.players.get(item).hand)
-      if (playerValue > 21) {
+      if (playerValue > 21)
         results[item] = 3
-        this.state.players.get(item).totalCredits -= this.state.players.get(item).bet
-      }
       else if (dealerValue > 21 || playerValue > dealerValue){
         results[item] = 0
+        this.state.players.get(item).totalCredits += (this.state.players.get(item).bet * 2)
+      }
+      else if (playerValue < dealerValue)
+        results[item] = 1
+      else if (playerValue == dealerValue) {
+        results[item] = 2
         this.state.players.get(item).totalCredits += this.state.players.get(item).bet
       }
-      else if (playerValue < dealerValue) {
-        results[item] = 1
-        this.state.players.get(item).totalCredits -= this.state.players.get(item).bet
-      }
-      else if (playerValue == dealerValue)
-        results[item] = 2
       this.state.players.get(item).bet = 0
       payouts[item] = this.state.players.get(item).totalCredits
     })
@@ -327,38 +294,44 @@ class BlackjackRoom extends Room {
 
   onJoin(client, options) {
     if(this.state.players.has(client.sessionId)) return
+    if(this.state.gamePhase == "playing") return
     const player = new BlackjackPlayer();
     player.name = options.name || `Player ${client.sessionId}`;
-    player.totalCredits = 10_000
+    player.totalCredits = 10_000 // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NUMBER
     this.state.players.set(client.sessionId, player);
+    if (this.state.owner == '') {
+      this.state.owner = client.sessionId; // set the first player to join as the owner
+    }
 
-    console.log(
-      `Player joined: ${player.name}. Current player count: ${this.state.players.size}`
-    );
-    console.log(this.state.players)
+    console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Room owner is ${this.state.owner}`);
+    // console.log(this.state.players)
     this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players });
   }
 
   onLeave(client) {
     const player = this.state.players.get(client.sessionId);
+    const keys = Array.from(this.state.players.keys())
+    let nextKey = "dealer"
+    let currentIndex
     if (player) {
       // Return player's cards to the deck
       for (const card of player.hand) {
         this.state.deck.push(card);
       }
+      currentIndex = keys.indexOf(client.sessionId);
+
+      if (currentIndex !== -1 && currentIndex < keys.length - 1) {
+          nextKey = keys[currentIndex + 1]; // Set next player if available
+      }
       this.state.players.delete(client.sessionId);
     }
 
-    console.log(`Player left. Remaining players: ${this.state.players.size}`);
+    if (!this.state.players.has(this.state.owner))
+      this.state.owner = this.state.players.keys().next().value
 
-    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players });
+    console.log(`Player left. Remaining players: ${this.state.players.size}. Room owner is ${this.state.owner}`);
 
-    // End the game if there aren't enough players
-    if (this.state.players.size < 2 && this.state.gamePhase === "playing") {
-      console.log("Not enough players to continue. Ending game...");
-      this.state.gamePhase = "ended";
-      this.broadcast("gameEnded", { reason: "Not enough players" });
-    }
+    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
   }
 
   reshuffleDeck() {
