@@ -269,7 +269,9 @@ class BlackjackRoom extends Room {
     const results = {}
     const payouts = {}
 
-
+    console.log("Is players a Map?", this.state.players instanceof Map);
+    console.log("Players type:", typeof this.state.players);
+    console.log("Players content:", this.state.players);
     this.state.players.keys().forEach((item) => {
       console.log(item + " started with " + (this.state.players.get(item).totalCredits + this.state.players.get(item).bet) + " and bet " + this.state.players.get(item).bet)
       const playerValue = this.calculateHandValue(this.state.players.get(item).hand)
