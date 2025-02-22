@@ -29,7 +29,7 @@ class BlackjackScene extends Phaser.Scene {
     this.totalCredits
     this.currentBetText
     this.placeBetsButton
-    this.client = new Client("ws://localhost:2567")
+    this.client = new Client(`ws://${import.meta.env.VITE_COLYSEUS_HOST}:${import.meta.env.VITE_COLYSEUS_PORT}`)
     this.room = Room
   }
 
