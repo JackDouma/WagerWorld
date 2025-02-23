@@ -21,24 +21,15 @@ class BlackjackRoom extends Room {
     }, 30000);
 
     // Add logging to track player count
-    console.log(
-      `Room created. Current player count: ${this.state.players.size}`
-    );
+    console.log(`Room created. Current player count: ${this.state.players.size}`);
+    this.state.gamePhase = 'waiting'
 
     // Initialize deck
     this.initializeDeck();
 
-    // Handle "ready" message
-    this.onMessage("ready", (client, message) => {
-      const player = this.state.players.get(client.sessionId);
-      if (player) {
-        player.isReady = true;
-        this.checkGameStart();
-      }
-    });
-
+    // when a bet is made take the clients money and put them in ready state
     this.onMessage("bet", (client, message) => {
-        console.log("betting " + message.value)
+        console.log(client.sessionId + " is betting " + message.value)
         const player = this.state.players.get(client.sessionId);
         if (player) {
           player.bet = message.value
@@ -48,6 +39,7 @@ class BlackjackRoom extends Room {
         }
     })
 
+    // when a hit is made, draw a card and broadcast the results back to the client
     this.onMessage("hit", (client, message) => {
       console.log(client.sessionId + " is hitting")
       const player = this.state.players.get(client.sessionId);
@@ -61,6 +53,7 @@ class BlackjackRoom extends Room {
       }
     })
 
+    // if a player busts, pass to the next player
     this.onMessage("playerBusts", (client, message) => {
       console.log(client.sessionId + " busts")
       const player = this.state.players.get(client.sessionId);
@@ -69,6 +62,7 @@ class BlackjackRoom extends Room {
       }
     })
 
+    // if a player stands, pass to the next player
     this.onMessage("stand", (client, message) => {
       console.log(client.sessionId + " stands")
       const player = this.state.players.get(client.sessionId);
@@ -77,64 +71,51 @@ class BlackjackRoom extends Room {
       }
     })
 
+    // if a disconnection happens during that player's turn, make the next player in line go
     this.onMessage("currentTurnDisconnect", (client, message) => {
-      console.log("DC: " + this.state.currentTurn)
-      const playerIds = Array.from(this.state.players.keys());
-      const currentIndex = playerIds.indexOf(this.state.currentTurn);
-      console.log("DC INDEX: " + currentIndex)
-      if (currentIndex === playerIds.length - 1)
-        this.state.currentTurn = "dealer"
-      else
-        this.state.currentTurn = message.nextPlayer
-
-      console.log(this.state.currentTurn)
-
-      this.broadcast("handleDisconnection", { nextPlayer: this.state.currentTurn });
-
+      // boolean check for when multiple clients send a message. makes sure it only runs once per disconnect
+      if (!this.state.disconnectCheck) {
+        this.state.disconnectCheck = true
+        const playerIds = Array.from(this.state.players.keys());
+        const currentIndex = playerIds.indexOf(this.state.currentTurn);
+        if (currentIndex === playerIds.length - 1)
+          this.state.currentTurn = "dealer"
+        else
+          this.state.currentTurn = message.nextPlayer
+        this.broadcast("handleDisconnection", { nextPlayer: this.state.currentTurn });
+      }
     })
 
+    // once the disconnection has been fully handled, open up any additional disconnection messages coming in
+    this.onMessage("disconnectionHandled", (client) => {
+      this.state.disconnectCheck = false
+    })
+
+    // once its the dealer's turn, make him draw cards
     this.onMessage("dealerTurn", (client, message) => {
       if (this.state.gamePhase == "playing")
         this.dealerTurn()
     })
 
-    this.onMessage("endGame", (client, message) => {
-      this.state.gamePhase = "done";
-    })
-
+    // once the game is reset, reset the owner as well
     this.onMessage("resetGame", (client) => {
-      console.log("resetting...")
+      console.log("Resetting Game...")
       this.state.owner = ''
       this.broadcast("resetGame", {client: client.sessionId})
     })
   }
 
+  // creatig and shuffling the deck
   initializeDeck() {
-    const suits = ["hearts", "diamonds", "clubs", "spades"];
-    const ranks = [
-      "2",
-      "3",
-      "4",
-      "5",
-      "6",
-      "7",
-      "8",
-      "9",
-      "10",
-      "jack",
-      "queen",
-      "king",
-      "ace",
-    ];
+    const suits = [ "hearts", "diamonds", "clubs", "spades" ];
+    const ranks = [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace", ];
 
     let id = 0;
     const deckArray = [];
 
-    for (const suit of suits) {
-      for (const rank of ranks) {
+    for (const suit of suits)
+      for (const rank of ranks)
         deckArray.push(new Card(suit, rank, `${id++}`));
-      }
-    }
 
     // Shuffle using a regular array first
     for (let i = deckArray.length - 1; i > 0; i--) {
@@ -146,25 +127,28 @@ class BlackjackRoom extends Room {
     this.state.deck = new ArraySchema(...deckArray);
   }
 
+  // make sure each player is ready and has a bet in before starting
   checkGameStart(sessionId) {
-    const allReady = Array.from(this.state.players.values()).every(
-      (player) => player.isReady
-    );
+    // boolean expression to see if each player is ready
+    const allReady = Array.from(this.state.players.values()).every((player) => player.isReady);
     // check which players are ready
     for (const player of this.state.players.values()) {
       console.log(`Player ${player.name} is ready: ${player.isReady}`);
     }
     console.log(`All players ready: ${allReady}`);
+    // if all are ready, signal to the clients to start the game
     if (allReady) {
       console.log("Starting game...");
       this.startGame();
     }
+    // otherwise, signal the client that readied up to wait for everyone else
     else {
       console.log("waiting...")
       this.broadcast("waitForOthers", { user: sessionId })
     }
   }
 
+  // starting the game by deling out the cards
   startGame() {
     this.state.gamePhase = "dealing";
 
@@ -172,6 +156,7 @@ class BlackjackRoom extends Room {
 
     // Deal initial cards with a slight delay
     const dealCards = async () => {
+      // each player's first card
       for (const playerId of playerIds) {
         const player = this.state.players.get(playerId);
         const card = this.state.deck.pop();
@@ -180,18 +165,20 @@ class BlackjackRoom extends Room {
         }
       }
 
+      // dealer's first card
       this.state.dealer.hand.push(this.state.deck.pop());
 
+      // each player's second card
       for (const playerId of playerIds) {
         const player = this.state.players.get(playerId);
         const card = this.state.deck.pop();
         if (card) {
           player.hand.push(card);
           player.handValue = this.calculateHandValue(player.hand)
-          console.log(player.handValue)
         }
       }
 
+      // dealer's second card
       this.state.dealer.hand.push(this.state.deck.pop());
 
       // Start the first turn after dealing
@@ -227,51 +214,45 @@ class BlackjackRoom extends Room {
     return value || 0
   }
 
+  // allowing the next client in line to go. pass in true if the player busted and lost, false for the if the player stands
   nextTurn(playerBusts) {
     const prevTurn = this.state.currentTurn
     const playerIds = Array.from(this.state.players.keys());
     const currentIndex = playerIds.indexOf(this.state.currentTurn);
+    // if the calculated index is the last one, make the dealer go
     if (currentIndex === playerIds.length - 1)
       this.state.currentTurn = "dealer"
+    // otherwise, proceed as normal
     else
       this.state.currentTurn = playerIds[currentIndex + 1];
-
-    console.log(this.state.currentTurn)
-
+    // broadcast to the clients that the next person can go
     this.broadcast("nextTurn", { nextPlayer: this.state.currentTurn, busted: playerBusts, prevPlayer: prevTurn, score: this.state.players.get(prevTurn).handValue });
   }
 
+  // handling the dealer's turn
   dealerTurn() {
     let dealerValue = this.calculateHandValue(this.state.dealer.hand)
-    const allPlayersLower = [...this.state.players.values()].every(player =>
-      this.calculateHandValue(player.hand) < dealerValue
-    );
+    // if for some reason all the player's decided to stand on a smaller value than the dealer, then skip the loop
+    const allPlayersLower = [...this.state.players.values()].every(player => this.calculateHandValue(player.hand) < dealerValue);
     if (!allPlayersLower) {
+      // make the dealer draw cards until they get above a 17
       while (dealerValue < 17) {
         console.log("Dealer hits")
 
-        if (this.state.deck.length === 0) {
-          console.log("Deck is empty! Dealer cannot draw more cards.");
-          break;
-        }
-
         const card = this.state.deck.pop();
-        if (!card) {
-          console.log("Error: Drew an undefined card. Stopping dealer turn.");
-          break;
+        if (card) {
+          this.state.dealer.hand.push(card);
+          dealerValue = this.calculateHandValue(this.state.dealer.hand)
+          console.log("Dealer is at " + dealerValue)
         }
-        this.state.dealer.hand.push(card);
-        dealerValue = this.calculateHandValue(this.state.dealer.hand)
-        console.log(dealerValue)
       }
     }
 
+    // initializing results
     const results = {}
     const payouts = {}
 
-    console.log("Is players a Map?", this.state.players instanceof Map);
-    console.log("Players type:", typeof this.state.players);
-    console.log("Players content:", this.state.players);
+    // for each player, get their winnings and number results, where 0 = win, 1 = dealer wins, 2 = push, 3 = player busts
     this.state.players.keys().forEach((item) => {
       console.log(item + " started with " + (this.state.players.get(item).totalCredits + this.state.players.get(item).bet) + " and bet " + this.state.players.get(item).bet)
       const playerValue = this.calculateHandValue(this.state.players.get(item).hand)
@@ -291,71 +272,78 @@ class BlackjackRoom extends Room {
       payouts[item] = this.state.players.get(item).totalCredits
     })
 
+    // set game phase to 'done', and broadcast the results back to the clients
+    this.state.gamePhase = "done"
     this.broadcast("dealerResult", { dealerHand: this.state.dealer.hand, playerResults: results, winnings: payouts })
   }
 
+  // handles when a player joins
   onJoin(client, options) {
-    if(this.state.players.has(client.sessionId)) return
-    if(this.state.gamePhase == "playing") return
+    // ignore if a duplicate ID shows up, otherwise create a new player
+    if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new BlackjackPlayer();
+    // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
     player.name = options.name || `Player ${client.sessionId}`;
-    player.totalCredits = 10_000 // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NUMBER
-    this.state.players.set(client.sessionId, player);
-    if (this.state.owner == '') {
-      this.state.owner = client.sessionId; // set the first player to join as the owner
+    player.totalCredits = options.balance || 10_000
+
+    // if the game is currently in progress, put them in the waiting room
+    if(this.state.gamePhase == "playing")
+      this.state.waitingRoom.set(client.sessionId, player);
+    // otherwise add like normal, and if they're the room creator, make them the owner
+    else {
+      this.state.players.set(client.sessionId, player);
+      if (this.state.owner == '') {
+        this.state.owner = client.sessionId; // set the first player to join as the owner
+      }
     }
 
-    console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Room owner is ${this.state.owner}`);
-    // console.log(this.state.players)
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players });
+    // log and broadcast that a new player has joined
+    console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
+    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
 
+  // handles when a player leaves
   onLeave(client) {
     const player = this.state.players.get(client.sessionId);
     const keys = Array.from(this.state.players.keys())
+    // initialize nextKey and dealer (important)
     let nextKey = "dealer"
     let currentIndex
+    // if the player was found in the active players
     if (player) {
-      // Return player's cards to the deck
+      // return player's cards to the deck
       for (const card of player.hand) {
-        this.state.deck.push(card);
+        this.state.deck.push(card)
       }
-      currentIndex = keys.indexOf(client.sessionId);
-
+      // get the index of the client that left, if its not the last player at the table, set teh nextKey to be the next guy, otherwise it will stay as the dealer
+      currentIndex = keys.indexOf(client.sessionId)
       if (currentIndex !== -1 && currentIndex < keys.length - 1) {
-          nextKey = keys[currentIndex + 1]; // Set next player if available
+          nextKey = keys[currentIndex + 1]
       }
+      // remove player
       this.state.players.delete(client.sessionId);
     }
-
+    // if not found, check the watiting room and remove from there
+    else {
+      const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
+      if(waitingPlayer)
+        this.state.waitingRoom.delete(client.sessionId)
+    }
+    // if the room owner was the once that left, then make the next guy in line the owner
     if (!this.state.players.has(this.state.owner))
       this.state.owner = this.state.players.keys().next().value
 
-    console.log(`Player left. Remaining players: ${this.state.players.size}. Room owner is ${this.state.owner}`);
+    console.log(`Player left. Remaining players: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
 
-    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
-  }
-
-  reshuffleDeck() {
-    console.log("Reshuffling discard pile into deck...");
-    const shuffledDiscardPile = [...this.state.discardPile];
-    this.state.discardPile.clear();
-
-    // Shuffle the discard pile
-    for (let i = shuffledDiscardPile.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffledDiscardPile[i], shuffledDiscardPile[j]] = [
-        shuffledDiscardPile[j],
-        shuffledDiscardPile[i],
-      ];
+    // if there is nobody left in the room, then destroy it
+    if(this.state.players.size == 0) {
+      console.log("No players left, destroying room")
+      this.broadcast("roomDestroyed")
+      this.disconnect()
     }
-
-    // Add shuffled cards back to the deck
-    this.state.deck.push(...shuffledDiscardPile);
-  }
-
-  broadcastGameStateUpdate() {
-    this.broadcast("stateUpdate", this.state.toJSON());
+    // otherwise tell the clients that someone left
+    else
+      this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
   }
 }
 

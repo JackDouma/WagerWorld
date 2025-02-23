@@ -44,20 +44,24 @@ class BlackjackState extends Schema {
     constructor() {
         super();
         this.players = new MapSchema();
+        this.waitingRoom = new MapSchema();
         this.dealer = new BlackjackPlayer();
         this.deck = new ArraySchema();
         this.currentTurn = '';
         this.gamePhase = 'waiting';
         this.owner = '';
+        this.disconnectCheck = false;
     }
 }
 schema.defineTypes(BlackjackState, {
     players: { map: BlackjackPlayer },
+    waitingRoom: { map: BlackjackPlayer },
     dealer: BlackjackPlayer,
     deck: [ Card ],
     currentTurn: "string",
     gamePhase: "string",
-    owner: "string"
+    owner: "string",
+    disconnectCheck: "boolean"
 });
 
 module.exports = { Card, BlackjackPlayer, BlackjackState };
