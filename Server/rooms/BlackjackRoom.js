@@ -294,10 +294,15 @@ class BlackjackRoom extends Room {
 
   onJoin(client, options) {
     if(this.state.players.has(client.sessionId)) return
-    if(this.state.gamePhase == "playing") return
     const player = new BlackjackPlayer();
     player.name = options.name || `Player ${client.sessionId}`;
     player.totalCredits = 10_000 // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NUMBER
+
+    if(this.state.gamePhase == "playing") {
+      this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits });
+      return
+    }
+    
     this.state.players.set(client.sessionId, player);
     if (this.state.owner == '') {
       this.state.owner = client.sessionId; // set the first player to join as the owner
@@ -331,7 +336,13 @@ class BlackjackRoom extends Room {
 
     console.log(`Player left. Remaining players: ${this.state.players.size}. Room owner is ${this.state.owner}`);
 
-    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
+    if(this.state.players.size == 0) {
+      console.log("No players left, destroying room")
+      this.broadcast("roomDestroyed")
+      this.disconnect()
+    }
+    else
+      this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
   }
 
   reshuffleDeck() {

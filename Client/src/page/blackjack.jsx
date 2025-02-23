@@ -20,7 +20,7 @@ class BlackjackScene extends Phaser.Scene {
     this.currentTurn
     // object used for later (cuz its gotta be played, then flipped over later instead of right away)
     this.dealersSecond
-    this.playerCredits = 10_000
+    this.playerCredits
     this.currentBet = 0
     this.possibleBets = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000]
     this.possibleBetButtons = []
@@ -73,10 +73,6 @@ class BlackjackScene extends Phaser.Scene {
 
     this.room.onMessage('playerJoin', (message) => {
       console.log(`Player ${message.sessionId} joined the room`);
-      if (message.sessionId === this.room.sessionId) {
-        this.playerCredits = message.totalCredits
-        this.totalCredits.setText(`Credits: ${this.playerCredits}`)
-      }
       if(this.room.state.gamePhase == "waiting") {
         this.amountOfPlayers = Object.keys(message.players).length
         if (this.playerIndex === undefined) this.playerIndex = this.amountOfPlayers - 1
@@ -89,7 +85,12 @@ class BlackjackScene extends Phaser.Scene {
         this.editPlayerSlots()
       }
       else if (this.room.state.gamePhase == "playing") {
-
+        if (this.playerCredits === undefined)
+          this.resultsText.setText("Waiting for Game to Finish...").setVisible(true)
+      }
+      if (message.sessionId === this.room.sessionId) {
+        this.playerCredits = message.totalCredits
+        this.totalCredits.setText(`Credits: ${this.playerCredits}`)
       }
     })
 
@@ -123,8 +124,6 @@ class BlackjackScene extends Phaser.Scene {
     })
 
     this.room.onMessage("waitForOthers", (message) => {
-      // console.log(message.user)
-      // console.log(this.room.sessionId)
       if(message.user == this.room.sessionId) {
         this.resultsText.setVisible(true)
         this.removeBetButtons()
@@ -135,10 +134,6 @@ class BlackjackScene extends Phaser.Scene {
       const player = message.index
       this.playerHands.set(message.sessionId, message.hand)
       const hand = this.playerHands.get(message.sessionId)
-      // console.log("step 1: " + this.allPhysicalPositions[player].x)
-      // console.log("step 2: " + (this.doesRotate(player) == 1 ? this.playerCardCounts[player] * (this.scale.width / 50) : 0))
-      // console.log("step 3: " + (this.doesRotate(player) == 0 ? (this.scale.width / 20) : (this.doesRotate(player) == 2 ? -(this.scale.width / 20) : 0)))
-      // console.log("possible issue: " + this.playerCardCounts[player])
       this.animateCard(this.allPhysicalPositions[player].x + (this.doesRotate(player) == 1 ? (hand.length - 1) * (this.scale.width / 50) : 0) - (this.doesRotate(player) == 0 ? (this.scale.width / 20) : (this.doesRotate(player) == 2 ? -(this.scale.width / 20) : 0)), 
           this.allPhysicalPositions[player].y + (this.doesRotate(player) != 1 ? (hand.length - 1) * (this.scale.height / 30) : 0) - (this.doesRotate(player) == 1 ? (this.scale.width / 18) : 0), 
           `${hand[hand.length - 1].rank}_of_${hand[hand.length - 1].suit}.png`, 0, this.doesRotate(player), player != this.playerIndex)
@@ -184,6 +179,10 @@ class BlackjackScene extends Phaser.Scene {
     this.room.onMessage("resetGame", (message) => {
       if (this.room.sessionId != message.client)
         this.resetGame()
+    })
+
+    this.room.onMessage("roomDestroyed", (message) => {
+      this.resetGame()
     })
 
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
@@ -250,8 +249,6 @@ class BlackjackScene extends Phaser.Scene {
       for(var i = 0; i < this.amountOfPlayers; i++)
         this.allPhysicalPositions[i].setPosition(this.allPositionCoordinates[i + 2][0], this.allPositionCoordinates[i + 2][1])
     else {
-      console.log("hello?")
-      console.log(this.amountOfPlayers)
       for(var i = 0; i < this.amountOfPlayers; i++)
         this.allPhysicalPositions[i].setPosition(this.allPositionCoordinates[i + 3][0], this.allPositionCoordinates[i + 3][1])
     }  
@@ -316,8 +313,6 @@ class BlackjackScene extends Phaser.Scene {
   dealInitialCards() {
     this.room.state.players.keys().forEach((item) => this.playerHands.set(item, this.room.state.players.get(item).hand))
     this.dealerHand = this.room.state.dealer.hand
-    console.log(this.playerHands)
-    console.log(this.room.state.dealer)
   }
 
   removeBetButtons(){
@@ -327,11 +322,12 @@ class BlackjackScene extends Phaser.Scene {
   }
 
   startGame(){
+    this.removeBetButtons()
+    if(!this.room.state.players.has(this.room.sessionId)) return
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
 
     // removing the betting buttons
-    this.removeBetButtons()
     this.resultsText.setVisible(false)
 
     this.dealInitialCards()
