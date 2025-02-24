@@ -68,6 +68,7 @@ function App() {
                 <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
                 <Route path="/blackjack" element={<BlackJack />} />
                 <Route path="/poker" element={<Poker />} />
+                <Route path="/roulette" element={<Roulette />} />
                 <Route path="/room/:roomId" element={<RoomPage />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/signin" element={<Signin />} />
