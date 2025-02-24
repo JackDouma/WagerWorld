@@ -22,6 +22,7 @@ import RoomPage from './page/roomPage.jsx';
 import BlackJack from './page/blackjack.jsx';
 import HorseRacingGame from './page/horseRacing.jsx';
 import Poker from './page/poker.jsx';
+import Roulette from './page/roulette.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
 import "./styles.css";
 
@@ -69,6 +70,7 @@ function App() {
                 <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
                 <Route path="/blackjack" element={<BlackJack />} />
                 <Route path="/poker" element={<Poker />} />
+                <Route path="/roulette" element={<Roulette />} />
                 <Route path="/horseracing" element={<HorseRacingGame />} />
                 <Route path="/room/:roomId" element={<RoomPage />} />
                 <Route path="/signup" element={<Signup />} />
