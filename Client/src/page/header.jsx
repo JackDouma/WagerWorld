@@ -62,7 +62,7 @@ function Header()
       <nav>
         <ul>
           <li><a href="/index">Home</a></li>
-          <li><a href="/blackjack">Blackjack</a></li>
+          {/* <li><a href="/blackjack">Blackjack</a></li> */}
           <li><a href="/poker">Poker</a></li>
           <li><a href="/horseracing">Horse Racing</a></li>
           {!user ? (
