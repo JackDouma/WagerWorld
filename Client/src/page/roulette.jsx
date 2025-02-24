@@ -19,38 +19,38 @@ var gameOptions = {
 }
  
 // once the window loads...
-window.onload = function() {
+// window.onload = function() {
  
-    // game configuration object
-    var gameConfig = {
+//     // game configuration object
+//     var gameConfig = {
  
-        // render type
-       type: Phaser.CANVAS,
+//         // render type
+//        type: Phaser.CANVAS,
  
-       // game width, in pixels
-       width: 800,
+//        // game width, in pixels
+//        width: 800,
  
-       // game height, in pixels
-       height: 600,
+//        // game height, in pixels
+//        height: 600,
  
-       // specify canvas
-       canvas: gameCanvas,
+//        // specify canvas
+//        canvas: gameCanvas,
 
-       // game background color
-       backgroundColor: 0x1C7022,
+//        // game background color
+//        backgroundColor: 0x1C7022,
  
-       // scenes used by the game
-       scene: [RouletteScene]
-    };
+//        // scenes used by the game
+//        scene: [RouletteScene]
+//     };
  
-    // game constructor
-    game = new Phaser.Game(gameConfig);
+//     // game constructor
+//     game = new Phaser.Game(gameConfig);
  
-    // pure javascript to give focus to the page/frame and scale the game
-    window.focus()
-    resize();
-    window.addEventListener("resize", resize, false);
-}
+//     // pure javascript to give focus to the page/frame and scale the game
+//     window.focus()
+//     resize();
+//     window.addEventListener("resize", resize, false);
+// }
  
 // Phaser scene
 class RouletteScene extends Phaser.Scene{
@@ -307,21 +307,21 @@ class RouletteScene extends Phaser.Scene{
 
 // ********************************************************* //
 // Irrelevant with 'config' in putting it in a react component ?
-function resize() {
-    var canvas = document.querySelector("canvas");
-    var windowWidth = window.innerWidth;
-    var windowHeight = window.innerHeight;
-    var windowRatio = windowWidth / windowHeight;
-    var gameRatio = game.config.width / game.config.height;
-    if(windowRatio < gameRatio){
-        canvas.style.width = windowWidth + "px";
-        canvas.style.height = (windowWidth / gameRatio) + "px";
-    }
-    else{
-        canvas.style.width = (windowHeight * gameRatio) + "px";
-        canvas.style.height = windowHeight + "px";
-    }
-}
+// function resize() {
+//     var canvas = document.querySelector("canvas");
+//     var windowWidth = window.innerWidth;
+//     var windowHeight = window.innerHeight;
+//     var windowRatio = windowWidth / windowHeight;
+//     var gameRatio = game.config.width / game.config.height;
+//     if(windowRatio < gameRatio){
+//         canvas.style.width = windowWidth + "px";
+//         canvas.style.height = (windowWidth / gameRatio) + "px";
+//     }
+//     else{
+//         canvas.style.width = (windowHeight * gameRatio) + "px";
+//         canvas.style.height = windowHeight + "px";
+//     }
+// }
 // ********************************************************* //
 
 // putting it all in a React component
