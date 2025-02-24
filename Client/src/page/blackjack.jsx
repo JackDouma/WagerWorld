@@ -49,7 +49,6 @@ class BlackjackScene extends Phaser.Scene {
 
   // method to create the scene
   async create() {
-
     console.log("Joining room...");
 
     // joining room
@@ -99,10 +98,15 @@ class BlackjackScene extends Phaser.Scene {
       this.amountOfPlayers = Object.keys(message.players).length
       this.players = message.players
       if(this.room.state.gamePhase != "playing" && this.room.state.gamePhase != "dealing") {
+        console.log(this.playerIndex, message.index)
+        if (this.playerIndex >= message.index) {
+          console.log("yay")
+          this.playerIndex--
+        }
         this.getPlayerNames()
         this.editPlayerSlots()
       }
-      // if teh game is in progress, update the name of the player slot with Disconnected
+      // if the game is in progress, update the name of the player slot with Disconnected
       if(this.room.state.gamePhase == "playing")
         this.allPhysicalPositions[message.index].setText("Disconnected");
       // if it was the disconnected players turn, handle that on the server
