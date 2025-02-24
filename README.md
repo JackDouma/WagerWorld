@@ -1,5 +1,5 @@
 <h1>WagerWorld</h1>
-<p>Live Site <a href="https://wagerworld.site" target="_blank">here</a></p>
+<p>Live Site available at https://wagerworld.site</p>
 
 <h2>Hardware</h2>
 <ul>
