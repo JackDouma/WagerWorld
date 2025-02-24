@@ -295,7 +295,7 @@ class RouletteScene extends Phaser.Scene{
     payout(wheelResult) {
         var bet
         var totalPayout = 0
-        bet = this.straightUp[wheelResult[0]]
+        bet = this.straightUp[wheelResult[0] - 1] // -1 to translate to index value
         if (bet > 0) {
             totalPayout += bet*35
         }
