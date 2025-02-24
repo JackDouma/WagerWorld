@@ -21,6 +21,7 @@ import ViewUserById from './page/userbyid.jsx';
 import RoomPage from './page/roomPage.jsx';
 import BlackJack from './page/blackjack.jsx';
 import Poker from './page/poker.jsx';
+import Roulette from './page/roulette.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
 import "./styles.css";
 
