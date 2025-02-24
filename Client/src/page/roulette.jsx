@@ -62,10 +62,10 @@ class RouletteScene extends Phaser.Scene{
     preload(){
         // images
         // roulette wheel @ https://www.vexels.com/png-svg/preview/151205/roulette-wheel-icon
-        this.load.image("wheel", "/assets/roulette-wheel-og.png");
-        this.load.image("wheel-bg", "/assets/roulette-wheel-bg.png");
-        this.load.image("betTable", "/assets/betTable.jpg")
-        this.load.image("chip", "/assets/chip.png")
+        this.load.image("wheel", "/roulette/roulette-wheel.png");
+        this.load.image("wheel-bg", "/roulette/roulette-wheel-bg.png");
+        this.load.image("betTable", "/roulette/betTable.jpg")
+        this.load.image("chip", "/roulette/chip.png")
     }
  
     create(){
