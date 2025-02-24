@@ -17,14 +17,7 @@ function ViewUserById()
     const [loading, setLoading] = useState(true);
     const [editMode, setEditMode] = useState(false);
     const [isAccountOwner, setIsAccountOwner] = useState(false);
-
-    // fetch game history (fake numbers for now)
-    // TODO add backend for this
-    const gameHistory = [
-        { id: 1, game: "Blackjack", result: "Win", bet: 200, date: "2024-02-15" },
-        { id: 2, game: "Poker", result: "Loss", bet: 100, date: "2024-02-14" },
-        { id: 3, game: "Roulette", result: "Win", bet: 300, date: "2024-02-13" }
-    ];
+    const [gameHistory, setGameHistory] = useState([]);
 
     useEffect(() => {
         // check if user is the account owner
@@ -47,6 +40,7 @@ function ViewUserById()
                     setUserName(userData.name || "");
                     setUserEmail(userData.email || "");
                     setUserOrg(userData.org || "");
+                    setGameHistory(userData.gameHistory || []);
                 } 
                 // user not found
                 else 
@@ -156,11 +150,11 @@ function ViewUserById()
             </tr>
             </thead>
             <tbody>
-            {gameHistory.map((game) => (
-                <tr key={game.id}>
-                <td>{game.game}</td>
-                <td>{game.result}</td>
-                <td>{game.date}</td>
+            {gameHistory.map((game, index) => (
+                <tr key={index}>
+                    <td>{game.gameName}</td>
+                    <td>{game.result}</td>
+                    <td>{game.date.toDate().toLocaleString()}</td>
                 </tr>
             ))}
             </tbody>

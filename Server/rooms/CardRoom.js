@@ -21,11 +21,14 @@ class CardRoom extends Room {
         // Initialize deck
         this.initializeDeck();
 
-        // Handle "ready" message
-        this.onMessage("ready", (client, message) => {
+        // on ready
+        this.onMessage("ready", (client) => {
             const player = this.state.players.get(client.sessionId);
-            if (player) {
+
+            if (player) 
+            {
                 player.isReady = true;
+                this.broadcast("playerReady", this.state.players);
                 this.checkGameStart();
             }
         });
@@ -106,18 +109,17 @@ class CardRoom extends Room {
         this.state.deck = new ArraySchema(...deckArray);
     }
 
-    checkGameStart() {
+    checkGameStart()
+    {
         const allReady = Array.from(this.state.players.values()).every(player => player.isReady);
-        // check which players are ready
-        for (const player of this.state.players.values()) {
-            console.log(`Player ${player.name} is ready: ${player.isReady}`);
-        }
-        console.log(`All players ready: ${allReady}`);
-        if (allReady && this.state.players.size >= 2) {
+        
+        if (allReady && this.state.players.size >= 2) 
+        {
             console.log("Starting game...");
-            this.startGame();
+            this.state.gamePhase = "blackjack";
         }
     }
+    
 
     startGame() {
         this.state.gamePhase = 'dealing';
