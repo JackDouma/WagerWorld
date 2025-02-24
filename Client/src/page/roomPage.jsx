@@ -1,127 +1,65 @@
-import React, { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { Client } from 'colyseus.js';
+import React, { useEffect, useState } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Client } from "colyseus.js";
 
-const client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`); // Replace with your Colyseus server URL
+const client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
 
 function RoomPage() {
-  const { roomId } = useParams();
-  const navigate = useNavigate();
-  const [room, setRoom] = useState(null);
-  const [playerHand, setPlayerHand] = useState([]);
-  const [currentTurn, setCurrentTurn] = useState(null);
-  const [gamePhase, setGamePhase] = useState('waiting');
-  const [discardPile, setDiscardPile] = useState([]);
+    const { roomId } = useParams();
+    const navigate = useNavigate();
+    const [room, setRoom] = useState(null);
+    const [gamePhase, setGamePhase] = useState("waiting");
 
-  useEffect(() => {
-    const joinRoom = async () => {
-      try {
-        const joinedRoom = await client.joinById(roomId);
-        setRoom(joinedRoom);
+    useEffect(() => {
+        const joinRoom = async () => {
+          try {
+              const joinedRoom = await client.joinById(roomId);
+              setRoom(joinedRoom);
 
-        // Listen for state changes
-        joinedRoom.onStateChange((state) => {
-          console.log("State changed:", state);
-          const player = state.players[joinedRoom.sessionId];
-          console.log(player)
-          if (player) {
-            setPlayerHand(player.hand || []);
-          }
-          setCurrentTurn(state.currentTurn);
-          setGamePhase(state.gamePhase);
-          setDiscardPile(state.discardPile || []);
-        });
+              // listener
+              joinedRoom.onStateChange((state) => {
+                  console.log("State changed:", state);
+                  setGamePhase(state.gamePhase);
 
-        // Listen for custom events
-        joinedRoom.onMessage("stateUpdate", (message) => {
-          console.log("Received state update:", message);
-        });
+                  // on game start
+                  console.log("Updated gamePhase:", gamePhase);
+                  if (state.gamePhase === "blackjack") {
+                    console.log("Navigating to Blackjack");
+                    navigate("/blackjack");
+                  }
+              });
 
-        joinedRoom.onMessage("gameEnded", (message) => {
-          console.log("Game ended:", message.reason);
-          alert(`Game ended: ${message.reason}`);
-          navigate('/');
-        });
+              joinedRoom.onLeave(() => navigate("/"));
+            } 
+            catch (error) 
+            {
+                console.error("Error joining room:", error);
+                navigate("/");
+            }
+        };
 
-        // Handle disconnection
-        joinedRoom.onLeave((code) => {
-          console.log("Left room with code:", code);
-          navigate('/');
-        });
-      } catch (error) {
-        console.error("Error joining room:", error);
-        navigate('/');
-      }
-    };
-
-    joinRoom();
-  }, [roomId, navigate]);
-
-  const drawCard = () => {
-    if (room && gamePhase === 'playing' && room.sessionId === currentTurn) {
-      room.send("drawCard");
-    } else {
-      alert("It's not your turn or the game hasn't started yet.");
-    }
-  };
-
-  const playCard = (cardId) => {
-    if (room && gamePhase === 'playing' && room.sessionId === currentTurn) {
-      room.send("playCard", { cardId });
-    } else {
-      alert("It's not your turn or the game hasn't started yet.");
-    }
-  };
+        joinRoom();
+    }, [roomId, navigate]);
 
     const ready = () => {
-    if (room && gamePhase === 'waiting') {
-      room.send("ready");
-    } else {
-      alert("It's not your turn or the game hasn't started yet.");
+        if (room && gamePhase === "waiting") 
+        {
+           room.send("ready");
         }
     };
 
-  return (
-    <div>
-      <h1>Room ID: {roomId}</h1>
-      <p>Game Phase: {gamePhase}</p>
-      <p>Current Turn: {currentTurn}</p>
-      {gamePhase === 'waiting' && (
-      <>
-        <p>Waiting for players...</p>
-        <button onClick={ready}>Ready</button>
-      </>
-    )}
-      <div>
-        <h2>Your Hand:</h2>
-        <ul>
-          {playerHand.map((card) => (
-            <li key={card.id}>
-              {card.rank} of {card.suit}{' '}
-              <button onClick={() => playCard(card.id)} disabled={gamePhase !== 'playing' || room.sessionId !== currentTurn}>
-                Play
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h2>Discard Pile:</h2>
-        <ul>
-          {discardPile.map((card) => (
-            <li key={card.id}>
-              {card.faceUp ? `${card.rank} of ${card.suit}` : 'Face Down'}
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <button onClick={drawCard} disabled={gamePhase !== 'playing' || room.sessionId !== currentTurn}>
-        Draw Card
-      </button>
-    </div>
-  );
+    return (
+        <div>
+            <h1>Room ID: {roomId}</h1>
+            <p>Game Phase: {gamePhase}</p>
+            {gamePhase === "waiting" && (
+                <>
+                    <p>Waiting for players...</p>
+                    <button onClick={ready}>Ready</button>
+                </>
+            )}
+        </div>
+    );
 }
 
 export default RoomPage;
