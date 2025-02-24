@@ -98,11 +98,8 @@ class BlackjackScene extends Phaser.Scene {
       this.amountOfPlayers = Object.keys(message.players).length
       this.players = message.players
       if(this.room.state.gamePhase != "playing" && this.room.state.gamePhase != "dealing") {
-        console.log(this.playerIndex, message.index)
-        if (this.playerIndex >= message.index) {
-          console.log("yay")
+        if (this.playerIndex >= message.index)
           this.playerIndex--
-        }
         this.getPlayerNames()
         this.editPlayerSlots()
       }
