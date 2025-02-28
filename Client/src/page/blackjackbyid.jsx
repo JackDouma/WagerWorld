@@ -35,7 +35,7 @@ class BlackjackScene extends Phaser.Scene {
 
   // loading all the image assets
   preload() {
-    this.load.image('bg', 'table.jpg')
+    this.load.image('bg', '/table.jpg')
     this.load.image('card', '/card-back.png')
 
     const values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"]
