@@ -55,7 +55,7 @@ class BlackjackScene extends Phaser.Scene {
 
     // joining room
     try {
-      this.room = await this.client.joinOrCreate("blackjack", this.roomId);
+      this.room = await this.client.joinOrCreate("blackjack" + this.roomId);
       console.log("Joined successfully!");
     } catch (e) {
       console.error(e);
