@@ -4,7 +4,7 @@ import { Client, Room } from 'colyseus.js';
 import { useParams } from "react-router-dom";
 
 class BlackjackScene extends Phaser.Scene {
-
+  
   // constructor to initialize all the scene variables
   constructor() {
     super({ key: 'BlackjackScene' })
@@ -49,12 +49,13 @@ class BlackjackScene extends Phaser.Scene {
   }
 
   // method to create the scene
-  async create() {
+  async create(data) {
     console.log("Joining room...");
+    this.roomId = data.roomId;
 
     // joining room
     try {
-      this.room = await this.client.joinOrCreate("blackjack");
+      this.room = await this.client.joinOrCreate("blackjack", this.roomId);
       console.log("Joined successfully!");
     } catch (e) {
       console.error(e);
@@ -640,6 +641,7 @@ const BlackjackGame = () => {
         const game = new Phaser.Game(config)
         gameRef.current = game
         setGameInstance(game)
+        game.scene.start("BlackjackScene", { roomId });
 
         return () => {
         game.destroy(true)

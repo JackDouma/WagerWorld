@@ -66,13 +66,20 @@ function ViewOrgById() {
     const navigate = useNavigate();
 
     const createRoom = async () => {
-        // Make a POST request that creates a room and returns its ID.
-        // TODO: Move this all to a separate file and function so that this can be done easily across all of our pages.
+        const currentUser = auth.currentUser;
+
+        if (!currentUser) 
+        {
+            console.error("User is not authenticated");
+            return;
+        }
+    
         const postData = {
             roomType: "card_room",
-            maxPlayers: 8
+            maxPlayers: 8,
+            creatorId: currentUser.uid,
         };
-
+    
         try {
             const response = await fetch(`${import.meta.env.VITE_COLYSEUS_HTTP_URL}/create-room`, {
                 method: 'POST',
@@ -81,42 +88,52 @@ function ViewOrgById() {
                 },
                 body: JSON.stringify(postData)
             });
-
+    
             const jsonResponse = await response.json();
-
-            console.log(response.ok);
-            console.log(jsonResponse.roomId);
-            if (response.ok && jsonResponse.roomId) {
-                console.log("Room created successfully! Redirecting...");
+    
+            if (response.ok && jsonResponse.roomId) 
+            {
                 navigate(`/room/${jsonResponse.roomId}`);
+            } 
+            else 
+            {
+                console.error("ERROR: ", jsonResponse);
             }
-            else {
-                console.error("Error creating room or invalid response:", jsonResponse);
-            }
-        } catch (error) {
-            console.error('Error making POST request:', error);
+        } 
+        catch (error) 
+        {
+            console.error('ERROR: ', error);
         }
-
-        // const room = await client.create("card_room"); // Replace "your_room_name" with your room type
-        // navigate(`/room/${room.id}`);
     };
+    
 
     const joinRoom = () => {
-        if (roomId) {
-        navigate(`/room/${roomId}`);
-        } else {
-        alert("Please enter a valid room ID.");
+        if (roomId) 
+        {
+            navigate(`/room/${roomId}`);
+        } 
+        else 
+        {
+            alert("Please enter a valid room ID.");
         }
     };
 
     const fetchAvailableRooms = async (client) => {
         try {
-        const rooms = await client.getAvailableRooms('card_room');
-        setAvailableRooms(rooms);
-        } catch (e) {
-        setError('Failed to fetch rooms');
+            const rooms = await client.getAvailableRooms('card_room');
+            
+            // room must be from same org
+            const memberIds = members.map(member => member.id);
+            const filteredRooms = rooms.filter(room => memberIds.includes(room.metadata?.creatorId));
+    
+            setAvailableRooms(filteredRooms);
+        } 
+        catch (e) 
+        {
+            setError('ERROR: failed to fetch rooms');
         }
     };
+    
 
     return (
         <main>

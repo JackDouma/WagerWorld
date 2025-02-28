@@ -12,27 +12,18 @@ function RoomPage() {
 
     useEffect(() => {
         const joinRoom = async () => {
-          try {
-              const joinedRoom = await client.joinById(roomId);
-              setRoom(joinedRoom);
+            try {
+                const joinedRoom = await client.joinById(roomId);
+                setRoom(joinedRoom);
 
-              // listener
-              joinedRoom.onStateChange((state) => {
-                  console.log("State changed:", state);
-                  setGamePhase(state.gamePhase);
+                // listener
+                joinedRoom.onStateChange((state) => {
+                    console.log("State changed:", state);
+                    setGamePhase(state.gamePhase);
+                });
 
-                  // on game start
-                  console.log("Updated gamePhase:", gamePhase);
-                  if (state.gamePhase === "blackjack") {
-                    console.log("Navigating to Blackjack");
-                    navigate("/blackjack");
-                  }
-              });
-
-              joinedRoom.onLeave(() => navigate("/"));
-            } 
-            catch (error) 
-            {
+                joinedRoom.onLeave(() => navigate("/"));
+            } catch (error) {
                 console.error("Error joining room:", error);
                 navigate("/");
             }
@@ -41,23 +32,23 @@ function RoomPage() {
         joinRoom();
     }, [roomId, navigate]);
 
-    const ready = () => {
-        if (room && gamePhase === "waiting") 
-        {
-           room.send("ready");
-        }
-    };
+    const games = [
+        { name: "Blackjack", path: `/blackjack/${roomId}` },
+        { name: "Poker", path: `/poker/${roomId}` },
+        { name: "Horse Racing", path: `/horseracing/${roomId}` }
+    ];
 
     return (
         <div>
             <h1>Room ID: {roomId}</h1>
-            <p>Game Phase: {gamePhase}</p>
-            {gamePhase === "waiting" && (
-                <>
-                    <p>Waiting for players...</p>
-                    <button onClick={ready}>Ready</button>
-                </>
-            )}
+            <h2>Select a Game:</h2>
+            <div className="games">
+                {games.map((game, index) => (
+                    <button key={index} onClick={() => navigate(game.path)}>
+                        {game.name}
+                    </button>
+                ))}
+            </div>
         </div>
     );
 }
