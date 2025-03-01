@@ -45,6 +45,10 @@ class BlackjackScene extends Phaser.Scene {
         this.load.image(fileName, `/Cards/${fileName}`)
       })
     })
+    this.load.audio("win", "cha-ching.mp3")
+    this.load.audio("card", "card2.mp3")
+    this.load.audio("card2", "card2.mp3")
+
   }
 
   // method to create the scene
@@ -205,6 +209,7 @@ class BlackjackScene extends Phaser.Scene {
 
     // 
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
+    this.add.audio('win', 'cha-ching.mp3')
     this.createUI()
   }
 
@@ -363,7 +368,7 @@ class BlackjackScene extends Phaser.Scene {
     
     // dealing the dealer's first card
     this.animateCard(centerX - (this.scale.width / 20), this.scale.width / 6, `${this.dealerHand[0].rank}_of_${this.dealerHand[0].suit}.png`, 1, 1, false)
-
+    
     // dealing out the second card to each player
     i = 0
     this.playerHands.keys().forEach((key) => {
@@ -552,7 +557,7 @@ class BlackjackScene extends Phaser.Scene {
 
     // dealer draws the rest of cards passed in from dealerHand
     for (var i = 2; i < this.dealerHand.length; i++){
-      this.animateCard(centerX - (this.scale.width / 20) + (i * (this.scale.width / 50)), this.scale.width / 6, `${this.dealerHand[i].rank}_of_${this.dealerHand[i].suit}.png`, 0, 1, false)
+      this.animateCard(centerX - (this.scale.width / 20) + (i * (this.scale.width / 50)), this.scale.width / 6, `${this.dealerHand[i].rank}_of_${this.dealerHand[i].suit}.png`, (i - 2) * 2, 1, false)
       dealerValue = this.calculateHandValue(this.dealerHand)
       this.dealerValueText.setText(dealerValue)
     }
@@ -596,6 +601,8 @@ class BlackjackScene extends Phaser.Scene {
     
     // show results
     this.resultsText.setText(message).setVisible(true)
+    if(message == "You Win!")
+      this.sound.play("win")
 
     // replace the hit and stand buttons with play again and quit
     this.hitButton.destroy()
@@ -604,7 +611,7 @@ class BlackjackScene extends Phaser.Scene {
       .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Play Again', { fontSize: '48px', fill: '#0f0' })
       .setInteractive()
       .on('pointerdown', () => {
-        this.resultsText.setText('Waiting for rooom owner...')
+        this.resultsText.setText('Waiting for room owner...')
         this.playAgainButton.destroy()
         if (this.room.sessionId == this.room.state.owner)
           this.room.send("resetGame")
