@@ -1,0 +1,119 @@
+/* Global Styles */
+body {
+    font-family: Arial, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f4f8; /* Light background for contrast */
+  }
+  
+  /* Main Container */
+  .horse-racing-container {
+    width: 100%;
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 1rem;
+    text-align: center;
+  }
+  
+  /* Controls Section */
+  .controls {
+    margin-bottom: 1.5rem;
+  }
+  
+  .controls button {
+    margin: 0 0.5rem;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.3s;
+  }
+  
+  .controls button:hover {
+    transform: translateY(-2px);
+  }
+  
+  .bet-button {
+    background-color: #007bff;
+    color: white;
+  }
+  
+  .bet-button:disabled {
+    background-color: #cccccc;
+    cursor: not-allowed;
+  }
+  
+  .start-button {
+    background-color: #28a745;
+    color: white;
+  }
+  
+  /* Game Status */
+  .game-status {
+    font-size: 1.25rem;
+    font-weight: bold;
+    margin-bottom: 1.5rem;
+    color: #333;
+  }
+  
+  /* Game Area */
+  .game-area {
+    width: 100%;
+    height: 400px;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: #fff;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  }
+  
+  /* Bets Table */
+  .bets-table {
+    margin-top: 1.5rem;
+  }
+  
+  .bets-table table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  
+  .bets-table th,
+  .bets-table td {
+    padding: 0.75rem;
+    border: 1px solid #ccc;
+    text-align: center;
+  }
+  
+  .bets-table th {
+    background-color: #007bff;
+    color: white;
+    font-weight: bold;
+  }
+  
+  /* Responsive Styles */
+  @media (max-width: 768px) {
+    .controls button {
+      width: 100%;
+      margin-bottom: 0.5rem;
+    }
+  
+    .game-area {
+      height: 300px;
+    }
+  
+    .game-status {
+      font-size: 1rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .horse-racing-container {
+      padding: 0.5rem;
+    }
+  
+    .bets-table th,
+    .bets-table td {
+      font-size: 0.9rem;
+    }
+  }
