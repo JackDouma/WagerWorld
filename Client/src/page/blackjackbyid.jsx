@@ -50,15 +50,18 @@ class BlackjackScene extends Phaser.Scene {
 
   // method to create the scene
   async create(data) {
-    console.log("Joining room...");
     this.roomId = data.roomId;
 
-    // joining room
+    // if room is found
     try {
-      this.room = await this.client.joinOrCreate("blackjack" + this.roomId);
-      console.log("Joined successfully!");
-    } catch (e) {
-      console.error(e);
+      this.room = await this.client.joinById({ customRoomId: this.roomId });
+      console.log("Joining room:", this.roomId);
+    } 
+    // if not room is found
+    catch (err) 
+    {
+      this.room = await this.client.create("blackjack", { customRoomId: this.roomId });
+      console.log("Creating room:", this.roomId);
     }
 
     // method is called every time there is a state change, but is only used for actually starting the game
