@@ -20,8 +20,11 @@ import ViewUser from './page/user.jsx';
 import ViewUserById from './page/userbyid.jsx';
 import RoomPage from './page/roomPage.jsx';
 import BlackJack from './page/blackjack.jsx';
-import HorseRacingGame from './page/horseRacing.jsx';
+import BlackJackById from './page/blackjackbyid.jsx';
+import HorseRacing from './page/horseracing.jsx';
+import HorseRacingById from './page/horseracingbyid.jsx';
 import Poker from './page/poker.jsx';
+import PokerById from './page/pokerbyid.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
 import "./styles.css";
 
@@ -66,10 +69,30 @@ function App() {
                         }
                     />
                 </Route>
+                
+                <Route path="/blackjack">
+                    <Route index element={<BlackJack />} />
+                    <Route 
+                        path=":roomId" 
+                        element={<BlackJackById />}
+                    />
+                </Route>
+                <Route path="/horseracing">
+                    <Route index element={<HorseRacing />} />
+                    <Route 
+                        path=":roomId" 
+                        element={<HorseRacingById />}
+                    />
+                </Route>
+                <Route path="/poker">
+                    <Route index element={<Poker />} />
+                    <Route 
+                        path=":roomId" 
+                        element={<PokerById />}
+                    />
+                </Route>
+
                 <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
-                <Route path="/blackjack" element={<BlackJack />} />
-                <Route path="/poker" element={<Poker />} />
-                <Route path="/horseracing" element={<HorseRacingGame />} />
                 <Route path="/room/:roomId" element={<RoomPage />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/signin" element={<Signin />} />

@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Phaser from 'phaser'
 import { Client, Room } from 'colyseus.js';
+import { useParams } from "react-router-dom";
 
 class BlackjackScene extends Phaser.Scene {
-
+  
   // constructor to initialize all the scene variables
   constructor() {
     super({ key: 'BlackjackScene' })
@@ -34,7 +35,7 @@ class BlackjackScene extends Phaser.Scene {
 
   // loading all the image assets
   preload() {
-    this.load.image('bg', 'table.jpg')
+    this.load.image('bg', '/table.jpg')
     this.load.image('card', '/card-back.png')
 
     const values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"]
@@ -48,15 +49,19 @@ class BlackjackScene extends Phaser.Scene {
   }
 
   // method to create the scene
-  async create() {
-    console.log("Joining room...");
+  async create(data) {
+    this.roomId = data.roomId;
 
-    // joining room
+    // if room is found
     try {
-      this.room = await this.client.joinOrCreate("blackjack");
-      console.log("Joined successfully!");
-    } catch (e) {
-      console.error(e);
+      this.room = await this.client.joinById({ customRoomId: this.roomId });
+      console.log("Joining room:", this.roomId);
+    } 
+    // if not room is found
+    catch (err) 
+    {
+      this.room = await this.client.create("blackjack", { customRoomId: this.roomId });
+      console.log("Creating room:", this.roomId);
     }
 
     // method is called every time there is a state change, but is only used for actually starting the game
@@ -619,32 +624,34 @@ class BlackjackScene extends Phaser.Scene {
 
 // putting it all in a React component
 const BlackjackGame = () => {
-  const gameRef = useRef(null)
-  const [gameInstance, setGameInstance] = useState(null)
+    const { roomId } = useParams();
+    const gameRef = useRef(null)
+    const [gameInstance, setGameInstance] = useState(null)
 
-  useEffect(() => {
-    const config = {
-      type: Phaser.AUTO,
-      width: window.innerWidth - 10,
-      height: window.innerHeight - 10,
-      backgroundColor: '#2d2d2d',
-      parent: 'phaser-game',
-      scene: BlackjackScene,
-      scale: {
-        autoCenter: Phaser.Scale.CENTER_HORIZONTALLY
-      },
-    }
+    useEffect(() => {
+        const config = {
+        type: Phaser.AUTO,
+        width: window.innerWidth - 10,
+        height: window.innerHeight - 10,
+        backgroundColor: '#2d2d2d',
+        parent: 'phaser-game',
+        scene: BlackjackScene,
+        scale: {
+            autoCenter: Phaser.Scale.CENTER_HORIZONTALLY
+        },
+        }
 
-    const game = new Phaser.Game(config)
-    gameRef.current = game
-    setGameInstance(game)
+        const game = new Phaser.Game(config)
+        gameRef.current = game
+        setGameInstance(game)
+        game.scene.start("BlackjackScene", { roomId });
 
-    return () => {
-      game.destroy(true)
-    }
-  }, [])
+        return () => {
+        game.destroy(true)
+        }
+    }, [])
 
-  return <div id="phaser-game"></div>
+    return <div id="phaser-game"></div>
 }
 
 export default BlackjackGame
