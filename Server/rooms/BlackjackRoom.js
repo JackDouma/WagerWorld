@@ -10,7 +10,7 @@ class BlackjackRoom extends Room {
   onCreate(options) {
     this.setState(new BlackjackState());
 
-    this.maxClients = options.maxPlayers || 9;
+    this.maxClients = options.maxPlayers || 8;
 
     // Add timeout that destroys room if no players join (needed for /create-room endpoint)
     this.emptyRoomTimeout = setTimeout(() => {
@@ -21,7 +21,7 @@ class BlackjackRoom extends Room {
     }, 30000);
 
     // Add logging to track player count
-    console.log(`Room created. Current player count: ${this.state.players.size}`);
+    console.log(`Room ${this.roomId} created. Current player count: ${this.state.players.size}`);
     this.state.gamePhase = 'waiting'
 
     // Initialize deck

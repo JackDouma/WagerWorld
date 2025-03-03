@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Phaser from 'phaser'
 import { Client, Room } from 'colyseus.js';
+import * as WebFontLoader from 'webfontloader'
 
 class BlackjackScene extends Phaser.Scene {
 
@@ -34,8 +35,14 @@ class BlackjackScene extends Phaser.Scene {
 
   // loading all the image assets
   preload() {
-    this.load.image('bg', 'table.jpg')
+    this.load.image('bg', '/table.jpg')
     this.load.image('card', '/card-back.png')
+    this.load.image('logo', '/blackjack-logo.png')
+
+    const chipValues = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000]
+    chipValues.forEach(value => {
+      this.load.image(`${value}-chip`, `/Chips/${value}-chip.png`);
+    });
 
     const values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"]
     const suits = ["spades", "clubs", "diamonds", "hearts"]
@@ -48,12 +55,13 @@ class BlackjackScene extends Phaser.Scene {
     this.load.audio("win", "cha-ching.mp3")
     this.load.audio("card", "card2.mp3")
     this.load.audio("card2", "card2.mp3")
-
   }
 
   // method to create the scene
-  async create() {
+  async create(data) {
     console.log("Joining room...");
+    console.log(data.roomId)
+    this.roomId = data.roomId
 
     // joining room
     try {
@@ -209,7 +217,7 @@ class BlackjackScene extends Phaser.Scene {
 
     // 
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
-    this.add.audio('win', 'cha-ching.mp3')
+    this.load.audio('win', 'cha-ching.mp3')
     this.createUI()
   }
 
@@ -228,7 +236,7 @@ class BlackjackScene extends Phaser.Scene {
   addBetButtons(amount, x, y){
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
-    this.possibleBetButtons.push(this.add.text(x, y, amount, { fontSize: '96px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => {
+    this.possibleBetButtons.push(this.add.image(x, y, `${amount}-chip`).setInteractive().on('pointerdown', () => {
       // if the button is pressed while the user has enough credits to bet that amount, then let it slide
       if (this.playerCredits >= amount)
         this.bet(amount)
@@ -242,10 +250,10 @@ class BlackjackScene extends Phaser.Scene {
           text.destroy()
         })
       }
-    }).setOrigin(0.5, 0.5))
+    }).setOrigin(0.5, 0.5).setScale(0.2))
     // adding buttons to remove the displayed bet amount and put it back in the account
     this.possibleRemoveBetButtons.push(this.add
-      .text(x + 10, y + 50, `Remove`, { fontSize: '18px', fill: '#f00' })
+      .text(this.possibleBetButtons[this.possibleBetButtons.length - 1].x, this.possibleBetButtons[this.possibleBetButtons.length - 1].y + 70, `Remove`, { fontSize: '18px', fill: '#f00' })
       .setInteractive()
       .on('pointerdown', () => this.removeBet(amount)).setOrigin(0.5, 0.5)
     )
@@ -290,21 +298,46 @@ class BlackjackScene extends Phaser.Scene {
     // adding the player positions to be offscreen
     for (var i = 0; i < 8; i++)
       this.allPhysicalPositions.push(this.add.text(centerX, -100, `Player ${i + 1}`, { fontFamily: 'Arial', fontSize: '32px', fill: '#fff' }).setOrigin(0.5, 0.5))
-    this.add.text(centerX, this.scale.height / 20, 'Blackjack', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
+    this.add.image(centerX, this.scale.height / 12, 'logo').setOrigin(0.5, 0.5)
 
-    this.totalCredits = this.add.text(centerX + (this.scale.width / 5), this.scale.height / 20, 'Credits: Loading...', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
+    this.totalCredits = this.add.text(centerX + (this.scale.width / 3.5), this.scale.height / 20, 'Credits: Loading...', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
     this.currentBetText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Current Bet: ${this.currentBet}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
     // creating buttons for each possible amount that can be bet
+    const numChips = this.possibleBets.length;
+    const numRows = 2
+    const numCols = Math.ceil(numChips / numRows)
+
+    const chipSpacingX = this.scale.width / (numCols + 1)
+    const chipSpacingY = this.scale.height / 4
+
     this.possibleBets.forEach((item, index) => {
-      this.addBetButtons(item, (centerX - (this.scale.width / 3.5)) + (index < 5 ? index * (this.scale.width / 7) : (index - 5) * (this.scale.width / 5)), (centerY - (this.scale.height / 3)) + (index < 5 ? (this.scale.height / 5) : (this.scale.height / 2.5)))
+        const row = Math.floor(index / numCols)
+        const col = index % numCols
+
+        const x = (this.scale.width / 2) - ((numCols - 1) * chipSpacingX / 2) + (col * chipSpacingX) + (index > 4 ? chipSpacingX / 2 : 0)
+        const y = (this.scale.height / 3) + (row * chipSpacingY)
+
+        this.addBetButtons(item, x, y)
     })
 
     // game starts once all bets are finalized
-    this.placeBetsButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 4.5), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.room.send("bet", { value: this.currentBet }))
+    this.placeBetsButton = this.add.text(centerX, centerY + (this.scale.height / 4), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setOrigin(0.5, 0.5).setInteractive().on('pointerdown', () => this.room.send("bet", { value: this.currentBet }))
 
     // text to show any results of a player (ie. busted, standing, waiting, etc.)
     this.resultsText = this.add.text(centerX, centerY + (this.scale.height / 20), 'Waiting...', { fontSize: '60px', fill: '#fff' }).setOrigin(0.5, 0.5).setVisible(false)
+
+    WebFontLoader.default.load({
+      google: {
+        families: ['Rowdies', 'Congenial Semibold']
+      },
+      active: () => {
+        this.totalCredits.setFontFamily('"Rowdies"')
+        this.currentBetText.setFontFamily('"Rowdies')
+        this.placeBetsButton.setFontFamily('"Rowdies')
+        this.possibleRemoveBetButtons.forEach((item) => {item.setFontFamily('"Rowdies')})
+      }
+    })
   }
 
   // method to see if a certain player's name and cards rotate a certain way
@@ -630,15 +663,19 @@ const BlackjackGame = () => {
   const [gameInstance, setGameInstance] = useState(null)
 
   useEffect(() => {
+    const header = document.getElementById("header")
+    const headerHeight = header ? header.offsetHeight : 0
+
     const config = {
       type: Phaser.AUTO,
-      width: window.innerWidth - 10,
-      height: window.innerHeight - 10,
-      backgroundColor: '#2d2d2d',
-      parent: 'phaser-game',
+      width: window.innerWidth,
+      height: window.innerHeight - headerHeight,
+      backgroundColor: "#2d2d2d",
+      parent: "phaser-game",
       scene: BlackjackScene,
       scale: {
-        autoCenter: Phaser.Scale.CENTER_HORIZONTALLY
+        mode: Phaser.Scale.FIT,
+        autoCenter: Phaser.Scale.CENTER_BOTH,
       },
     }
 
@@ -646,10 +683,26 @@ const BlackjackGame = () => {
     gameRef.current = game
     setGameInstance(game)
 
+    setTimeout(() => {
+      game.scale.resize(window.innerWidth, window.innerHeight - headerHeight)
+    }, 100)
+
     return () => {
       game.destroy(true)
     }
   }, [])
+
+  useEffect(() => {
+    const updateGameSize = () => {
+      const header = document.getElementById("header")
+      const headerHeight = header ? header.offsetHeight : 0
+      if (gameRef.current)
+        gameRef.current.scale.resize(window.innerWidth, window.innerHeight - headerHeight)
+    };
+
+    window.addEventListener("resize", updateGameSize)
+    return () => window.removeEventListener("resize", updateGameSize)
+  }, []);
 
   return <div id="phaser-game"></div>
 }
