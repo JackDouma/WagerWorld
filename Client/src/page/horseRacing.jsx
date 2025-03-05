@@ -146,41 +146,10 @@ const HorseRacingGame = () => {
   };
 
   return (
-    <div className="horse-racing-container">
-      <div className="controls">
-        <button
-          onClick={placeBet}
-          disabled={selectedHorse === null}
-          className="bet-button"
-        >
-          Place Bet on Horse {selectedHorse !== null ? selectedHorse + 1 : ''}
-        </button>
-        <button onClick={startRace} className="start-button">
-          Start Race
-        </button>
-      </div>
-      <div className="game-status">{gameStatus}</div>
-      <div id="game-container" className="game-area" />
-      <div className="bets-table">
-        <table>
-          <thead>
-            <tr>
-              <th>Client ID</th>
-              <th>Horse</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bets.map((bet, index) => (
-              <tr key={index}>
-                <td>{bet.clientId}</td>
-                <td>Horse {bet.horseIndex + 1}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+    <main>
+      <h1>ERROR: Organization Required</h1>
+    </main>
   );
-};
+}
 
-export default HorseRacingGame;
+export default HorseRacing;
