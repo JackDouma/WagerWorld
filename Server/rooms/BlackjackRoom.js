@@ -8,6 +8,7 @@ const { ArraySchema } = require("@colyseus/schema");
 
 class BlackjackRoom extends Room {
   onCreate(options) {
+    this.customRoomId = options.customRoomId;
     this.setState(new BlackjackState());
 
     this.maxClients = options.maxPlayers || 8;
@@ -15,7 +16,7 @@ class BlackjackRoom extends Room {
     // Add timeout that destroys room if no players join (needed for /create-room endpoint)
     this.emptyRoomTimeout = setTimeout(() => {
       if (this.clients.length === 0) {
-        console.log(`Room ${this.roomId} destroyed due to inactivity.`);
+        console.log(`Room ${this.customRoomId} destroyed due to inactivity.`);
         this.disconnect();
       }
     }, 30000);

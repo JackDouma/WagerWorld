@@ -24,8 +24,7 @@ const gameServer = new Server({
 
 // Register your room handlers
 gameServer.define('card_room', CardRoom);
-
-gameServer.define('blackjack', BlackjackRoom);
+gameServer.define('blackjack', BlackjackRoom).enableRealtimeListing();
 gameServer.define('horse_racing', HorseRacingRoom);
 
 // Use JSON body parsing
@@ -36,23 +35,13 @@ app.use(express.static('public'));
 
 // POST endpoint for creating rooms
 app.post("/create-room", async (req, res) => {
-    const { roomType, maxPlayers } = req.body;
-
-    if (!roomType || typeof roomType !== "string") {
-        return res.status(400).json({error: "Room type is required and must be string."});
-    }
-
     try {
-        if (!maxPlayers || typeof maxPlayers !== "number") {
-            const room = await matchMaker.createRoom(roomType, { maxPlayers: maxPlayers });
-            res.json({ roomId: room.roomId });
-        }
-        else {
-            const room = await matchMaker.createRoom(roomType, {});
-            res.json({ roomId: room.roomId });
-        }
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+        const room = await matchMaker.createRoom("blackjack", { maxPlayers:  8 });
+        res.json({ roomId: room.roomId });
+    } 
+    catch (error) 
+    {
+        res.status(400).json({ ERROR: error.message });
     }
 });
 
