@@ -53,8 +53,6 @@ class BlackjackScene extends Phaser.Scene {
       })
     })
     this.load.audio("win", "cha-ching.mp3")
-    this.load.audio("card", "card2.mp3")
-    this.load.audio("card2", "card2.mp3")
   }
 
   // method to create the scene
@@ -131,8 +129,8 @@ class BlackjackScene extends Phaser.Scene {
       this.room.send("disconnectionHandled")
       // show hit and stand buttons to the correct user
       if (this.currentTurn == this.room.sessionId) {
-        this.hitButton.setActive(true).setVisible(true)
-        this.standButton.setActive(true).setVisible(true)
+        this.hitButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
+        this.standButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
       }
       // if the last player diconnected, go straight to the dealer
       if (this.currentTurn == "dealer")
@@ -179,8 +177,8 @@ class BlackjackScene extends Phaser.Scene {
       // set hit and stand buttons inivisible for the one who finished, and visible for the next player
       this.currentTurn = message.nextPlayer
       if (this.currentTurn == this.room.sessionId) {
-        this.hitButton.setActive(true).setVisible(true)
-        this.standButton.setActive(true).setVisible(true)
+        this.hitButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
+        this.standButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
       }
       if (message.prevPlayer == this.room.sessionId) {
         this.hitButton.setActive(false).setVisible(false)
@@ -215,7 +213,7 @@ class BlackjackScene extends Phaser.Scene {
       }
     });
 
-    // 
+    // adding everything else
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
     this.load.audio('win', 'cha-ching.mp3')
     this.createUI()
@@ -245,7 +243,7 @@ class BlackjackScene extends Phaser.Scene {
         const text = this.add.text(centerX, centerY - (this.scale.height / 3), 'Not enough credits', {
           fontSize: '48px',
           fill: 'red',
-        }).setOrigin(0.5, 0.5)
+        }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
         this.time.delayedCall(3000, () => {
           text.destroy()
         })
@@ -329,19 +327,22 @@ class BlackjackScene extends Phaser.Scene {
 
     WebFontLoader.default.load({
       google: {
-        families: ['Rowdies', 'Congenial Semibold']
+        families: ['Rowdies']
       },
       active: () => {
         this.totalCredits.setFontFamily('"Rowdies"')
-        this.currentBetText.setFontFamily('"Rowdies')
-        this.placeBetsButton.setFontFamily('"Rowdies')
+        this.currentBetText.setFontFamily('"Rowdies"')
+        this.resultsText.setFontFamily('"Rowdies"')
+        this.placeBetsButton.setFontFamily('"Rowdies"')
         this.possibleRemoveBetButtons.forEach((item) => {item.setFontFamily('"Rowdies')})
+        this.allPhysicalPositions.forEach((item) => {item.setFontFamily('"Rowdies')})
       }
     })
   }
 
   // method to see if a certain player's name and cards rotate a certain way
   // 0 indicates the player is on the right side of the screen, 1 on the bottom, and 2 on the left
+  // method to make sure all the cards rotate as specified depending on where on the table they need to go
   doesRotate(index){
     if(this.amountOfPlayers >= 7)
       if (index < 2)
@@ -353,14 +354,13 @@ class BlackjackScene extends Phaser.Scene {
     else if (this.amountOfPlayers >= 5)
       if (index < 1)
         return 0
-      else if (index > 4)
-         return 2        
+      else if (index > 6)
+        return 2
       else
         return 1
     else
       return 1
   }
-
   
   // dealing cards to all the players and dealer
   dealInitialCards() {
@@ -491,8 +491,8 @@ class BlackjackScene extends Phaser.Scene {
           this.dealerValueText = this.add.text(card.x - (this.scale.width / 12), card.y, this.currentTurn != "dealer" ? (isNaN(this.dealerHand[0].rank) ? 10 : this.dealerHand[0].rank) : 
             this.calculateHandValue(this.dealerHand), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
           if (this.currentTurn == this.room.sessionId) {
-            this.hitButton.setActive(true).setVisible(true)
-            this.standButton.setActive(true).setVisible(true)
+            this.hitButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
+            this.standButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
           }
         }
       },
