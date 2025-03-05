@@ -1,45 +1,69 @@
-import { useState } from 'react';
-import { signInWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../../firebase';
+import { useState, useEffect } from "react";
+import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+import { auth } from "../../firebase";
+import { useNavigate } from "react-router-dom";
+import { doc, getDoc, getFirestore } from "firebase/firestore";
 
+const db = getFirestore();
 
-function Signin() 
-{
+function Signin() {
   //////////////
   // BACK END //
   //////////////
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const navigate = useNavigate();
+
+  // check if the user is already signed in, and redirect to their org page if so
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        const userDoc = await getDoc(doc(db, "users", user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          const userOrgId = userData.org?.orgId;
+          if (userOrgId) {
+            navigate(`/org/${userOrgId}`);
+          } else {
+            navigate("/index");
+          }
+        }
+      }
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   // on sign in button press
   const signInButton = async () => {
-    setError('');
+    setError("");
 
-    // if not all fields are entered 
-    if (!email || !password) 
-    {
-      setError('ERROR: Field is Empty.');
+    // if not all fields are entered
+    if (!email || !password) {
+      setError("ERROR: Field is Empty.");
       return;
     }
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
       const user = userCredential.user;
 
       // on success bring to home
-      document.location.href="/";
-    } 
-    // handle signin errors
-    catch (err) 
-    {
-      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') 
-      {
-        setError('ERROR: Incorrect email or password.');
-      } 
-      else 
-      {
+      document.location.href = "/";
+    } catch (err) {
+      // handle signin errors
+      if (
+        err.code === "auth/user-not-found" ||
+        err.code === "auth/invalid-credential"
+      ) {
+        setError("ERROR: Incorrect email or password.");
+      } else {
         setError(`ERROR: ${err.message}`);
       }
     }
@@ -71,4 +95,4 @@ function Signin()
   );
 }
 
-export default Signin
+export default Signin;

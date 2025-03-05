@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import Header from './page/header.jsx';
 import Index from './page/index.jsx';
 import NotFound from './page/notfound.jsx'; // Make sure the NotFound component is imported
@@ -28,15 +28,11 @@ import PokerById from './page/pokerbyid.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
 import "./styles.css";
 
-import '@fontsource/roboto/300.css';
-import '@fontsource/roboto/400.css';
-import '@fontsource/roboto/500.css';
-import '@fontsource/roboto/700.css';
-
 function App() {
     return (
         <BrowserRouter>
-            <Header />
+        {/* TODO: this logic for when the header appears will need to be updated as I go */}
+            {location.pathname !== '/' && location.pathname !== '/index' && <Header />}
             <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/index" element={<Index />} />
