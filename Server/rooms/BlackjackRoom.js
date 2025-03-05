@@ -22,7 +22,7 @@ class BlackjackRoom extends Room {
     }, 30000);
 
     // Add logging to track player count
-    console.log(`Room created. Current player count: ${this.state.players.size}`);
+    console.log(`Room ${this.roomId} created. Current player count: ${this.state.players.size}`);
     this.state.gamePhase = 'waiting'
 
     // Initialize deck
