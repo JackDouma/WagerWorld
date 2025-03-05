@@ -2,11 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Client } from "colyseus.js";
 
-<<<<<<< HEAD
-const client = new Client("ws://localhost:2567"); // Replace with your Colyseus server URL
-=======
 const client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
->>>>>>> 7a0ecd3672acbbdee0806160e831d588ea79c157
 
 function RoomPage() {
     const { roomId } = useParams();
