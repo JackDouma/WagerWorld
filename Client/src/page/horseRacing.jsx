@@ -12,7 +12,7 @@ const HorseRacingGame = () => {
 
   // Initialize game and connect to Colyseus room
   useEffect(() => {
-    const client = new Client('ws://localhost:2567');
+    const client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
 
     async function connectToRoom() {
       try {
