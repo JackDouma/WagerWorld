@@ -42,9 +42,19 @@ function AppContent() {
     const location = useLocation();
     useEffect(() => { }, [location]);
 
+    // pages listed here will show the header
+    const showHeader = (pathname) => {
+        return (
+            pathname.startsWith('/org') ||
+            pathname.startsWith('/user') ||
+            pathname === '/404' ||
+            pathname === '/admin'
+        );
+    };
+
     return (
         <>
-            {(location.pathname.startsWith('/org') || location.pathname.startsWith('/user') || location.pathname == ('/404') || location.pathname == ('/admin')) && <Header />}
+            {showHeader(location.pathname) && <Header />}
             <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/index" element={<Index />} />

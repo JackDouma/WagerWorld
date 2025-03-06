@@ -6,8 +6,9 @@ function Index() {
   const theme = useTheme();
 
   return (
-    <main
-      style={{
+    <Box
+      component="main"
+      sx={{
         backgroundColor: theme.palette.primary.main,
         minHeight: "100vh",
       }}
@@ -21,7 +22,7 @@ function Index() {
       >
         <Typography
           variant="general"
-          style={{
+          sx={{
             color: theme.palette.primary.contrastText,
             fontSize: "2rem",
             margin: "0",
@@ -31,7 +32,7 @@ function Index() {
         </Typography>
         <Typography
           variant="heading"
-          style={{
+          sx={{
             color: "#FFFFFF",
             fontSize: "7rem",
             marginTop: "0px",
@@ -59,7 +60,7 @@ function Index() {
           <Typography variant="btn">Play Now ➔</Typography>
         </Button>
       </Box>
-    </main>
+    </Box>
   );
 }
 
