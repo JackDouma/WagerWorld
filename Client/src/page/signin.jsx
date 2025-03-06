@@ -92,19 +92,18 @@ function Signin() {
 
   if (!userSignedIn) {
     return (
-      <box component="main">
-        <Box
-          sx={{
-            backgroundImage: 'url(/auth-pages-background.jpg)',
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            minHeight: "100vh",
-            display: 'flex',
-            justifyContent: 'center',
-            alignItems: 'center',
-          }}
-        >
-          <Box display="flex" flexDirection="column" justifyContent="center" alignItems="center">
+      <Box
+        sx={{
+          backgroundImage: 'url(/auth-pages-background.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          minHeight: "100vh",
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <Box component="main">
             <Typography
               variant="general"
               sx={{
@@ -114,11 +113,11 @@ function Signin() {
                 fontWeight: 600,
               }}
             >
-              Sign In
+              Signin
             </Typography>
 
             <div className="form">
-              <TextField variant="outlined" size="small" margin="dense" type="email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)}
+              <TextField variant="outlined" margin="dense" type="email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)}
                 sx={{
                   width: '400px',
                   '& .MuiInputLabel-root': {
@@ -130,7 +129,7 @@ function Signin() {
                 }}
               />
 
-              <TextField variant="outlined" size="small" margin="dense" type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)}
+              <TextField variant="outlined" margin="dense" type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)}
                 sx={{
                   width: '400px',
                   '& .MuiInputLabel-root': {
@@ -138,7 +137,7 @@ function Signin() {
                   },
                   '& .MuiInputBase-input': {
                     ...theme.typography.general,
-                  }
+                  },
                 }}
               />
 
@@ -151,7 +150,7 @@ function Signin() {
                   "&:hover": { backgroundColor: "#FFC700" },
                   borderRadius: "40px",
                   textTransform: "none",
-                  padding: "3px 32px",
+                  padding: "5px 32px",
                   fontSize: "1.5rem",
                   margin: "10px 0px",
                 }}
@@ -161,9 +160,8 @@ function Signin() {
 
             </div>
             <Typography variant="general" marginTop="10px" color="primary.main">Don't have an account yet? <Link href="/signup" color="primary.main"><strong>Click here to sign up.</strong></Link></Typography>
-          </Box>
         </Box>
-      </box>
+      </Box>
     );
   }
 }
