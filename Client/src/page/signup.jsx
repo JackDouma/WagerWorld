@@ -112,8 +112,8 @@ function Signup()
       setPasswordConfirm('');
       setBirthday('');
 
-      // on success bring to home
-      document.location.href="/";
+      // on success bring to my org page
+      document.location.href="/org/" + userJSON.org.orgId;
     } 
     // handle firebase errors
     catch (err) 

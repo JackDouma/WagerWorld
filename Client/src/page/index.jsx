@@ -56,7 +56,7 @@ function Index() {
             fontSize: "1.5rem",
           }}
         >
-          <Typography variant="btn">Sign In ➔</Typography>
+          <Typography variant="btn">Play Now ➔</Typography>
         </Button>
       </Box>
     </main>
