@@ -36,8 +36,8 @@ function Signup() {
     setError('');
 
     // if not all fields are entered 
-    if (!email || !password || !birthday) {
-      setError('ERROR: Field is Empty.');
+    if (!email || !name || !password || !birthday) {
+      setError('ERROR: All fields are required.');
       return;
     }
 
@@ -47,7 +47,7 @@ function Signup() {
       return;
     }
 
-    // format the birthday to a string
+    // format the birthday to a string to match Firestore setup
     const formattedBirthday = birthday ? birthday.toISOString().split('T')[0] : '';
 
     try {
@@ -122,9 +122,14 @@ function Signup() {
     catch (err) {
       if (err.code === 'auth/email-already-in-use') {
         setError('ERROR: This email is already in use.');
-      }
-      else {
-        setError(`ERROR: ${err.message}`);
+      } else if (err.code === 'auth/invalid-email' || err.code === 'invalid-argument') {
+        setError('ERROR: Invalid email format.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('ERROR: Password should be at least 6 characters.')
+      } else if (err.message === 'Cannot read properties of undefined (reading \'orgId\')') { // temporary else if block for orgRef not being initialized properly bug
+        setError('ERROR: Your organization is not registered with WagerWorld yet.');
+      } else {
+        setError(`ERROR: ${err.message}, CODE: ${err.code}`);
       }
     }
   };
