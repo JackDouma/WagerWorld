@@ -648,12 +648,12 @@ class BlackjackScene extends Phaser.Scene {
         this.playAgainButton.destroy()
         if (this.room.sessionId == this.room.state.owner)
           this.room.send("resetGame")
-      }).setOrigin(0.5, 0.5)
+      }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
 
     this.quitButton = this.add
       .text(centerX + (this.scale.width / 5), centerY + (this.scale.height / 6), 'Quit', { fontSize: '48px', fill: '#f00' })
       .setInteractive()
-      .on('pointerdown', () => window.location.href = '/').setOrigin(0.5, 0.5) 
+      .on('pointerdown', () => window.location.href = '/').setOrigin(0.5, 0.5) .setFontFamily('"Rowdies"')
   }
 }
 
