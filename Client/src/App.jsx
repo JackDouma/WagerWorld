@@ -26,6 +26,7 @@ import HorseRacing from './page/horseracing.jsx';
 import HorseRacingById from './page/horseracingbyid.jsx';
 import Poker from './page/poker.jsx';
 import PokerById from './page/pokerbyid.jsx';
+import OrgRequest from './page/orgrequest.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
 import "./styles.css";
 
@@ -45,7 +46,7 @@ function AppContent() {
     // pages listed here will show the header
     const showHeader = (pathname) => {
         return (
-            pathname.startsWith('/org') ||
+            pathname.startsWith('/org/') ||
             pathname.startsWith('/user') ||
             pathname === '/404' ||
             pathname === '/admin'
@@ -118,6 +119,7 @@ function AppContent() {
                 <Route path="/room/:roomId" element={<RoomPage />} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/signin" element={<Signin />} />
+                <Route path="/orgrequest" element={<OrgRequest />} />
                 <Route path="/createorg" element={<AdminOnlyRoute><CreateOrg /></AdminOnlyRoute>} />
                 <Route path="/editorg">
                     <Route index element={<AdminOnlyRoute><EditOrg /></AdminOnlyRoute>} />
