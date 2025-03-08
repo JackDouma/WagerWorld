@@ -117,7 +117,7 @@ function Signin() {
             sx={{
               color: theme.palette.primary.main,
               fontSize: "5rem",
-              marginBottom: "20px",
+              marginBottom: "10px",
               textDecoration: 'none',
               textShadow: "0px 1px 2px rgba(0, 0, 0, 0.5)",
             }}

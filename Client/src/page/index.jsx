@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Typography, Button, Box } from "@mui/material";
+import { Typography, Button, Box, Link } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 function Index() {
@@ -11,6 +11,7 @@ function Index() {
       sx={{
         backgroundColor: theme.palette.primary.main,
         minHeight: "100vh",
+        position: "relative",
       }}
     >
       <Box
@@ -18,7 +19,7 @@ function Index() {
         flexDirection="column"
         justifyContent="center"
         alignItems="center"
-        minHeight="90vh"
+        minHeight="95vh"
       >
         <Typography
           variant="general"
@@ -59,6 +60,20 @@ function Index() {
         >
           <Typography variant="btn">Play Now ➔</Typography>
         </Button>
+      </Box>
+      <Box
+        component="footer"
+        sx={{
+          backgroundColor: theme.palette.primary.light,
+          color: theme.palette.primary.contrastText,
+          textAlign: "center",
+          padding: "12px",
+          position: "absolute",
+          bottom: 0,
+          width: "100%",
+        }}
+      >
+        <Typography variant="general">Looking to get your organization set up on WagerWorld? <Link href="/orgrequest" color="primary.dark"><strong>Submit an organization creation request.</strong></Link></Typography>
       </Box>
     </Box>
   );
