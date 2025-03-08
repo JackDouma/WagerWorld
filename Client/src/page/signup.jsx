@@ -151,7 +151,21 @@ function Signup() {
           alignItems: 'center',
         }}
       >
-        <Box component="main">
+        <Box component="main" sx={{ marginTop: '-80px' }}>
+
+          <Link
+            href="/"
+            variant="heading"
+            sx={{
+              color: theme.palette.primary.main,
+              fontSize: "5rem",
+              textDecoration: 'none',
+              textShadow: "0px 1px 2px rgba(0, 0, 0, 0.5)",
+            }}
+          >
+            WagerWorld
+          </Link>
+
           <Typography
             variant="general"
             sx={{
@@ -165,7 +179,7 @@ function Signup() {
           </Typography>
 
           <div className="form">
-            <TextField variant="outlined" margin="dense" type="email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)}
+            <TextField variant="outlined" margin="none" type="email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)}
               sx={{
                 width: '400px',
                 '& .MuiInputLabel-root': {
@@ -180,7 +194,7 @@ function Signup() {
               }}
             />
 
-            <TextField variant="outlined" margin="dense" type="text" label="Name" value={name} onChange={(e) => setName(e.target.value)}
+            <TextField variant="outlined" margin="none" type="text" label="Name" value={name} onChange={(e) => setName(e.target.value)}
               sx={{
                 width: '400px',
                 '& .MuiInputLabel-root': {
@@ -195,7 +209,7 @@ function Signup() {
               }}
             />
 
-            <TextField variant="outlined" margin="dense" type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)}
+            <TextField variant="outlined" margin="none" type="password" label="Password" value={password} onChange={(e) => setPassword(e.target.value)}
               sx={{
                 width: '400px',
                 '& .MuiInputLabel-root': {
@@ -210,7 +224,7 @@ function Signup() {
               }}
             />
 
-            <TextField variant="outlined" margin="dense" type="password" label="Confirm Password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)}
+            <TextField variant="outlined" margin="none" type="password" label="Confirm Password" value={passwordConfirm} onChange={(e) => setPasswordConfirm(e.target.value)}
               sx={{
                 width: '400px',
                 '& .MuiInputLabel-root': {
@@ -234,7 +248,6 @@ function Signup() {
                 textField: {
                   sx: {
                     width: '400px',
-                    margin: '8px 0px 4px 0px',
                     '& .MuiInputLabel-root': {
                       ...theme.typography.general,
                       '&.Mui-focused, &.MuiFormLabel-filled': {
@@ -270,7 +283,7 @@ function Signup() {
             </Button>
 
           </div>
-          <Typography variant="general" marginTop="10px" color="primary.main">Already have an account? <Link href="/signin" color="primary.main"><strong>Click here to sign in.</strong></Link></Typography>
+          <Typography variant="general" color="primary.main">Already have an account? <Link href="/signin" color="primary.main"><strong>Click here to sign in.</strong></Link></Typography>
         </Box>
       </Box>
     </LocalizationProvider>

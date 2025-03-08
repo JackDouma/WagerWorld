@@ -109,7 +109,22 @@ function Signin() {
           alignItems: 'center',
         }}
       >
-        <Box component="main">
+        <Box component="main" sx={{ marginTop: '-100px' }}>
+
+          <Link
+            href="/"
+            variant="heading"
+            sx={{
+              color: theme.palette.primary.main,
+              fontSize: "5rem",
+              marginBottom: "20px",
+              textDecoration: 'none',
+              textShadow: "0px 1px 2px rgba(0, 0, 0, 0.5)",
+            }}
+          >
+            WagerWorld
+          </Link>
+
           <Typography
             variant="general"
             sx={{
