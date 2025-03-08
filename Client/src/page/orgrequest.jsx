@@ -1,16 +1,12 @@
-import { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-import { auth } from "../../firebase";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { doc, getDoc, getFirestore } from "firebase/firestore";
-import { Link, Typography, Box, TextField, Button, FormControl, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
+import { Typography, Box, TextField, Button, FormControl, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-// import nodemailer from "nodemailer";
-// TODO: Delete some of these.
-
+import emailjs from '@emailjs/browser';
 
 function OrgRequest() {
     const theme = useTheme();
+    const navigate = useNavigate();
     const [orgName, setOrgName] = useState("");
     const [orgDomain, setOrgDomain] = useState("");
     const [ownerName, setOwnerName] = useState("");
@@ -18,37 +14,60 @@ function OrgRequest() {
     const [ownerPassword, setOwnerPassword] = useState("");
     const [open, setOpen] = useState(false);
     const [alertMessage, setAlertMessage] = useState("");
+    const [dialogTitle, setDialogTitle] = useState("");
+    const [emailjsResponse, setEmailjsResponse] = useState("");
 
-    const handleClickOpen = (message) => {
+    const handleClickOpen = (title, message) => {
+        setDialogTitle(title);
         setAlertMessage(message);
         setOpen(true);
     };
 
     const handleClose = () => {
         setOpen(false);
+        if (emailjsResponse === 200) {
+            navigate("/");
+        }
     };
 
     const submitRequestButton = async () => {
         if (!orgName || !orgDomain || !ownerName || !ownerEmail || !ownerPassword) {
-            handleClickOpen("Please fill out all fields before submitting.");
+            handleClickOpen("ERROR", "Please fill out all fields before submitting.");
             return;
         }
         const domainRegex = /^[^\s@]+\.[^\s@]+$/;
         if (!domainRegex.test(orgDomain)) {
-            handleClickOpen("The domain entered is invalid. Example of valid format: lakeheadu.ca");
+            handleClickOpen("ERROR", "The domain entered is invalid. Example of valid format: lakeheadu.ca");
             return;
         }
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(ownerEmail)) {
-            handleClickOpen("The email entered is invalid.");
+            handleClickOpen("ERROR", "The email entered is invalid.");
             return;
         }
         if (ownerPassword.length < 6) {
-            handleClickOpen("Password must be at least 6 characters long.");
+            handleClickOpen("ERROR", "Password must be at least 6 characters long.");
             return;
         }
 
-        
+        var templateParams = {
+            orgName: orgName,
+            orgDomain: orgDomain,
+            ownerName: ownerName,
+            ownerEmail: ownerEmail,
+            ownerPassword: ownerPassword
+        };
+
+        emailjs.send('service_q2zk9g9', 'template_p2ohttt', templateParams, { publicKey: `${import.meta.env.VITE_EMAILJS_PUBLIC_KEY}` }).then(
+            (response) => {
+                setEmailjsResponse(response.status);
+                handleClickOpen("SUCCESS", "Request submitted successfully! WagerWorld will reach out once your organization has been created.");
+            },
+            (error) => {
+                console.log('Error occurred when sending email: ', error);
+                handleClickOpen("ERROR", "Failed to submit request. Please try again later.");
+            },
+        );
     };
 
     return (
@@ -80,7 +99,7 @@ function OrgRequest() {
             </FormControl>
 
             <Dialog open={open} onClose={handleClose}>
-                <DialogTitle>{"ERROR"}</DialogTitle>
+                <DialogTitle>{dialogTitle}</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
                         {alertMessage}
