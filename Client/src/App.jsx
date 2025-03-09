@@ -43,19 +43,29 @@ function AppContent() {
     const location = useLocation();
     useEffect(() => { }, [location]);
 
-    // pages listed here will show the header
+    // for now, specifying the pages that won't show the header. will do the opposite once front end is finished
     const showHeader = (pathname) => {
         return (
-            pathname.startsWith('/org/') ||
-            pathname.startsWith('/user') ||
-            pathname === '/404' ||
-            pathname === '/admin'
+            pathname === '/' ||
+            pathname === '/index' ||
+            pathname === '/signin' ||
+            pathname === '/signup' ||
+            pathname === '/orgrequest'
         );
-    };
+    }
+    // // pages listed here will show the header
+    // const showHeader = (pathname) => {
+    //     return (
+    //         pathname.startsWith('/org/') ||
+    //         pathname.startsWith('/user') ||
+    //         pathname === '/404' ||
+    //         pathname === '/admin'
+    //     );
+    // };
 
     return (
         <>
-            {showHeader(location.pathname) && <Header />}
+            {!showHeader(location.pathname) && <Header />}
             <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/index" element={<Index />} />

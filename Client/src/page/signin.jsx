@@ -3,7 +3,7 @@ import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
-import { Link, Typography, Box, TextField, Button } from "@mui/material";
+import { Link, Typography, Box, TextField, Button, Divider } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 const db = getFirestore();
@@ -109,7 +109,7 @@ function Signin() {
           alignItems: 'center',
         }}
       >
-        <Box component="main" sx={{ marginTop: '-100px' }}>
+        <Box component="main" sx={{ marginTop: '-60px' }}>
 
           <Link
             href="/"
@@ -117,13 +117,19 @@ function Signin() {
             sx={{
               color: theme.palette.primary.main,
               fontSize: "5rem",
-              marginBottom: "10px",
               textDecoration: 'none',
-              textShadow: "0px 1px 2px rgba(0, 0, 0, 0.5)",
             }}
           >
             WagerWorld
           </Link>
+
+          <Divider
+            sx={{
+              borderColor: theme.palette.primary.light,
+              width: '100%',
+              marginBottom: '10px'
+            }}
+          />
 
           <Typography
             variant="general"

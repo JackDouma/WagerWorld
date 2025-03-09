@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocs, collection, query, where, getFirestore, arrayUnion, updateDoc, increment } from 'firebase/firestore';
 import { auth, app } from '../../firebase';
-import { Link, Typography, Box, TextField, Button } from "@mui/material";
+import { Link, Typography, Box, TextField, Button, Divider } from "@mui/material";
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useTheme } from "@mui/material/styles";
@@ -151,7 +151,7 @@ function Signup() {
           alignItems: 'center',
         }}
       >
-        <Box component="main" sx={{ marginTop: '-80px' }}>
+        <Box component="main" sx={{ marginTop: '-60px' }}>
 
           <Link
             href="/"
@@ -160,11 +160,18 @@ function Signup() {
               color: theme.palette.primary.main,
               fontSize: "5rem",
               textDecoration: 'none',
-              textShadow: "0px 1px 2px rgba(0, 0, 0, 0.5)",
             }}
           >
             WagerWorld
           </Link>
+
+          <Divider
+            sx={{
+              borderColor: theme.palette.primary.light,
+              width: '100%',
+              marginBottom: '10px'
+            }}
+          />
 
           <Typography
             variant="general"
