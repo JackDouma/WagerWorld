@@ -9,6 +9,7 @@ const { CardRoom } = require('./rooms/CardRoom');
 const { BlackjackRoom } = require('./rooms/BlackjackRoom');
 const { admin, firestore, auth } = require('./firebase'); 
 const HorseRacingRoom = require('./rooms/HorseBettingRoom');
+const endpoints = require('./endpoints');
 
 const app = express();
 const port = process.env.PORT || 2567;
