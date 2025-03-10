@@ -100,7 +100,7 @@ function Signin() {
     return (
       <Box
         sx={{
-          backgroundImage: 'url(/auth-pages-background.jpg)',
+          backgroundImage: 'url(/auth-pages-background.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           minHeight: "100vh",

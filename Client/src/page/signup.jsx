@@ -142,7 +142,7 @@ function Signup() {
     <LocalizationProvider dateAdapter={AdapterDateFns}>
       <Box
         sx={{
-          backgroundImage: 'url(/auth-pages-background.jpg)',
+          backgroundImage: 'url(/auth-pages-background.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           minHeight: "100vh",
