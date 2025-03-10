@@ -1,5 +1,6 @@
 const { Room } = require('@colyseus/core');
 const { Schema, type, MapSchema, ArraySchema } = require("@colyseus/schema");
+const admin = require('../firebase');
 
 class Horse extends Schema {
   constructor() {
@@ -22,12 +23,14 @@ class RaceState extends Schema {
     this.horses = new ArraySchema();
     this.raceStarted = false;
     this.bets = new MapSchema();
+    this.players = new MapSchema();
   }
 }
 
 type([Horse])(RaceState.prototype, "horses");
 type("boolean")(RaceState.prototype, "raceStarted");
 type({ map: "number" })(RaceState.prototype, "bets");
+type({ map: "string" })(RaceState.prototype, "players");
 
 class HorseRacingRoom extends Room {
   onCreate() {
@@ -112,13 +115,44 @@ class HorseRacingRoom extends Room {
     }, 3000);
   }
 
-  onJoin(client) {
-    console.log(client.sessionId, "joined!");
+ async onJoin(client, options) {
+    // Set player ID from options when client joins
+    if (options.playerId) {
+      try {
+        // console.log('Firebase Admin:', admin); // Should show initialized app
+        // console.log('Firestore:', admin.firestore); // Should show function
+
+        const playerDoc = await admin.firestore.collection('users').doc(options.playerId).get();
+        if (playerDoc.exists) {
+          const playerName = playerDoc.data().name;
+          this.state.players.set(client.sessionId, playerName);
+          console.log(`${playerName} joined!`);
+        } else {
+          console.log(`Player with ID ${options.playerId} not found.`);
+        }
+      } catch (error) {
+        console.error('Error fetching player data:', error);
+      }
+    
+
+    console.log(options.playerId, "joined!");
   }
+}
 
   onLeave(client) {
     console.log(client.sessionId, "left!");
     this.state.bets.delete(client.sessionId);
+    // Remove player from players map
+    this.state.players.delete(client.sessionId);
+
+    // Update isInGame to false
+    admin.firestore.collection('users').doc(client.sessionId).update({
+      isInGame: false
+    });
+
+    // console log to show that the player has left the game
+    console.log(`Player with ID ${client.sessionId} has left the game.`);
+
   }
 }
 
