@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { auth } from '../../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
-import { Typography, Box, TextField, Button, FormControl, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Link, CircularProgress, AppBar, Toolbar, IconButton, Tooltip } from "@mui/material";
-import MenuIcon from '@mui/icons-material/Menu';
+import { Typography, Box, Link, Tooltip } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import { useTheme } from "@mui/material/styles";
 import { useLocation } from 'react-router-dom';
@@ -18,9 +17,31 @@ function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
+  const [contextTextTitle, setContextTextTitle] = useState('');
+  const [contextTextNavigationHref, setContextTextNavigationHref] = useState('');
+  const [contextTextNavigationText, setContextTextNavigationText] = useState('');
 
-  // check if logged in or not
   useEffect(() => {
+    // setting the text displayed in the center of the header (blank if not one of these)
+    if (location.pathname.startsWith('/room')) {
+      setContextTextTitle('Room: <Room Name Here>')
+      setContextTextNavigationHref('/joinroom')
+      setContextTextNavigationText('Join a different room')
+    } else if (location.pathname.startsWith('/blackjack')) {
+      setContextTextTitle('Blackjack')
+      setContextTextNavigationHref('/roomPage')
+      setContextTextNavigationText('Exit game')
+    } else if (location.pathname.startsWith('/horseracing')) {
+      setContextTextTitle('Horse Racing')
+      setContextTextNavigationHref('/roomPage')
+      setContextTextNavigationText('Exit game')
+    } else if (location.pathname.startsWith('/poker')) {
+      setContextTextTitle('Poker')
+      setContextTextNavigationHref('/roomPage')
+      setContextTextNavigationText('Exit game')
+    }
+
+    // check if logged in or not
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
         setUser(currentUser);
@@ -88,7 +109,6 @@ function Header() {
                 color: "#FFFFFF",
                 textShadow: "0px -4px 8px rgba(0, 0, 0, 0.5)",
                 WebkitTextStroke: `1px ${theme.palette.secondary.main}`,
-                // fontSize: "2vw",
                 fontSize: "40px",
               }}
             >
@@ -98,42 +118,25 @@ function Header() {
 
           {/* Context text (center) */}
           <Grid size={3}>
-            {location.pathname.startsWith('/room') && (
-              <>
-                <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
-                  Room: &lt;Room Name Here&gt;
-                </Typography>
-                <br />
-                <Link variant="general" href="/joinroom" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Join a different room</Link>
-              </>
-            )}
-            {location.pathname.startsWith('/blackjack') && (
-              <>
-                <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
-                  Blackjack
-                </Typography>
-                <br />
-                <Link variant="general" href="/roomPage" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Exit game</Link>
-              </>
-            )}
-            {location.pathname.startsWith('/horseracing') && (
-              <>
-                <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
-                  Horse Racing
-                </Typography>
-                <br />
-                <Link variant="general" href="/roomPage" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Exit game</Link>
-              </>
-            )}
-            {location.pathname.startsWith('/poker') && (
-              <>
-                <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
-                  Poker
-                </Typography>
-                <br />
-                <Link variant="general" href="/roomPage" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Exit game</Link>
-              </>
-            )}
+            <>
+              <Typography variant="heading"
+                sx={{
+                  color: theme.palette.primary.contrastText,
+                  fontSize: "1.5rem"
+                }}
+              >
+                {contextTextTitle}
+              </Typography>
+              <br />
+              <Link variant="general" href={contextTextNavigationHref}
+                sx={{
+                  color: theme.palette.primary.contrastText,
+                  textDecoration: 'underline'
+                }}
+              >
+                {contextTextNavigationText}
+              </Link>
+            </>
           </Grid>
 
           {/* User details (right side) */}
@@ -155,7 +158,15 @@ function Header() {
               }}
             >
               {!isAdmin && (
-                <Box sx={{ display: 'flex', alignItems: 'start', flexDirection: 'column', marginLeft: '6px', marginRight: '30px' }}>
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'start',
+                    flexDirection: 'column',
+                    marginLeft: '6px',
+                    marginRight: '30px'
+                  }}
+                >
                   <Link
                     variant="heading"
                     fontWeight={700}
@@ -179,14 +190,23 @@ function Header() {
               )}
 
               {isAdmin && (
-                <Box sx={{ display: 'flex', alignItems: 'start', marginLeft: '6px', marginRight: '30px' }}>
-                  <Link variant="heading" fontWeight={700} fontSize={"20px"} sx={{
-                    textDecoration: "none",
-                    color: theme.palette.primary.contrastText,
-                    '&:hover': {
-                      color: theme.palette.primary.dark,
-                    }
-                  }} href={`/admin`} >
+                <Box
+                  sx={{
+                    display: 'flex',
+                    alignItems: 'start',
+                    marginLeft: '6px',
+                    marginRight: '30px'
+                  }}
+                >
+                  <Link variant="heading" fontWeight={700} fontSize={"20px"} href={`/admin`}
+                    sx={{
+                      textDecoration: "none",
+                      color: theme.palette.primary.contrastText,
+                      '&:hover': {
+                        color: theme.palette.primary.dark,
+                      }
+                    }}
+                  >
                     {userName}
                   </Link>
                 </Box>
