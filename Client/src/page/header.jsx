@@ -17,16 +17,8 @@ function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
-  const [isGame, setIsGame] = useState(false);
 
   useEffect(() => {
-    if (
-      location.pathname.startsWith('/blackjack') ||
-      location.pathname.startsWith('/horseracing') ||
-      location.pathname.startsWith('/poker')
-    ) {
-      setIsGame(true);
-    }
 
     // check if logged in or not
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -68,7 +60,13 @@ function Header() {
   };
 
   return (
-    !isGame && (
+    (
+      // all game paths to go here
+      !location.pathname.startsWith('/blackjack') &&
+      !location.pathname.startsWith('/horseracing') &&
+      !location.pathname.startsWith('/poker')
+    ) &&
+    (
       // header for non-game pages
       <header id="header"
         style={{
@@ -258,7 +256,7 @@ function Header() {
         </nav>
       </header>
     ) ||
-    isGame && (
+    (
       // header for game pages (top left corner back button)
       <div
         style={{
