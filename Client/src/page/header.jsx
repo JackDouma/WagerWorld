@@ -70,7 +70,7 @@ function Header() {
   return (
     !isGame && (
       // header for non-game pages
-      <header
+      <header id="header"
         style={{
           borderBottomLeftRadius: '18px',
           borderBottomRightRadius: '18px',
