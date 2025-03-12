@@ -24,7 +24,6 @@ class BlackjackPlayer extends Schema {
         this.name = '';
         this.hand = new ArraySchema();
         this.isReady = false;
-        this.score = 0;
         this.bet = 0;
         this.handValue = 0;
         this.totalCredits = 0;
@@ -34,7 +33,6 @@ schema.defineTypes(BlackjackPlayer, {
     name: "string",
     hand: [ Card ],
     isReady: "boolean",
-    score: "number",
     bet: "number",
     handValue: "number",
     totalCredits: "number"

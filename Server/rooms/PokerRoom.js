@@ -13,6 +13,9 @@ class PokerRoom extends Room {
     this.dealerRaceCheck = false;
     this.maxClients = options.maxPlayers || 8;
 
+    this.suits = [ "hearts", "diamonds", "clubs", "spades" ];
+    this.ranks = [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace", ];
+
     // Add timeout that destroys room if no players join (needed for /create-room endpoint)
     this.emptyRoomTimeout = setTimeout(() => {
       if (this.clients.length === 0) {
@@ -88,7 +91,8 @@ class PokerRoom extends Room {
           this.state.currentTurn = "dealer"
         else
           this.state.currentTurn = message.nextPlayer
-        this.broadcast("handleDisconnection", { nextPlayer: this.state.currentTurn });
+        console.log('this guys turn', this.state.currentTurn, Array.from(this.state.players.values()).filter(player => player.lastAction !== 'fold').length)
+        this.broadcast("handleDisconnection", { nextPlayer: this.state.currentTurn, dc: Array.from(this.state.players.values()).filter(player => player.lastAction !== 'fold').length === 1});
       }
     })
 
@@ -109,22 +113,40 @@ class PokerRoom extends Room {
     })
 
     this.onMessage('newGame', (client) => {
-      console.log('NEW GAME WAS CALLED BY', client.sessionId, 'WHEN IT SHOULD HAVE BEEN', this.state.owner)
-      console.log('SB=', Array.from(this.state.players.values()).find(player => player.blind === 1).name, 'BB=', Array.from(this.state.players.values()).find(player => player.blind === 2).name)
-      this.broadcast('newGame')
+      // const waiters = this.state.waitingRoom
+      const waitingPlayers = Array.from(this.state.waitingRoom.keys());
+      while (waitingPlayers.length > 0 && this.state.players.size < this.maxClients) {
+        const nextPlayerId = waitingPlayers.shift()
+        const player = this.state.waitingRoom.get(nextPlayerId)
+        if (player) {
+          this.state.players.set(nextPlayerId, player)
+          this.state.waitingRoom.delete(nextPlayerId)
+          player.hand = new ArraySchema()
+          if (this.state.players.size == 0)
+            player.blind = 1;
+          else if (this.state.players.size == 1)
+            player.blind = 2;
+          else if (this.state.players.size == 2) {
+            const playerIds = Array.from(this.state.players.keys());
+            if (this.state.players.get(playerIds[1]).blind === 1 && this.state.players.get(playerIds[0]).blind === 2) {
+              player.blind = 2
+              this.state.players.get(playerIds[0]).blind = 0
+            }
+          }
+          this.broadcast("playerJoin", { sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+        }
+      }
+      this.broadcast('newGame', { waitingRoom: this.state.waitingRoom })
     })
   }
 
   // creatig and shuffling the deck
   initializeDeck() {
-    const suits = [ "hearts", "diamonds", "clubs", "spades" ];
-    const ranks = [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace", ];
-
     let id = 0;
     const deckArray = [];
 
-    for (const suit of suits)
-      for (const rank of ranks)
+    for (const suit of this.suits)
+      for (const rank of this.ranks)
         deckArray.push(new Card(suit, rank, `${id++}`));
 
     // Shuffle using a regular array first
@@ -163,16 +185,16 @@ class PokerRoom extends Room {
     this.state.gamePhase = "dealing";
 
     const playerIds = Array.from(this.state.players.keys());
-
+    const hands = {}
+    
     // Deal initial cards with a slight delay
     const dealCards = async () => {
       // each player's first card
       for (const playerId of playerIds) {
         const player = this.state.players.get(playerId);
         const card = this.state.deck.pop();
-        if (card) {
+        if (card)
           player.hand.push(card);
-        }
       }
 
       // each player's second card
@@ -181,7 +203,7 @@ class PokerRoom extends Room {
         const card = this.state.deck.pop();
         if (card) {
           player.hand.push(card);
-          player.handValue = this.calculateHandValue(player.hand)
+          hands[playerId] = this.state.players.get(playerId).hand
         }
       }
 
@@ -208,30 +230,7 @@ class PokerRoom extends Room {
     };
 
     dealCards();
-  }
-
-  // manages all blackjack counting logic :)
-  calculateHandValue(hand) {
-    let value = 0
-    let aces = 0
-
-    hand.forEach((card) => {
-      if (['jack', 'queen', 'king'].includes(card.rank)) {
-        value += 10
-      } else if (card.rank === 'ace') {
-        value += 11
-        aces += 1
-      } else {
-        value += parseInt(card.rank, 10)
-      }
-    })
-
-    while (value > 21 && aces > 0) {
-      value -= 10
-      aces -= 1
-    }
-
-    return value || 0
+    this.broadcast('gameStart', { hands, players: this.state.players, dealerHand: this.state.dealer.hand, currentTurn: this.state.currentTurn, gamePhase: this.state.gamePhase })
   }
 
   // allowing the next client in line to go
@@ -252,7 +251,7 @@ class PokerRoom extends Room {
     const activePlayers = playerIds.filter(id => this.state.players.get(id).lastAction !== 'fold')
 
     if (activePlayers.length === 1)
-        this.endGame(activePlayers[0])
+      this.endGame()
   }
 
   // method to check if the betting round it done
@@ -271,43 +270,65 @@ class PokerRoom extends Room {
   // handling the dealer's turn
   dealerTurn() {
     if (!this.dealerRaceCheck) {
-      this.dealerRaceCheck = true
-      // always burn a card at the start
-      this.state.deck.pop();
       const gamePhase = parseInt(this.state.gamePhase.replace(/\D/g, ""), 10)
-      if(gamePhase == 1) {
-        for (var i = 0; i < 3; i++) {
+      if (gamePhase < 4) {
+        this.dealerRaceCheck = true
+        // always burn a card at the start
+        this.state.deck.pop();
+        if(gamePhase == 1) {
+          for (var i = 0; i < 3; i++) {
+            const card = this.state.deck.pop()
+            if (card)
+              this.state.dealer.push(card)
+          }
+        }
+        else if (gamePhase == 2 || gamePhase == 3) {
           const card = this.state.deck.pop()
           if (card)
             this.state.dealer.push(card)
         }
+        const activePlayers = Array.from(this.state.players.values()).filter(player => player.lastAction !== 'fold')
+        activePlayers.forEach((item) => item.lastAction = 'none')
+        this.state.gamePhase = `playing${gamePhase + 1}`
+        console.log(gamePhase)
+        this.broadcast("dealerResult", { result: this.state.dealer, nextTurn: this.state.currentTurn })
       }
-      else if (gamePhase == 2 || gamePhase == 3) {
-        const card = this.state.deck.pop()
-        if (card)
-          this.state.dealer.push(card)
-      }
-      const activePlayers = Array.from(this.state.players.values()).filter(player => player.lastAction !== 'fold')
-      activePlayers.forEach((item) => item.lastAction = 'none')
-      this.state.gamePhase = `playing${gamePhase + 1}`
-      this.broadcast("dealerResult", { result: this.state.dealer, nextTurn: this.state.currentTurn })
+      else
+        this.endGame()
     }
   }
 
   // method to end the game and show results
-  endGame(winnerId) {
-    const winner = this.state.players.get(winnerId);
+  endGame(res) {
+    const activePlayers = Array.from(this.state.players.entries()).filter(([id, player]) => player.lastAction !== "fold");
+
+    let winnerId, winner, result;
+    
+    if (activePlayers.length === 1) {
+        // ✅ If only one player remains, they win automatically
+        [winnerId, winner] = activePlayers[0];
+        result = res ? res : 'folded'
+    } else {
+        // ✅ Determine the winner at showdown
+        [winner, result] = this.determineWinner(activePlayers.map(([id, player]) => player), this.state.dealer);
+        console.log(winner.name, result);
+
+        // ✅ Find the session ID (key) of the winner in `this.state.players`
+        winnerId = activePlayers.find(([id, player]) => player === winner)?.[0];
+    }
+
     if (winner) {
-        console.log(`Game Over! Winner: ${winner.name}`)
+        console.log(`Game Over! Winner: ${winner.name} with a ${result}`)
 
         winner.totalCredits += this.state.pot
 
-        this.broadcast("endGame", { winner: winnerId, winnings: this.state.pot })
+        this.broadcast("endGame", { winner: winnerId, winnings: this.state.pot, result: result })
 
         this.state.pot = 0
         this.state.highestBet = 0
         this.state.gamePhase = "waiting"
         this.state.dealer = new ArraySchema()
+        this.initializeDeck()
         
         this.state.players.forEach(player => {
             player.bet = 0
@@ -349,6 +370,102 @@ class PokerRoom extends Room {
     this.state.players.get(playerIds[newBbIndex]).blind = 2
   }
 
+  evaluateHand(playerHand, communityCards) {
+    const fullHand = [...playerHand, ...communityCards]; // Combine hole + community cards
+    const suits = {}; // To track suits
+    const counts = {}; // To track card frequencies
+    let isFlush = false, isStraight = false, straightHigh = 0;
+
+    // ✅ Count occurrences of ranks & suits
+    fullHand.forEach(card => {
+        const rank = card.rank;
+        const suit = card.suit;
+        
+        counts[rank] = (counts[rank] || 0) + 1
+        suits[suit] = (suits[suit] || 0) + 1
+
+        if (suits[suit] >= 5) isFlush = true; // Check for Flush
+    });
+
+    // ✅ Convert ranks into sorted numeric values
+    let rankValues = fullHand.map(card => this.ranks.indexOf(card.rank)).sort((a, b) => b - a);
+    let highCard = rankValues[0]; // Track the highest card for tie-breaking
+    console.log(rankValues)
+
+    // ✅ Check for Straight
+    let sequence = [];
+    for (let i = 1; i < rankValues.length; i++) {
+        if (rankValues[i] === rankValues[i - 1] - 1) sequence.push(rankValues[i]);
+        else if (rankValues[i] !== rankValues[i - 1]) sequence = [];
+    }
+    if (sequence.length >= 5) {
+      isStraight = true;
+      straightHigh = sequence[sequence.length - 1]; // High card of straight
+    }
+
+    // FIND HIGHEST CARD IN A FLUSH TODO
+
+    // ✅ Determine hand rankings
+    const pairs = Object.entries(counts).filter(([rank, count]) => count === 2).map(([rank]) => rank)
+    const threeOfAKind = Object.entries(counts).filter(([rank, count]) => count === 3).map(([rank]) => rank)
+    const fourOfAKind = Object.entries(counts).filter(([rank, count]) => count === 4).map(([rank]) => rank)
+    const fullHouse = threeOfAKind.size > 0 && pairs.size > 0;
+
+    highCard = this.ranks[highCard]
+
+    if (isFlush && isStraight && straightHigh === 12) return { rank: 1, name: "Royal Flush", highCard };
+    if (isFlush && isStraight) return { rank: 2, name: "Straight Flush", highCard: straightHigh };
+    if (fourOfAKind.length !== 0) return { rank: 3, name: "Four of a Kind", highCard: fourOfAKind[0] };
+    if (fullHouse) return { rank: 4, name: "Full House", highCard: threeOfAKind[0] };
+    if (isFlush) return { rank: 5, name: "Flush", highCard };
+    if (isStraight) return { rank: 6, name: "Straight", highCard: straightHigh };
+    if (threeOfAKind.length !== 0) return { rank: 7, name: "Three of a Kind", highCard: threeOfAKind[0] };
+    if (pairs.length === 2) return { rank: 8, name: "Two Pair", highCard: pairs };
+    if (pairs.length === 1) return { rank: 9, name: "One Pair", highCard: pairs[0] };
+    return { rank: 10, name: "High Card", highCard };
+  }
+
+  determineWinner(players, communityCards) {
+    let bestHand = { rank: 11, highCard: -1 }; // Higher rank means worse hand
+    let winner = null;
+
+    players.forEach(player => {
+        const handResult = this.evaluateHand(player.hand, communityCards);
+        console.log(`${player.name} has ${handResult.name} with high card ${handResult.highCard}`);
+
+        // ✅ The lowest rank value is the best hand
+        if (handResult.rank < bestHand.rank) {
+            bestHand = handResult;
+            winner = player;
+        } else if (handResult.rank === bestHand.rank) {
+            // ✅ If tied, compare high cards
+            if (Array.isArray(handResult.highCard) && Array.isArray(bestHand.highCard)) {
+                if (handResult.highCard[0] > bestHand.highCard[0]) {
+                  bestHand = handResult;
+                  winner = player;
+                }
+                else if (handResult.highCard[0] == bestHand.highCard[0]) {
+                  if (handResult.highCard[1] > bestHand.highCard[1]) {
+                    bestHand = handResult;
+                    winner = player;
+                  }
+                }
+            }
+            else {
+              if (handResult.highCard > bestHand.highCard) {
+                bestHand = handResult;
+                winner = player;
+              }
+            }
+        }
+    });
+
+    console.log(`Winner is ${winner.name} with ${bestHand.name}. (High Card: ${bestHand.highCard})`);
+    return [winner, bestHand.name];
+  }
+
+
+
   // handles when a player joins
   onJoin(client, options) {
     // ignore if a duplicate ID shows up, otherwise create a new player
@@ -368,12 +485,16 @@ class PokerRoom extends Room {
         player.blind = 1;
       else if (this.state.players.size == 1)
         player.blind = 2;
-
+      else if (this.state.players.size == 2) {
+        const playerIds = Array.from(this.state.players.keys());
+        if (this.state.players.get(playerIds[1]).blind === 1 && this.state.players.get(playerIds[0]).blind === 2) {
+          player.blind = 2
+          this.state.players.get(playerIds[0]).blind = 0
+        }
+      }
+      
       this.state.players.set(client.sessionId, player);
 
-      if (this.state.players.size > 2)
-        this.assignBlinds()
-      
       if (this.state.owner == '') {
         this.state.owner = client.sessionId; // set the first player to join as the owner
       }
@@ -384,25 +505,25 @@ class PokerRoom extends Room {
     this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
 
-  assignBlinds() {
-    const playerIds = Array.from(this.state.players.keys());
-    console.log("???")
+  // assignBlinds() {
+  //   const playerIds = Array.from(this.state.players.keys());
+  //   console.log("???")
 
-    if (playerIds.length < 2) {
-        console.log("Not enough players for blinds.");
-        return;
-    }
+  //   if (playerIds.length < 2) {
+  //       console.log("Not enough players for blinds.");
+  //       return;
+  //   }
 
-    if (this.state.players.get(playerIds[0]).blind != 0 && this.state.players.get(playerIds[1]).blind != 0) {
-      this.state.players.forEach(player => player.blind = 0)
+  //   if (this.state.players.get(playerIds[0]).blind != 0 && this.state.players.get(playerIds[1]).blind != 0) {
+  //     this.state.players.forEach(player => player.blind = 0)
 
-      this.state.players.get(playerIds[0]).blind = 1
-      this.state.players.get(playerIds[1]).blind = 2
+  //     this.state.players.get(playerIds[0]).blind = 1
+  //     this.state.players.get(playerIds[1]).blind = 2
 
-      console.log(`New Small Blind: ${playerIds[0]}, New Big Blind: ${playerIds[1]}`)
-    }
+  //     console.log(`New Small Blind: ${playerIds[0]}, New Big Blind: ${playerIds[1]}`)
+  //   }
     
-  }
+  // }
 
   // handles when a player leaves
   onLeave(client) {
@@ -413,16 +534,33 @@ class PokerRoom extends Room {
     let currentIndex
     // if the player was found in the active players
     if (player) {
-      // return player's cards to the deck
-      for (const card of player.hand) {
-        this.state.deck.push(card)
-      }
       // get the index of the client that left, if its not the last player at the table, set teh nextKey to be the next guy, otherwise it will stay as the dealer
       currentIndex = keys.indexOf(client.sessionId)
-      if (currentIndex !== -1 && currentIndex < keys.length - 1) {
-        nextKey = keys[currentIndex + 1]
-        if (player.blind != 0)
-          this.state.players.get(nextKey).blind = player.blind
+      // console.log(currentIndex !== -1, !this.checkBettingRoundEnd())
+      if (currentIndex !== -1 && !this.checkBettingRoundEnd()) {
+        console.log('maybe')
+        nextKey = keys[(currentIndex + 1) % keys.length]
+        console.log('next key', nextKey)
+      }
+      // ✅ If the player was the Small Blind, shift the blinds
+      if (player.blind === 1) {
+        console.log("Small Blind disconnected, rotating blinds...");
+        if (keys.length > 1) { // More than 2 players
+            const newSB = keys[(currentIndex + 1) % keys.length]; // Big Blind becomes Small Blind
+            this.state.players.get(newSB).blind = 1;
+            console.log(newSB)
+            const newBB = keys[(currentIndex + 2) % keys.length]; // Next player becomes Big Blind
+            this.state.players.get(newBB).blind = 2;
+        }
+      }
+      // ✅ If the player was the Big Blind, shift the big blind
+      else if (player.blind === 2) {
+          console.log("Big Blind disconnected, shifting big blind...");
+          if (keys.length > 1) { // More than 2 players
+              const newBB = keys[(currentIndex + 1) % keys.length]; // Next player becomes Big Blind
+              this.state.players.get(newBB).blind = 2;
+          }
+          // If only 2 players remain, do nothing (SB remains SB)
       }
       // remove player
       this.state.players.delete(client.sessionId);
@@ -446,8 +584,11 @@ class PokerRoom extends Room {
       this.disconnect()
     }
     // otherwise tell the clients that someone left
-    else
+    else {
       this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
+      if (this.state.gamePhase.includes('playing') && Array.from(this.state.players.values()).filter((player) => player.lastAction !== "fold").length === 1)
+        this.endGame('disconnect')
+    }
   }
 }
 

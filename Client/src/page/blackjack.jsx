@@ -15,7 +15,8 @@ class BlackjackScene extends Phaser.Scene {
     this.amountOfPlayers = 0
     this.playerIndex
     this.players = {}
-    this.playerHands = new Map()
+    this.waitingRoom = {}
+    this.playerHands = {}
     this.dealerHand = []
     this.currentTurn
     // object used for later (because its gotta be played at first, then flipped over later instead of right away)
@@ -29,12 +30,28 @@ class BlackjackScene extends Phaser.Scene {
     this.currentBetText
     this.placeBetsButton
     this.resultsText
+    this.activeCards = []
+    this.isWaiting = false
     this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`)
     this.room = Room
   }
 
   // loading all the image assets
   preload() {
+    WebFontLoader.default.load({
+      google: {
+        families: ['Rowdies']
+      },
+      active: () => {
+        this.totalCredits.setFontFamily('"Rowdies"')
+        this.currentBetText.setFontFamily('"Rowdies"')
+        this.resultsText.setFontFamily('"Rowdies"')
+        this.placeBetsButton.setFontFamily('"Rowdies"')
+        this.possibleRemoveBetButtons.forEach((item) => {item.setFontFamily('"Rowdies')})
+        this.allPhysicalPositions.forEach((item) => {item.setFontFamily('"Rowdies')})
+      }
+    })
+
     this.load.image('bg', '/table.jpg')
     this.load.image('card', '/card-back.png')
     this.load.image('logo', '/blackjack-logo.png')
@@ -72,17 +89,25 @@ class BlackjackScene extends Phaser.Scene {
     // method is called every time there is a state change, but is only used for actually starting the game
     this.room.onStateChange((state) => {
       console.log("State updated:", state);
-      if (state.gamePhase == "playing" && !this.started){
-        this.currentTurn = this.room.state.owner
+    });
+
+    this.room.onMessage('gameStart', (message) => {
+      if (message.gamePhase == "playing" && !this.started) {
+        this.currentTurn = message.owner
+        this.playerHands = message.hands
+        this.dealerHand = message.dealerHand
+        console.log(this.dealerHand)
         this.started = true
         this.startGame()
       }
-    });
+    })
 
     // handling a player joining
     this.room.onMessage('playerJoin', (message) => {
       console.log(`Player ${message.sessionId} joined the room`);
       // if cards havent been dealt yet, add the player to the table
+      this.waitingRoom = message.waitingRoom
+      console.log(this.waitingRoom)
       if(this.room.state.gamePhase == "waiting") {
         this.amountOfPlayers = Object.keys(message.players).length
         if (this.playerIndex === undefined) this.playerIndex = this.amountOfPlayers - 1
@@ -91,8 +116,12 @@ class BlackjackScene extends Phaser.Scene {
         this.editPlayerSlots()
       }
       // if a game is in progress, show them a waiting screen
-      else if (this.room.state.gamePhase == "playing" && this.room.state.waitingRoom.has(message.sessionId))
+      else if (this.room.state.gamePhase == "playing" && this.room.sessionId in this.waitingRoom) {
         this.resultsText.setText("Waiting for Game to Finish...").setVisible(true)
+        this.removeBetButtons()
+        this.placeBetsButton.setActive(false).setVisible(false)
+        this.isWaiting = true
+      }
       // update the total credits screen
       if (message.sessionId === this.room.sessionId) {
         this.playerCredits = message.totalCredits
@@ -148,15 +177,15 @@ class BlackjackScene extends Phaser.Scene {
     // client-side hit managing
     this.room.onMessage("hitResult", (message) => {
       const player = message.index
-      this.playerHands.set(message.sessionId, message.hand)
-      const hand = this.playerHands.get(message.sessionId)
+      this.playerHands[message.sessionId] = message.hand
+      const hand = this.playerHands[message.sessionId]
       // animate the card from the server
       this.animateCard(this.allPhysicalPositions[player].x + (this.doesRotate(player) == 1 ? (hand.length - 1) * (this.scale.width / 50) : 0) - (this.doesRotate(player) == 0 ? (this.scale.width / 20) : (this.doesRotate(player) == 2 ? -(this.scale.width / 20) : 0)), 
           this.allPhysicalPositions[player].y + (this.doesRotate(player) != 1 ? (hand.length - 1) * (this.scale.height / 30) : 0) - (this.doesRotate(player) == 1 ? (this.scale.width / 18) : 0), 
           `${hand[hand.length - 1].rank}_of_${hand[hand.length - 1].suit}.png`, 0, this.doesRotate(player), player != this.playerIndex)
 
       // updating the value
-      const playerValue = this.calculateHandValue(this.playerHands.get(this.room.sessionId))
+      const playerValue = this.calculateHandValue(this.playerHands[this.room.sessionId])
       this.playerValueText.setText(playerValue)
       // if they got more than 21, tell the server that they busted
       if (this.room.sessionId == this.currentTurn && playerValue > 21)
@@ -197,8 +226,20 @@ class BlackjackScene extends Phaser.Scene {
     })
 
     // reset game message from the server
-    this.room.onMessage("resetGame", (message) => { 
-      this.resetGame()
+    this.room.onMessage("newGame", (message) => { 
+      this.started = false
+      if(this.playAgainButton) this.playAgainButton.destroy()
+      if(this.quitButton) this.quitButton.destroy()
+      this.playerHands = {}
+      this.currentBetText.destroy()
+      this.totalCredits.destroy()
+      this.resultsText.destroy()
+      if (this.playerValueText) this.playerValueText.destroy()
+      this.activeCards.forEach(item => item.destroy())
+      this.activeCardNames = []
+      if (this.dealerValueText) this.dealerValueText.destroy()
+      this.waitingRoom = message.waitingRoom
+      this.createUI(!this.isWaiting)
     })
 
     // if the room is destroyed, then reset the game
@@ -209,20 +250,20 @@ class BlackjackScene extends Phaser.Scene {
     // if the client refreshes or leaves, only alert them if the game is in play and they are not in the waiting room
     window.addEventListener("beforeunload", (event) => {
       if (this.room && (this.room.state.gamePhase === "playing" || this.room.state.gamePhase === "dealing") && !this.room.state.waitingRoom.has(this.room.sessionId)) {
-          event.preventDefault();
+        event.preventDefault();
       }
     });
 
     // adding everything else
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
     this.load.audio('win', 'cha-ching.mp3')
-    this.createUI()
+    this.createUI(true)
   }
 
   // adding the player's names to the text boxes around the table
   getPlayerNames(){
     // do not run if someones in the waiting room
-    if(this.room.state.waitingRoom.has(this.room.sessionId)) return
+    if(this.room.sessionId in this.waitingRoom) return
     var j = 0
     Object.keys(this.players).forEach((item) => {
       this.allPhysicalPositions[j].setText(item);
@@ -253,7 +294,7 @@ class BlackjackScene extends Phaser.Scene {
     this.possibleRemoveBetButtons.push(this.add
       .text(this.possibleBetButtons[this.possibleBetButtons.length - 1].x, this.possibleBetButtons[this.possibleBetButtons.length - 1].y + 70, `Remove`, { fontSize: '18px', fill: '#f00' })
       .setInteractive()
-      .on('pointerdown', () => this.removeBet(amount)).setOrigin(0.5, 0.5)
+      .on('pointerdown', () => this.removeBet(amount)).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
     )
   }
 
@@ -279,65 +320,63 @@ class BlackjackScene extends Phaser.Scene {
   }
 
   // creating all the elements on the screen before the actual game-play
-  createUI() {
+  createUI(firstTime) {
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
 
-    // setting the possible positions that the players can be
-    this.allPositionCoordinates.push([this.scale.width - this.scale.width / 50, this.scale.height / 4])
-    this.allPositionCoordinates.push([this.scale.width - this.scale.width / 50, (this.scale.height / 4) * 2.75])
-    this.allPositionCoordinates.push([centerX + (this.scale.width / 3.5), this.scale.height - this.scale.height / 30])
-    this.allPositionCoordinates.push([centerX + (this.scale.width / 10), this.scale.height - this.scale.height / 30])
-    this.allPositionCoordinates.push([centerX - (this.scale.width / 10), this.scale.height - this.scale.height / 30])
-    this.allPositionCoordinates.push([centerX - (this.scale.width / 3.5), this.scale.height - this.scale.height / 30])
-    this.allPositionCoordinates.push([this.scale.width / 50, (this.scale.height / 4) * 2.75])
-    this.allPositionCoordinates.push([this.scale.width / 50, this.scale.height / 4])
+    if(firstTime) {
+      // setting the possible positions that the players can be
+      this.allPositionCoordinates.push([this.scale.width - this.scale.width / 50, this.scale.height / 4])
+      this.allPositionCoordinates.push([this.scale.width - this.scale.width / 50, (this.scale.height / 4) * 2.75])
+      this.allPositionCoordinates.push([centerX + (this.scale.width / 3.5), this.scale.height - this.scale.height / 30])
+      this.allPositionCoordinates.push([centerX + (this.scale.width / 10), this.scale.height - this.scale.height / 30])
+      this.allPositionCoordinates.push([centerX - (this.scale.width / 10), this.scale.height - this.scale.height / 30])
+      this.allPositionCoordinates.push([centerX - (this.scale.width / 3.5), this.scale.height - this.scale.height / 30])
+      this.allPositionCoordinates.push([this.scale.width / 50, (this.scale.height / 4) * 2.75])
+      this.allPositionCoordinates.push([this.scale.width / 50, this.scale.height / 4])
 
-    // adding the player positions to be offscreen
-    for (var i = 0; i < 8; i++)
-      this.allPhysicalPositions.push(this.add.text(centerX, -100, `Player ${i + 1}`, { fontFamily: 'Arial', fontSize: '32px', fill: '#fff' }).setOrigin(0.5, 0.5))
-    this.add.image(centerX, this.scale.height / 12, 'logo').setOrigin(0.5, 0.5)
+      // adding the player positions to be offscreen
+      for (var i = 0; i < 8; i++)
+        this.allPhysicalPositions.push(this.add.text(centerX, -100, `Player ${i + 1}`, { fontFamily: 'Arial', fontSize: '32px', fill: '#fff' }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"'))
+      this.add.image(centerX, this.scale.height / 12, 'logo').setOrigin(0.5, 0.5)
+    }
 
-    this.totalCredits = this.add.text(centerX + (this.scale.width / 3.5), this.scale.height / 20, 'Credits: Loading...', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
-    this.currentBetText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Current Bet: ${this.currentBet}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
+    // adding the player slots
+    this.editPlayerSlots()
+    this.getPlayerNames()
+
+    this.totalCredits = this.add.text(centerX + (this.scale.width / 3.5), this.scale.height / 20, `Credits: ${this.playerCredits}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
+    this.currentBetText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Current Bet: ${this.currentBet}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
 
     // creating buttons for each possible amount that can be bet
-    const numChips = this.possibleBets.length;
-    const numRows = 2
-    const numCols = Math.ceil(numChips / numRows)
+    if(this.possibleBetButtons.length == 0) {
+      const numChips = this.possibleBets.length;
+      const numRows = 2
+      const numCols = Math.ceil(numChips / numRows)
 
-    const chipSpacingX = this.scale.width / (numCols + 1)
-    const chipSpacingY = this.scale.height / 4
+      const chipSpacingX = this.scale.width / (numCols + 1)
+      const chipSpacingY = this.scale.height / 4
 
-    this.possibleBets.forEach((item, index) => {
-        const row = Math.floor(index / numCols)
-        const col = index % numCols
+      this.possibleBets.forEach((item, index) => {
+          const row = Math.floor(index / numCols)
+          const col = index % numCols
 
-        const x = (this.scale.width / 2) - ((numCols - 1) * chipSpacingX / 2) + (col * chipSpacingX) + (index > 4 ? chipSpacingX / 2 : 0)
-        const y = (this.scale.height / 3) + (row * chipSpacingY)
+          const x = (this.scale.width / 2) - ((numCols - 1) * chipSpacingX / 2) + (col * chipSpacingX) + (index > 4 ? chipSpacingX / 2 : 0)
+          const y = (this.scale.height / 3) + (row * chipSpacingY)
 
-        this.addBetButtons(item, x, y)
-    })
+          this.addBetButtons(item, x, y)
+      })
+    }
+    else {
+      this.possibleBetButtons.forEach((item) => {item.setActive(true).setVisible(true)})
+      this.possibleRemoveBetButtons.forEach((item) => {item.setActive(true).setVisible(true)})
+    }
 
     // game starts once all bets are finalized
-    this.placeBetsButton = this.add.text(centerX, centerY + (this.scale.height / 4), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setOrigin(0.5, 0.5).setInteractive().on('pointerdown', () => this.room.send("bet", { value: this.currentBet }))
+    this.placeBetsButton = this.add.text(centerX, centerY + (this.scale.height / 4), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setOrigin(0.5, 0.5).setInteractive().on('pointerdown', () => this.room.send("bet", { value: this.currentBet })).setFontFamily('"Rowdies"')
 
     // text to show any results of a player (ie. busted, standing, waiting, etc.)
-    this.resultsText = this.add.text(centerX, centerY + (this.scale.height / 20), 'Waiting...', { fontSize: '60px', fill: '#fff' }).setOrigin(0.5, 0.5).setVisible(false)
-
-    WebFontLoader.default.load({
-      google: {
-        families: ['Rowdies']
-      },
-      active: () => {
-        this.totalCredits.setFontFamily('"Rowdies"')
-        this.currentBetText.setFontFamily('"Rowdies"')
-        this.resultsText.setFontFamily('"Rowdies"')
-        this.placeBetsButton.setFontFamily('"Rowdies"')
-        this.possibleRemoveBetButtons.forEach((item) => {item.setFontFamily('"Rowdies')})
-        this.allPhysicalPositions.forEach((item) => {item.setFontFamily('"Rowdies')})
-      }
-    })
+    this.resultsText = this.add.text(centerX, centerY + (this.scale.height / 20), 'Waiting...', { fontSize: '60px', fill: '#fff' }).setOrigin(0.5, 0.5).setVisible(false).setFontFamily('"Rowdies"')
   }
 
   // method to see if a certain player's name and cards rotate a certain way
@@ -361,17 +400,11 @@ class BlackjackScene extends Phaser.Scene {
     else
       return 1
   }
-  
-  // dealing cards to all the players and dealer
-  dealInitialCards() {
-    this.room.state.players.keys().forEach((item) => this.playerHands.set(item, this.room.state.players.get(item).hand))
-    this.dealerHand = this.room.state.dealer.hand
-  }
 
   // methods to remove the bet buttons once all bets are placed
   removeBetButtons(){
-    this.possibleBetButtons.forEach((item) => {item.destroy()})
-    this.possibleRemoveBetButtons.forEach((item) => {item.destroy()})
+    this.possibleBetButtons.forEach((item) => {item.setActive(false).setVisible(false)})
+    this.possibleRemoveBetButtons.forEach((item) => {item.setActive(false).setVisible(false)})
     this.placeBetsButton.destroy()
   }
 
@@ -387,29 +420,31 @@ class BlackjackScene extends Phaser.Scene {
     this.resultsText.setVisible(false)
 
     // dealing cards to all the players and dealer
-    this.room.state.players.keys().forEach((item) => this.playerHands.set(item, this.room.state.players.get(item).hand))
-    this.dealerHand = this.room.state.dealer.hand
+    // this.room.state.players.keys().forEach((item) =>  {
+    //   this.playerHands.set(item, this.room.state.players.get(item).hand)
+    //   console.log('HERE:', this.room.state.players.get(item).hand)
+    // })
 
     var i = 0
     // visually dealing out the first card to each player
-    this.playerHands.keys().forEach((key) => {
-      const string = `${this.playerHands.get(key)[0].rank}_of_${this.playerHands.get(key)[0].suit}.png`
+    for (const key in this.playerHands) {
+      const string = `${this.playerHands[key][0].rank}_of_${this.playerHands[key][0].suit}.png`
       this.animateCard(this.allPhysicalPositions[i].x - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)),
         this.allPhysicalPositions[i].y - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), string, 0, this.doesRotate(i), i != this.playerIndex)
       i++
-    })
+    }
     
     // dealing the dealer's first card
     this.animateCard(centerX - (this.scale.width / 20), this.scale.width / 6, `${this.dealerHand[0].rank}_of_${this.dealerHand[0].suit}.png`, 1, 1, false)
     
     // dealing out the second card to each player
     i = 0
-    this.playerHands.keys().forEach((key) => {
-      const string = `${this.playerHands.get(key)[1].rank}_of_${this.playerHands.get(key)[1].suit}.png`
-      this.animateCard(this.allPhysicalPositions[i].x + (this.doesRotate(i) == 1 ? (this.playerHands.get(key).length - 1) * (this.scale.width / 50) : 0) - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)), 
-        this.allPhysicalPositions[i].y + (this.doesRotate(i) != 1 ? (this.playerHands.get(key).length - 1) * (this.scale.height / 30) : 0) - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), string, 2, this.doesRotate(i), i != this.playerIndex)
+    for (const key in this.playerHands) {
+      const string = `${this.playerHands[key][1].rank}_of_${this.playerHands[key][1].suit}.png`
+      this.animateCard(this.allPhysicalPositions[i].x + (this.doesRotate(i) == 1 ? (this.playerHands[key].length - 1) * (this.scale.width / 50) : 0) - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)), 
+        this.allPhysicalPositions[i].y + (this.doesRotate(i) != 1 ? (this.playerHands[key].length - 1) * (this.scale.height / 30) : 0) - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), string, 2, this.doesRotate(i), i != this.playerIndex)
       i++
-    })
+    }
 
     // dealing the dealer's second card
     this.dealersSecond = this.animateCard(centerX - (this.scale.width / 20) + (this.scale.width / 50), this.scale.width / 6, `card`, 3, 1, false)
@@ -423,7 +458,7 @@ class BlackjackScene extends Phaser.Scene {
     else
       horiz = (this.scale.width / 9)
     this.playerValueText = this.add.text(this.allPhysicalPositions[this.playerIndex].x + horiz, this.allPhysicalPositions[this.playerIndex].y + vert,
-      this.calculateHandValue(this.playerHands.get(this.room.sessionId)), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
+      this.calculateHandValue(this.playerHands[this.room.sessionId]), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
     // creating the hit and stand button
     this.hitButton = this.add
@@ -498,6 +533,7 @@ class BlackjackScene extends Phaser.Scene {
       },
     })
 
+    this.activeCards.push(card)
     return card
   }
 
@@ -615,7 +651,7 @@ class BlackjackScene extends Phaser.Scene {
   // method to reset the game
   async resetGame(){
     console.log("Resetting Game")
-    this.playerHands = new Map()
+    this.playerHands = {}
     this.playerIndex = undefined
     this.currentTurn = ""
     this.allPhysicalPositions = []
@@ -646,8 +682,9 @@ class BlackjackScene extends Phaser.Scene {
       .on('pointerdown', () => {
         this.resultsText.setText('Waiting for room owner...')
         this.playAgainButton.destroy()
+        this.quitButton.destroy()
         if (this.room.sessionId == this.room.state.owner)
-          this.room.send("resetGame")
+          this.room.send("newGame")
       }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
 
     this.quitButton = this.add

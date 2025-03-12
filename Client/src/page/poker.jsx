@@ -14,8 +14,9 @@ class PokerScene extends Phaser.Scene {
     this.deck = []
     this.amountOfPlayers = 1
     this.playerIndex
-    this.players
-    this.playerHands = new Map()
+    this.players = {}
+    this.waitingRoom = {}
+    this.playerHands = {}
     this.dealer = []
     this.isPlayersTurn = []
     this.playerCardCounts = []
@@ -32,7 +33,8 @@ class PokerScene extends Phaser.Scene {
     this.highestCurrentBet = 0
     this.resultsText
     this.betType
-    this.activeCards = []
+    this.activeCards = new Map()
+    this.isWaiting = false
     this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`)
     this.room = Room
   }
@@ -41,7 +43,7 @@ class PokerScene extends Phaser.Scene {
   preload() {
     this.load.image('bg', '/table.jpg')
     this.load.image('card', '/card-back.png')
-    this.load.image('logo', '/blackjack-logo.png')
+    this.load.image('logo', '/poker-logo.png')
 
     const chipValues = [1, 5, 10, 50, 100, 500, 1000, 5000, 10000]
     chipValues.forEach(value => this.load.image(`${value}-chip`, `/Chips/${value}-chip.png`));
@@ -72,18 +74,25 @@ class PokerScene extends Phaser.Scene {
     // method is called every time there is a state change, but is only used for actually starting the game
     this.room.onStateChange((state) => {
       console.log("State updated:", state);
-      if (state.gamePhase.includes("playing") && !this.started){
-        this.players = Object.fromEntries(this.room.state.players.entries())
-        this.currentTurn = this.room.state.currentTurn
-        this.started = true
-        this.startGame()
-      }
     });
 
-    // handling a player joining
+    this.room.onMessage('gameStart', (message) => {
+      if (message.gamePhase.includes("playing") && !this.started) {
+        this.players = message.players
+        this.currentTurn = message.currentTurn
+        this.playerHands = message.hands
+        this.started = true
+        console.log(this.currentTurn)
+        this.startGame()
+      }
+    })
+
+   // handling a player joining
     this.room.onMessage('playerJoin', (message) => {
       console.log(`Player ${message.sessionId} joined the room`);
       // if cards havent been dealt yet, add the player to the table
+      this.waitingRoom = message.waitingRoom
+      console.log(this.waitingRoom)
       if(this.room.state.gamePhase == "waiting") {
         this.amountOfPlayers = Object.keys(message.players).length
         if (this.playerIndex === undefined) this.playerIndex = this.amountOfPlayers - 1
@@ -92,8 +101,12 @@ class PokerScene extends Phaser.Scene {
         this.getPlayerNames()
       }
       // if a game is in progress, show them a waiting screen
-      else if (this.room.state.gamePhase.includes("playing") && this.room.state.waitingRoom.has(message.sessionId))
+      else if (this.room.state.gamePhase.includes('playing') && this.room.sessionId in this.waitingRoom) {
         this.resultsText.setText("Waiting for Game to Finish...").setVisible(true)
+        this.startGameButton.setVisible(false).setActive(false)
+        this.leaveRoomButton.setVisible(false).setActive(false)
+        this.isWaiting = true
+      }
       // update the total credits screen
       if (message.sessionId === this.room.sessionId) {
         this.playerCredits = message.totalCredits
@@ -128,11 +141,10 @@ class PokerScene extends Phaser.Scene {
       this.currentTurn = message.nextPlayer
       // send an acknowledgement back to the server so it isnt pinged by multiple clients 
       this.room.send("disconnectionHandled")
-      // show hit and stand buttons to the correct user
-      if (this.currentTurn == this.room.sessionId) {
-        this.hitButton.setActive(true).setVisible(true)
-        this.standButton.setActive(true).setVisible(true)
-      }
+      // show raise, call, check and fold buttons to the correct user
+      console.log(this.currentTurn == this.room.sessionId, message.dc)
+      if (message.dc == false)
+        this.optionButtons.forEach(item => {item.setActive(this.currentTurn == this.room.sessionId).setVisible(this.currentTurn == this.room.sessionId)});
       // if the last player diconnected, go straight to the dealer
       if (this.currentTurn == "dealer")
         this.room.send("dealerTurn")
@@ -164,7 +176,6 @@ class PokerScene extends Phaser.Scene {
       }
       if (message.action == 'fold')
         this.playerBetValues[Array.from(this.room.state.players.keys()).indexOf(message.prevPlayer)].setText("Folded")
-      // set hit and stand buttons inivisible for the one who finished, and visible for the next player
       this.currentTurn = message.nextPlayer
 
       // if all players have equal bets, then go to the dealer
@@ -181,30 +192,27 @@ class PokerScene extends Phaser.Scene {
     })
 
     this.room.onMessage("endGame", (message) => {
-      this.endGame(message.winner, message.winnings)
+      this.endGame(message.winner, message.winnings, message.result)
     })
 
     // reset game message from the server
     this.room.onMessage("newGame", (message) => {
       this.started = false
+      if(this.playAgainButton) this.playAgainButton.destroy()
+      if(this.quitButton) this.quitButton.destroy()
       this.totalPotText.destroy()
       this.totalCreditsText.destroy()
       this.resultsText.destroy()
-      this.playerBetValues.forEach(item => item.destroy())
+      this.playerHands = {}
+      if(this.playerBetValues) this.playerBetValues.forEach(item => item.destroy())
       this.activeCards.forEach(item => item.destroy())
-      this.createUI(false)
-    })
-
-    // if the room is destroyed, then reset the game
-    this.room.onMessage("roomDestroyed", (message) => {
-        this.resetGame()
+      this.waitingRoom = message.waitingRoom
+      this.createUI(!this.isWaiting)
     })
 
     // if the client refreshes or leaves, only alert them if the game is in play and they are not in the waiting room
     window.addEventListener("beforeunload", (event) => {
-      if (this.room && (this.room.state.gamePhase.includes("playing") || this.room.state.gamePhase === "dealing") && !this.room.state.waitingRoom.has(this.room.sessionId)) {
-          event.preventDefault();
-      }
+      if (this.room && (this.room.state.gamePhase.includes("playing") || this.room.state.gamePhase === "dealing") && !this.room.state.waitingRoom.has(this.room.sessionId)) { event.preventDefault(); }
     });
 
     // loading background and audio
@@ -215,17 +223,25 @@ class PokerScene extends Phaser.Scene {
 
   // adding the player's names to the text boxes around the table
   getPlayerNames(){
+    console.log('getting', this.room.sessionId in this.waitingRoom)
     // do not run if someones in the waiting room
-    if(this.room.state.waitingRoom.has(this.room.sessionId)) return
+    if(this.room.sessionId in this.waitingRoom) return
     this.smallBlind.setPosition(0, -100)
     this.bigBlind.setPosition(0, -100)
     var j = 0
     Object.keys(this.players).forEach((item) => {
+      console.log(item, this.players[item].blind, j)
       this.allPhysicalPositions[j].setText(item);
-      if (this.players[item].blind === 1)
+      if (this.players[item].blind === 1) {
+        console.log('small blind found', this.allPhysicalPositions[j].x)
         this.smallBlind.setPosition(this.allPhysicalPositions[j].x - (this.doesRotate(j) == 2 ? -100 : 100), this.allPhysicalPositions[j].y - 100)
-      else if (this.players[item].blind === 2)
+        console.log('small blind found 2', this.allPhysicalPositions[j].x)
+      }
+      else if (this.players[item].blind === 2) {
+        console.log('big blind found', this.allPhysicalPositions[j].x)
         this.bigBlind.setPosition(this.allPhysicalPositions[j].x - (this.doesRotate(j) == 2 ? -100 : 100), this.allPhysicalPositions[j].y - 100)
+        console.log('big blind found 2', this.allPhysicalPositions[j].x)
+      }
       j++
     })
   }
@@ -298,15 +314,16 @@ class PokerScene extends Phaser.Scene {
       for (var i = 0; i < 8; i++)
         this.allPhysicalPositions.push(this.add.text(centerX, -100, `Player ${i + 1}`, { fontFamily: 'Arial', fontSize: '32px', fill: '#fff' }).setOrigin(0.5, 0.5).setAngle(this.doesRotate(i) == 0 ? -90 : this.doesRotate(i) == 2 ? 90 : 0))
 
-      this.add.text(centerX, this.scale.height / 20, 'Poker', { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
+      this.add.image(centerX, this.scale.height / 12, 'logo').setOrigin(0.5, 0.5)
     }
-    else 
-      this.getPlayerNames()
     
     // adding the player slots
-    this.editPlayerSlots()
+    if(!firstTime) {
+      this.editPlayerSlots()
+      this.getPlayerNames()
+    }
 
-      // top texts
+    // top texts
     this.totalCreditsText = this.add.text(centerX + (this.scale.width / 5), this.scale.height / 20, `Credits: ${this.playerCredits}`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
     this.totalPotText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Total Pot: 0`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
@@ -446,26 +463,25 @@ class PokerScene extends Phaser.Scene {
     this.leaveRoomButton.setVisible(false).setActive(false)
 
     // dealing cards to all the players
-    this.room.state.players.keys().forEach((item) => this.playerHands.set(item, this.room.state.players.get(item).hand))
+    // this.room.state.players.keys().forEach((item) => this.playerHands.set(item, this.room.state.players.get(item).hand))
 
     var i = 0
     // visually dealing out the first card to each player
-    this.playerHands.keys().forEach((key) => {
-      const string = `${this.playerHands.get(key)[0].rank}_of_${this.playerHands.get(key)[0].suit}.png`
-      this.animateCard(this.allPhysicalPositions[i].x - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)),
-        this.allPhysicalPositions[i].y - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), key == this.room.sessionId ? string : 'card', 0, this.doesRotate(i))
+    for (const key in this.playerHands) {
+      const string = `${this.playerHands[key][0].rank}_of_${this.playerHands[key][0].suit}.png`
+      this.activeCards.set(string, this.animateCard(this.allPhysicalPositions[i].x - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)),
+        this.allPhysicalPositions[i].y - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), key == this.room.sessionId ? string : 'card', 0, this.doesRotate(i)))
       i++
-    })
+    }
 
     // dealing out the second card to each player
     i = 0
-    this.playerHands.keys().forEach((key) => {
-      const string = `${this.playerHands.get(key)[1].rank}_of_${this.playerHands.get(key)[1].suit}.png`
-      this.animateCard(this.allPhysicalPositions[i].x + (this.doesRotate(i) == 1 ? (this.playerHands.get(key).length - 1) * (this.scale.width / 50) : 0) - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)), 
-        this.allPhysicalPositions[i].y + (this.doesRotate(i) != 1 ? (this.playerHands.get(key).length - 1) * (this.scale.height / 30) : 0) - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), 
-        key == this.room.sessionId ? string : 'card', 2, this.doesRotate(i), i == this.playerHands.size - 1)
+    for (const key in this.playerHands) {
+      const string = `${this.playerHands[key][1].rank}_of_${this.playerHands[key][1].suit}.png`
+      this.activeCards.set(string, this.animateCard(this.allPhysicalPositions[i].x + (this.doesRotate(i) == 1 ? (this.playerHands[key].length - 1) * (this.scale.width / 50) : 0) - (this.doesRotate(i) == 0 ? (this.scale.width / 20) : (this.doesRotate(i) == 2 ? -(this.scale.width / 20) : 0)), 
+        this.allPhysicalPositions[i].y + (this.doesRotate(i) != 1 ? (this.playerHands[key].length - 1) * (this.scale.height / 30) : 0) - (this.doesRotate(i) == 1 ? (this.scale.width / 18) : 0), key == this.room.sessionId ? string : 'card', 2, this.doesRotate(i), i == Object.keys(this.playerHands).length - 1))
       i++
-    })
+    }
 
     // showing all wagers (each starts at 0, except for big and small blinds)
     this.showWagers()
@@ -524,7 +540,31 @@ class PokerScene extends Phaser.Scene {
       },
     })
 
-    this.activeCards.push(card)
+    return card
+  }
+
+  flipCard(card, newTexture, rotate) {
+    this.tweens.add({
+      targets: card,
+      // by setting the horizontal scale to 0, we make it look like its mid-flip
+      scaleX: !rotate ? 0 : this.cardScale,
+      scaleY: rotate ? 0 : this.cardScale,
+      duration: 200,
+      ease: 'Linear',
+      // once its done we change the image used, and make it fully flip
+      onComplete: () => {
+        // Change the texture to the new card face
+        card.setTexture(newTexture)
+        // Flip back to full size
+        this.tweens.add({
+          targets: card,
+          // set horizontal scale back to what it was originally
+          scaleX: this.cardScale,
+          duration: 200,
+          ease: 'Linear'
+        })
+      },
+    })
   }
 
   // method to make a bet
@@ -610,12 +650,6 @@ class PokerScene extends Phaser.Scene {
     return value
   }
 
-  // method for the specified player to pass the turn to the next player, or dealer
-  passTurn(index){
-    this.isPlayersTurn[index] = false
-    this.isPlayersTurn[index == this.amountOfPlayers - 1 ? 0 : index + 1] = true
-  }
-
   // method to show or remove the betting options (0 ~ 10k, and place bets / cancel buttons)
   changeBettingOptions(option, raise){
     this.optionButtons.forEach((item => item.setVisible(!option).setActive(!option)))
@@ -694,14 +728,16 @@ class PokerScene extends Phaser.Scene {
     if(gamePhase == 1) {
       let i = 0
       this.dealer.forEach((item) => {
-        this.animateCard(centerX + ((i - 2) * (this.scale.width / 20)), this.scale.width / 10, `${item.rank}_of_${item.suit}.png`, i * 2, 1)
+        const string = `${item.rank}_of_${item.suit}.png`
+        this.activeCards.set(string, this.animateCard(centerX + ((i - 2) * (this.scale.width / 20)), this.scale.width / 10, string, i * 2, 1))
         i++
       })
     }
     // show just the next card if on the turn or river
-    else if (gamePhase == 2 || gamePhase == 3)
-      this.animateCard(centerX + ((gamePhase - 1) * (this.scale.width / 20)), this.scale.width / 10, `${this.dealer[gamePhase + 1].rank}_of_${this.dealer[gamePhase + 1].suit}.png`, 0, 1)
-
+    else if (gamePhase == 2 || gamePhase == 3) {
+      const string = `${this.dealer[gamePhase + 1].rank}_of_${this.dealer[gamePhase + 1].suit}.png`
+      this.activeCards.set(string, this.animateCard(centerX + ((gamePhase - 1) * (this.scale.width / 20)), this.scale.width / 10, string, 0, 1))
+    }
     // set the next turn, and prompt them to go
     this.currentTurn = nextTurn
     this.optionButtons.forEach(item => {item.setActive(this.currentTurn == this.room.sessionId).setVisible(this.currentTurn == this.room.sessionId)});
@@ -711,20 +747,34 @@ class PokerScene extends Phaser.Scene {
   }
 
   // method to end the game
-  endGame(winner, winnings) {
+  endGame(winner, winnings, result) {
+    if(this.room.state.waitingRoom.has(this.room.sessionId)) return
     this.currentTurn = "none"
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
+    let message = ''
+
+    if (result == 'folded')
+      message = " because everyone folded"
+    else if (result == 'disconnect')
+      message = " because everyone else disconnected"
+    else
+      message = " with a " + result
     
     // show results
     if (this.room.sessionId == winner) {
-      this.resultsText.setText("You Won!!!").setVisible(true)
+      this.resultsText.setText(`You Won ${message}!!!`).setVisible(true)
       this.sound.play("win")
       this.playerCredits += winnings
       this.totalCreditsText.setText(`Credits: ${this.playerCredits}`)
     }
     else
-      this.resultsText.setText(`${winner} won this round`).setVisible(true)
+      this.resultsText.setText(`${winner} won this round ${message}`).setVisible(true)
+
+    this.activeCards.keys().forEach(item => {
+      if(this.activeCards.get(item).texture.key.includes('card'))
+        this.flipCard(this.activeCards.get(item), item, item.height < item.width)
+    })
 
     this.optionButtons.forEach(item => {item.setActive(false).setVisible(false)});
     this.cancelActionButton.setActive(false).setVisible(false)
