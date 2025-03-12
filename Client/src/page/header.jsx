@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { auth } from '../../firebase';
 import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, getFirestore } from 'firebase/firestore';
-import { Typography, Box, TextField, Button, FormControl, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Link, CircularProgress, AppBar, Toolbar, IconButton } from "@mui/material";
+import { Typography, Box, TextField, Button, FormControl, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Link, CircularProgress, AppBar, Toolbar, IconButton, Tooltip } from "@mui/material";
 import MenuIcon from '@mui/icons-material/Menu';
 import Grid from '@mui/material/Grid2';
 import { useTheme } from "@mui/material/styles";
@@ -97,29 +97,44 @@ function Header() {
           </Grid>
 
           {/* Context text (center) */}
-          {(location.pathname === '/room' ||
-            location.pathname === '/roomPage') && (
-              <Grid size={6}>
+          <Grid size={3}>
+            {location.pathname.startsWith('/room') && (
+              <>
                 <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
-                  Room: Room Name Here
+                  Room: &lt;Room Name Here&gt;
                 </Typography>
                 <br />
                 <Link variant="general" href="/joinroom" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Join a different room</Link>
-              </Grid>
+              </>
             )}
-          {/* TODO: Add paths, game name conditional statements for all games here */}
-          {(location.pathname === '/blackjack' ||
-            location.pathname === '/blackjackbyid') && (
-              <Grid size={6}>
-                {location.pathname === '/blackjack' && (
-                  <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
-                    Blackjack
-                  </Typography>
-                )}
+            {location.pathname.startsWith('/blackjack') && (
+              <>
+                <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
+                  Blackjack
+                </Typography>
                 <br />
                 <Link variant="general" href="/roomPage" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Exit game</Link>
-              </Grid>
+              </>
             )}
+            {location.pathname.startsWith('/horseracing') && (
+              <>
+                <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
+                  Horse Racing
+                </Typography>
+                <br />
+                <Link variant="general" href="/roomPage" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Exit game</Link>
+              </>
+            )}
+            {location.pathname.startsWith('/poker') && (
+              <>
+                <Typography variant="heading" sx={{ color: theme.palette.primary.contrastText, fontSize: "1.5rem" }}>
+                  Poker
+                </Typography>
+                <br />
+                <Link variant="general" href="/roomPage" sx={{ color: theme.palette.primary.contrastText, textDecoration: 'underline' }}>Exit game</Link>
+              </>
+            )}
+          </Grid>
 
           {/* User details (right side) */}
           <Grid size="grow"
@@ -134,24 +149,96 @@ function Header() {
                 overflow: 'hidden',
                 backgroundColor: theme.palette.secondary.main,
                 boxShadow: '0 0px 2px rgba(0, 0, 0, 0.2)',
-                padding: '8px',
-                alignContent: 'center',
+                padding: '0px 6px',
+                display: 'flex',
+                alignItems: 'center',
               }}
             >
-              {/* user name */}
+              {!isAdmin && (
+                <Box sx={{ display: 'flex', alignItems: 'start', flexDirection: 'column', marginLeft: '6px', marginRight: '30px' }}>
+                  <Link
+                    variant="heading"
+                    fontWeight={700}
+                    fontSize={"20px"}
+                    sx={{
+                      textDecoration: "none",
+                      color: theme.palette.primary.contrastText,
+                      '&:hover': {
+                        color: theme.palette.primary.dark,
+                      }
+                    }}
+                    href={`/user/${user?.uid}`}
+                  >
+                    {userName}
+                  </Link>
 
-              {/* user points */}
+                  <Typography variant="heading" fontWeight={300}>
+                    0,000 points
+                  </Typography>
+                </Box>
+              )}
 
-              {/* users and owners: my org button (use an icon) */}
+              {isAdmin && (
+                <Box sx={{ display: 'flex', alignItems: 'start', marginLeft: '6px', marginRight: '30px' }}>
+                  <Link variant="heading" fontWeight={700} fontSize={"20px"} sx={{
+                    textDecoration: "none",
+                    color: theme.palette.primary.contrastText,
+                    '&:hover': {
+                      color: theme.palette.primary.dark,
+                    }
+                  }} href={`/admin`} >
+                    {userName}
+                  </Link>
+                </Box>
+              )}
 
-              <Link href="/index" onClick={signOutPress}
-                sx={{
-                  fontSize: "30px",
-                  color: theme.palette.primary.contrastText,
-                  paddingLeft: "10px"
-                }}>
-                <i className="fas fa-sign-out-alt"></i>
-              </Link>
+              {isOwner && (
+                <Tooltip title="Organization Settings">
+                  <Link href={`/orgsettings/${userOrg.orgId}`}
+                    sx={{
+                      fontSize: "32px",
+                      color: theme.palette.primary.contrastText,
+                      padding: "0 10px",
+                      '&:hover': {
+                        color: theme.palette.primary.dark,
+                      }
+                    }}
+                  >
+                    <i class="fa-solid fa-gears"></i>
+                  </Link>
+                </Tooltip>
+              )}
+
+              {userOrg && (
+                <Tooltip title="My Organization">
+                  <Link href={`/org/${userOrg.orgId}`}
+                    sx={{
+                      fontSize: "32px",
+                      color: theme.palette.primary.contrastText,
+                      padding: "0 10px",
+                      '&:hover': {
+                        color: theme.palette.primary.dark,
+                      }
+                    }}
+                  >
+                    <i class="fa-solid fa-sitemap"></i>
+                  </Link>
+                </Tooltip>
+              )}
+
+              <Tooltip title="Sign Out">
+                <Link href="/index" onClick={signOutPress}
+                  sx={{
+                    fontSize: "32px",
+                    color: theme.palette.primary.contrastText,
+                    padding: "0 10px",
+                    '&:hover': {
+                      color: theme.palette.primary.dark,
+                    }
+                  }}>
+                  <i className="fas fa-sign-out-alt"></i>
+                </Link>
+              </Tooltip>
             </Box>
           </Grid>
         </Grid>
