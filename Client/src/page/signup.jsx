@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc, getDoc, getDocs, collection, query, where, getFirestore, arrayUnion, updateDoc, increment } from 'firebase/firestore';
 import { auth, app } from '../../firebase';
-import { Link, Typography, Box, TextField, Button, Divider } from "@mui/material";
+import { Link, Typography, Box, TextField, Button, Divider, CircularProgress } from "@mui/material";
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { useTheme } from "@mui/material/styles";
@@ -21,6 +21,7 @@ function Signup() {
   const [birthday, setBirthday] = useState('');
   const [error, setError] = useState('');
   const theme = useTheme();
+  const [isLoading, setIsLoading] = useState(false);
 
   // Returns true if birthday is before today - 18 years.
   function is18OrOlder(birthday) {
@@ -49,6 +50,8 @@ function Signup() {
 
     // format the birthday to a string to match Firestore setup
     const formattedBirthday = birthday ? birthday.toISOString().split('T')[0] : '';
+
+    setIsLoading(true);
 
     try {
       // Create JSON object for user details
@@ -83,6 +86,7 @@ function Signup() {
 
         // Check if user is of age for organization. Set error if not.
         if (!is18OrOlder(formattedBirthday) && orgData.adultOnly) {
+          setIsLoading(false);
           setError("ERROR: You must be 18 or older to create an account with this organization.");
           return;
         }
@@ -120,6 +124,7 @@ function Signup() {
     }
     // handle firebase errors
     catch (err) {
+      setIsLoading(false);
       if (err.code === 'auth/email-already-in-use') {
         setError('ERROR: This email is already in use.');
       } else if (err.code === 'auth/invalid-email' || err.code === 'invalid-argument') {
@@ -274,7 +279,7 @@ function Signup() {
 
             {error && <Typography variant="general" className="error">{error}</Typography>}
 
-            <Button onClick={createAccountButton} variant="contained" size="large"
+            <Button onClick={createAccountButton} variant="contained" size="large" disabled={isLoading}
               sx={{
                 backgroundColor: theme.palette.secondary.main,
                 color: theme.palette.secondary.contrastText,
@@ -286,7 +291,7 @@ function Signup() {
                 margin: "10px 0px",
               }}
             >
-              <Typography variant="btn">Create Account</Typography>
+              {isLoading ? <CircularProgress size={42} /> : <Typography variant="btn">Create Account</Typography>}
             </Button>
 
           </div>
