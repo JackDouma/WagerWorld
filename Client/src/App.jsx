@@ -53,7 +53,7 @@ function AppContent() {
             pathname === '/orgrequest'
         );
     }
-    // // pages listed here will show the header
+    // // pages listed here will show the header (game pages included)
     // const showHeader = (pathname) => {
     //     return (
     //         pathname.startsWith('/org/') ||
