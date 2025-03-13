@@ -104,7 +104,7 @@ function Header() {
 
             {/* Room name and exit link (center) */}
             <Grid size={3}>
-              {location.pathname.startsWith('/room') &&
+              {location.pathname.startsWith('/TODO:TheRoomPageWhereAllTheGamesAreShown') && // TODO
                 <>
                   <Typography variant="heading"
                     sx={{
@@ -267,7 +267,7 @@ function Header() {
         }}
       >
         <Tooltip title="Leave game" placement="right">
-          <Link href="/roomPage"
+          <Link href="/TODO:TheRoomPageWhereAllTheGamesAreShown" // TODO
             sx={{
               display: 'flex',
               alignItems: 'center',
