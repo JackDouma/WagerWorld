@@ -54,12 +54,13 @@ class BlackjackScene extends Phaser.Scene {
 
     // if room is found
     try {
-      this.room = await this.client.joinById({ customRoomId: this.roomId });
+      this.room = await this.client.joinById(this.roomId, {});
       console.log("Joining room:", this.roomId);
     } 
     // if not room is found
     catch (err) 
     {
+      console.log(err);
       this.room = await this.client.create("blackjack", { customRoomId: this.roomId });
       console.log("Creating room:", this.roomId);
     }
@@ -192,7 +193,7 @@ class BlackjackScene extends Phaser.Scene {
     })
 
     // reset game message from the server
-    this.room.onMessage("resetGame", (message) => { 
+    this.room.onMessage("newGame", (message) => { 
       this.resetGame()
     })
 
@@ -612,7 +613,7 @@ class BlackjackScene extends Phaser.Scene {
         this.resultsText.setText('Waiting for rooom owner...')
         this.playAgainButton.destroy()
         if (this.room.sessionId == this.room.state.owner)
-          this.room.send("resetGame")
+          this.room.send("newGame")
       }).setOrigin(0.5, 0.5)
 
     this.quitButton = this.add

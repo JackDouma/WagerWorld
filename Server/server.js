@@ -8,7 +8,8 @@ const { MyRoom } = require('./rooms/MyRoom');
 const { CardRoom } = require('./rooms/CardRoom');
 const { BlackjackRoom } = require('./rooms/BlackjackRoom');
 const HorseRacingRoom = require('./rooms/HorseBettingRoom');
-const { PokerRoom } = require('./rooms/PokerRoom')
+const { PokerRoom } = require('./rooms/PokerRoom');
+const { Lobby } = require('./rooms/Lobby');
 
 const app = express();
 const port = process.env.PORT || 2567;
@@ -27,7 +28,8 @@ const gameServer = new Server({
 gameServer.define('card_room', CardRoom);
 gameServer.define('blackjack', BlackjackRoom).enableRealtimeListing();
 gameServer.define('horse_racing', HorseRacingRoom);
-gameServer.define('poker', PokerRoom)
+gameServer.define('poker', PokerRoom);
+gameServer.define('lobby', Lobby);
 
 // Use JSON body parsing
 app.use(express.json());
@@ -38,10 +40,10 @@ app.use(express.static('public'));
 // POST endpoint for creating rooms
 app.post("/create-room", async (req, res) => {
     try {
-        const room = await matchMaker.createRoom("blackjack", { maxPlayers:  8 });
+        const room = await matchMaker.createRoom(req.body.roomType, req.body.options);
         res.json({ roomId: room.roomId });
-    } 
-    catch (error) 
+    }
+    catch (error)
     {
         res.status(400).json({ ERROR: error.message });
     }

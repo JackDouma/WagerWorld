@@ -31,6 +31,7 @@ type({ map: "number" })(RaceState.prototype, "bets");
 
 class HorseRacingRoom extends Room {
   onCreate() {
+    this.autoDispose = false;
     this.maxClients = 10;
     this.setState(new RaceState());
 
@@ -69,7 +70,7 @@ class HorseRacingRoom extends Room {
       this.state.horses.forEach(horse => {
         if (!horse.finished) {
           horse.x += horse.speed;
-          
+
           if (horse.x >= 700) {
             horse.finished = true;
             horse.color = "green";
@@ -87,7 +88,7 @@ class HorseRacingRoom extends Room {
   }
 
   endRace() {
-    const winningHorseIndex = this.state.horses.findIndex(horse => 
+    const winningHorseIndex = this.state.horses.findIndex(horse =>
       horse.x >= 700
     );
 

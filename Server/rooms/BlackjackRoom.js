@@ -9,17 +9,20 @@ const { ArraySchema } = require("@colyseus/schema");
 class BlackjackRoom extends Room {
   onCreate(options) {
     this.customRoomId = options.customRoomId;
+    this.autoDispose = false;
     this.setState(new BlackjackState());
 
     this.maxClients = options.maxPlayers || 8;
 
-    // Add timeout that destroys room if no players join (needed for /create-room endpoint)
+    // Add timeout that destroys room if no players join (needed for /create-room endpoint). Disabled this for lobby implementation.
+    /*
     this.emptyRoomTimeout = setTimeout(() => {
       if (this.clients.length === 0) {
         console.log(`Room ${this.customRoomId} destroyed due to inactivity.`);
         this.disconnect();
       }
     }, 30000);
+    */
 
     // Add logging to track player count
     console.log(`Room ${this.roomId} created. Current player count: ${this.state.players.size}`);
@@ -295,7 +298,7 @@ class BlackjackRoom extends Room {
     this.state.gamePhase = "waiting"
     this.state.dealer = new BlackjackPlayer()
     this.initializeDeck()
-        
+
     this.state.players.forEach(player => {
       player.bet = 0
       player.hand = new ArraySchema()
@@ -362,15 +365,17 @@ class BlackjackRoom extends Room {
 
     console.log(`Player left. Remaining players: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
 
-    // if there is nobody left in the room, then destroy it
+    // if there is nobody left in the room, then destroy it. Disabled for lobby implementation.
+    /*
     if(this.state.players.size == 0) {
       console.log("No players left, destroying room")
       this.broadcast("roomDestroyed")
       this.disconnect()
     }
+    */
+
     // otherwise tell the clients that someone left
-    else
-      this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
+    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
   }
 }
 
