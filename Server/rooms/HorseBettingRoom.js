@@ -1,6 +1,6 @@
-const { Room } = require('@colyseus/core');
+const { Room } = require("@colyseus/core");
 const { Schema, type, MapSchema, ArraySchema } = require("@colyseus/schema");
-const admin = require('../firebase');
+const admin = require("../firebase");
 
 class Horse extends Schema {
   constructor() {
@@ -44,7 +44,11 @@ class HorseRacingRoom extends Room {
     }
 
     this.onMessage("placeBet", (client, data) => {
-      if (!this.state.raceStarted && data.horseIndex >= 0 && data.horseIndex < 5) {
+      if (
+        !this.state.raceStarted &&
+        data.horseIndex >= 0 &&
+        data.horseIndex < 5
+      ) {
         this.state.bets.set(client.sessionId, data.horseIndex);
       }
     });
@@ -59,7 +63,7 @@ class HorseRacingRoom extends Room {
 
   startRace() {
     // Assign random speeds to horses
-    this.state.horses.forEach(horse => {
+    this.state.horses.forEach((horse) => {
       horse.x = 50;
       horse.speed = 1 + Math.random() * 2;
       horse.finished = false;
@@ -69,10 +73,10 @@ class HorseRacingRoom extends Room {
     const interval = setInterval(() => {
       let allFinished = true;
 
-      this.state.horses.forEach(horse => {
+      this.state.horses.forEach((horse) => {
         if (!horse.finished) {
           horse.x += horse.speed;
-          
+
           if (horse.x >= 700) {
             horse.finished = true;
             horse.color = "green";
@@ -90,20 +94,20 @@ class HorseRacingRoom extends Room {
   }
 
   endRace() {
-    const winningHorseIndex = this.state.horses.findIndex(horse => 
-      horse.x >= 700
+    const winningHorseIndex = this.state.horses.findIndex(
+      (horse) => horse.x >= 700
     );
 
     console.log("winningHorseIndex", winningHorseIndex);
 
     this.state.bets.forEach((betHorseIndex, clientId) => {
       if (betHorseIndex === winningHorseIndex) {
-        const client = this.clients.find(c => c.sessionId === clientId);
+        const client = this.clients.find((c) => c.sessionId === clientId);
         if (client) {
-            console.log("won", clientId);
+          console.log("won", clientId);
           client.send("raceResult", {
             won: true,
-            horseIndex: winningHorseIndex
+            horseIndex: winningHorseIndex,
           });
         }
       }
@@ -115,29 +119,32 @@ class HorseRacingRoom extends Room {
     }, 3000);
   }
 
- async onJoin(client, options) {
+  async onJoin(client, options) {
     // Set player ID from options when client joins
     if (options.playerId) {
       try {
         // console.log('Firebase Admin:', admin); // Should show initialized app
         // console.log('Firestore:', admin.firestore); // Should show function
 
-        const playerDoc = await admin.firestore.collection('users').doc(options.playerId).get();
+        const playerDoc = await admin.firestore
+          .collection("users")
+          .doc(options.playerId)
+          .get();
         if (playerDoc.exists) {
           const playerName = playerDoc.data().name;
+          client.sessionId = options.playerId;
           this.state.players.set(client.sessionId, playerName);
           console.log(`${playerName} joined!`);
         } else {
           console.log(`Player with ID ${options.playerId} not found.`);
         }
       } catch (error) {
-        console.error('Error fetching player data:', error);
+        console.error("Error fetching player data:", error);
       }
-    
 
-    console.log(options.playerId, "joined!");
+      console.log(options.playerId, "joined!");
+    }
   }
-}
 
   onLeave(client) {
     console.log(client.sessionId, "left!");
@@ -146,13 +153,21 @@ class HorseRacingRoom extends Room {
     this.state.players.delete(client.sessionId);
 
     // Update isInGame to false
-    admin.firestore.collection('users').doc(client.sessionId).update({
-      isInGame: false
+    admin.firestore.collection("users").doc(client.sessionId).update({
+      isInGame: false,
     });
 
     // console log to show that the player has left the game
     console.log(`Player with ID ${client.sessionId} has left the game.`);
+  }
 
+  onDispose() {
+    // make sure all clients are set to not in game
+    this.state.players.forEach((player, clientId) => {
+      admin.firestore.collection("users").doc(clientId).update({
+        isInGame: false,
+      });
+    });
   }
 }
 

@@ -4,7 +4,7 @@ import { Client } from "colyseus.js";
 import { useParams } from "react-router-dom";
 import "../HorseRacingGame.css";
 import {db}  from "../../firebase";
-import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { doc, getDoc, updateDoc  } from "firebase/firestore";
 
 const HorseRacingGame = () => {
   const gameRef = useRef(null); // Reference to the Phaser game instance
@@ -21,19 +21,26 @@ const HorseRacingGame = () => {
     async function connectToRoom() {
       try {
         const playerId = localStorage.getItem("firebaseIdToken");
+        const userRef = doc(db, "users", playerId);
         const userDoc = await getDoc(doc(db, "users", playerId));
-        
+        try{
         if(userDoc.data().isInGame){
                     
                     console.log(`Player with ID is already in a game.`);
                     // open popup to inform user that they are already in a game and redirect to home page
-                    
+                    // redirect to home page
+                    window.location.href = "/";
                     return
                   }
         // update isInGame to true
-        await db.collection("users").doc(playerId).update({
+
+        await updateDoc(userRef, {
           isInGame: true
         });
+      }
+      catch (error) {
+        console.error('Error fetching player data:', error);
+      }
 
         const room = await client.joinOrCreate("horse_racing", {
           playerId: playerId || "anonymous",
