@@ -110,10 +110,21 @@ class BlackjackRoom extends Room {
     })
 
     // once the game is reset, reset the owner as well
-    this.onMessage("resetGame", (client) => {
-      console.log("Resetting Game...")
-      this.state.owner = ''
-      this.broadcast("resetGame", {client: client.sessionId})
+    this.onMessage("newGame", (client) => {
+      // const waiters = this.state.waitingRoom
+      const waitingPlayers = Array.from(this.state.waitingRoom.keys());
+      console.log('waiters', waitingPlayers)
+      while (waitingPlayers.length > 0 && this.state.players.size < this.maxClients) {
+        const nextPlayerId = waitingPlayers.shift()
+        const player = this.state.waitingRoom.get(nextPlayerId)
+        if (player) {
+          this.state.players.set(nextPlayerId, player)
+          this.state.waitingRoom.delete(nextPlayerId)
+          player.hand = new ArraySchema()
+          this.broadcast("playerJoin", { sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+        }
+      }
+      this.broadcast('newGame', { waitingRoom: this.state.waitingRoom })
     })
   }
 
@@ -165,6 +176,7 @@ class BlackjackRoom extends Room {
     this.state.gamePhase = "dealing";
 
     const playerIds = Array.from(this.state.players.keys());
+    const hands = {}
 
     // Deal initial cards with a slight delay
     const dealCards = async () => {
@@ -188,6 +200,7 @@ class BlackjackRoom extends Room {
           player.hand.push(card);
           player.handValue = this.calculateHandValue(player.hand)
         }
+        hands[playerId] = this.state.players.get(playerId).hand
       }
 
       // dealer's second card
@@ -200,6 +213,8 @@ class BlackjackRoom extends Room {
     };
 
     dealCards();
+    console.log(this.state.dealer.hand)
+    this.broadcast('gameStart', { hands, dealerHand: this.state.dealer.hand, owner: this.state.owner, gamePhase: this.state.gamePhase })
   }
 
   // manages all blackjack counting logic :)
@@ -230,22 +245,22 @@ class BlackjackRoom extends Room {
   nextTurn(playerBusts) {
     const prevTurn = this.state.currentTurn
     const playerIds = Array.from(this.state.players.keys());
-    const currentIndex = playerIds.indexOf(this.state.currentTurn);
+    const currentIndex = playerIds.indexOf(this.state.currentTurn)
     // if the calculated index is the last one, make the dealer go
     if (currentIndex === playerIds.length - 1)
       this.state.currentTurn = "dealer"
     // otherwise, proceed as normal
     else
-      this.state.currentTurn = playerIds[currentIndex + 1];
+      this.state.currentTurn = playerIds[currentIndex + 1]
     // broadcast to the clients that the next person can go
-    this.broadcast("nextTurn", { nextPlayer: this.state.currentTurn, busted: playerBusts, prevPlayer: prevTurn, score: this.state.players.get(prevTurn).handValue });
+    this.broadcast("nextTurn", { nextPlayer: this.state.currentTurn, busted: playerBusts, prevPlayer: prevTurn, score: this.state.players.get(prevTurn).handValue })
   }
 
   // handling the dealer's turn
   dealerTurn() {
     let dealerValue = this.calculateHandValue(this.state.dealer.hand)
     // if for some reason all the player's decided to stand on a smaller value than the dealer, then skip the loop
-    const allPlayersLower = [...this.state.players.values()].every(player => this.calculateHandValue(player.hand) < dealerValue);
+    const allPlayersLower = [...this.state.players.values()].every(player => this.calculateHandValue(player.hand) < dealerValue)
     if (!allPlayersLower) {
       // make the dealer draw cards until they get above a 17
       while (dealerValue < 17) {
@@ -285,8 +300,19 @@ class BlackjackRoom extends Room {
     })
 
     // set game phase to 'done', and broadcast the results back to the clients
-    this.state.gamePhase = "done"
+    // this.state.gamePhase = "done"
     this.broadcast("dealerResult", { dealerHand: this.state.dealer.hand, playerResults: results, winnings: payouts })
+
+    this.state.gamePhase = "waiting"
+    this.state.dealer = new BlackjackPlayer()
+    this.initializeDeck()
+        
+    this.state.players.forEach(player => {
+      player.bet = 0
+      player.hand = new ArraySchema()
+      player.handValue = 0
+      player.isReady = false
+    })
   }
 
   onGameFinished() {

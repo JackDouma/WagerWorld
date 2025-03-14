@@ -9,6 +9,7 @@ const { CardRoom } = require('./rooms/CardRoom');
 const { BlackjackRoom } = require('./rooms/BlackjackRoom');
 const { admin, firestore, auth } = require('./firebase'); 
 const HorseRacingRoom = require('./rooms/HorseBettingRoom');
+const { PokerRoom } = require('./rooms/PokerRoom')
 const endpoints = require('./endpoints');
 
 const app = express();
@@ -39,6 +40,7 @@ const gameServer = new Server({
 gameServer.define('card_room', CardRoom);
 gameServer.define('blackjack', BlackjackRoom).enableRealtimeListing();
 gameServer.define('horse_racing', HorseRacingRoom);
+gameServer.define('poker', PokerRoom)
 
 // Use JSON body parsing
 app.use(express.json());
