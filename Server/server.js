@@ -7,13 +7,26 @@ const { WebSocketTransport } = require('@colyseus/ws-transport');
 const { MyRoom } = require('./rooms/MyRoom');
 const { CardRoom } = require('./rooms/CardRoom');
 const { BlackjackRoom } = require('./rooms/BlackjackRoom');
+const { admin, firestore, auth } = require('./firebase'); 
 const HorseRacingRoom = require('./rooms/HorseBettingRoom');
 const { PokerRoom } = require('./rooms/PokerRoom')
+const endpoints = require('./endpoints');
 
 const app = express();
 const port = process.env.PORT || 2567;
 // NOTE: This is not secure and will need to be updated once we have the frontend hosted.
 app.use(cors());
+
+// Attach Firebase services to the request object
+app.use((req, res, next) => {
+    req.firestore = firestore;
+    req.auth = auth;
+    next();
+  });
+
+  app.use('/api', endpoints);
+
+
 
 // Create HTTP & WebSocket servers
 const server = http.createServer(app);
