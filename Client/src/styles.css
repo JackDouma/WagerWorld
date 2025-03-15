@@ -139,14 +139,14 @@ table td {
     text-decoration: underline;
 }
   
-.form 
+/* .form 
 {
     display: flex;
     align-items: center;
     flex-direction: column;
     gap: 10px;
     margin-bottom: 10px;
-}
+} */
 input 
 {
     padding: 10px;

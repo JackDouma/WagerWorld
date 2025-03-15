@@ -161,11 +161,11 @@ function ViewOrgById() {
     }, []);
 
     useEffect(() => {
-        document.body.style.backgroundColor = theme.palette.primary.light;
+        document.body.style.backgroundColor = "#ffe5bd";
         return () => {
             document.body.style.backgroundColor = '';
         };
-    }, [theme.palette.primary.light]);
+    }, []);
 
 
     return (

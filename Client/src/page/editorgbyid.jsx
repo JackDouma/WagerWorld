@@ -82,7 +82,8 @@ function EditOrgById()
             <h1>Edit Organization</h1>
             {error && <p style={{ color: 'red' }}>{error}</p>}
 
-            <form className="form" onSubmit={handleSave}>
+            {/* TODO: Note - form styling removed in styles.css - add back temporarily to see original */}
+            <form className="form" onSubmit={handleSave}> 
                 <div>
                     <label htmlFor="orgName">Organization Name</label>
                     <input
