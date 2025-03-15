@@ -74,6 +74,7 @@ function RoomPage() {
                     </button>
                 ))}
             </div>
+            <input type="hidden" id="headerRoomId" value={roomId} />
         </div>
     );
 }

@@ -181,6 +181,7 @@ const HorseRacingGame = () => {
             </tbody>
             </table>
         </div>
+        <input type="hidden" id="headerRoomId" value={roomId} />
         </div>
     );
 };

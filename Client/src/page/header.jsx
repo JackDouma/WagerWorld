@@ -17,8 +17,13 @@ function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
+  const [roomId, setRoomId] = useState('');
 
   useEffect(() => {
+    const inputField = document.getElementById('headerRoomId');
+    if (inputField) {
+      setRoomId(inputField.value);
+    }
 
     // check if logged in or not
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -46,7 +51,7 @@ function Header() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [location]);
 
   // handle sign-out
   const signOutPress = async () => {
@@ -104,7 +109,7 @@ function Header() {
 
             {/* Room name and exit link (center) */}
             <Grid size={3}>
-              {location.pathname.startsWith('/TODO:TheRoomPageWhereAllTheGamesAreShown') && // TODO
+              {location.pathname === (`/room/${roomId}`) &&
                 <>
                   <Typography variant="heading"
                     sx={{
@@ -112,7 +117,8 @@ function Header() {
                       fontSize: "1.5rem"
                     }}
                   >
-                    Room: &lt;Room Name Here&gt;
+                    {/* TOOD: Replace with room name */}
+                    Room: {roomId}
                   </Typography>
                   <br />
                   <Link variant="general" href='/signin'
@@ -173,6 +179,7 @@ function Header() {
                     </Link>
 
                     <Typography variant="heading" fontWeight={300}>
+                      {/* TODO: Replace with user points balance */}
                       0,000 points
                     </Typography>
                   </Box>
@@ -267,7 +274,7 @@ function Header() {
         }}
       >
         <Tooltip title="Leave game" placement="right">
-          <Link href="/TODO:TheRoomPageWhereAllTheGamesAreShown" // TODO
+          <Link href={`/room/${roomId}`}
             sx={{
               display: 'flex',
               alignItems: 'center',
