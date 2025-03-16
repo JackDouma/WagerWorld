@@ -3,7 +3,7 @@ import { signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
 import { auth } from "../../firebase";
 import { useNavigate } from "react-router-dom";
 import { doc, getDoc, getFirestore } from "firebase/firestore";
-import { Link, Typography, Box, TextField, Button, Divider } from "@mui/material";
+import { Link, Typography, Box, TextField, Button, Divider, CircularProgress } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 const db = getFirestore();
@@ -19,6 +19,7 @@ function Signin() {
   const [userSignedIn, setUserSignedIn] = useState(true);
   const navigate = useNavigate();
   const theme = useTheme();
+  const [isLoading, setIsLoading] = useState(false);
 
   // check if the user is already signed in, and redirect to their org page if so
   useEffect(() => {
@@ -29,6 +30,8 @@ function Signin() {
           const userData = userDoc.data();
           const userIsAdmin = userData.admin;
           const userOrgId = userData.org?.orgId;
+          const idToken = await user.getIdToken();
+          localStorage.setItem('firebaseIdToken', user.uid);
           if (userIsAdmin) {
             navigate("/admin");
           } else {
@@ -56,6 +59,8 @@ function Signin() {
       return;
     }
 
+    setIsLoading(true);
+
     try {
       const userCredential = await signInWithEmailAndPassword(
         auth,
@@ -81,6 +86,7 @@ function Signin() {
       }
 
     } catch (err) {
+      setIsLoading(false);
       // handle signin errors
       if (
         err.code === "auth/user-not-found" ||
@@ -100,7 +106,7 @@ function Signin() {
     return (
       <Box
         sx={{
-          backgroundImage: 'url(/auth-pages-background.jpg)',
+          backgroundImage: 'url(/auth-pages-background.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           minHeight: "100vh",
@@ -170,7 +176,7 @@ function Signin() {
 
             {error && <Typography variant="general" className="error">{error}</Typography>}
 
-            <Button onClick={signInButton} variant="contained" size="large"
+            <Button onClick={signInButton} variant="contained" size="large" disabled={isLoading}
               sx={{
                 backgroundColor: theme.palette.secondary.main,
                 color: theme.palette.secondary.contrastText,
@@ -182,7 +188,7 @@ function Signin() {
                 margin: "10px 0px",
               }}
             >
-              <Typography variant="btn">Sign In</Typography>
+              {isLoading ? <CircularProgress size={42} /> : <Typography variant="btn">Sign In</Typography>}
             </Button>
 
           </div>
