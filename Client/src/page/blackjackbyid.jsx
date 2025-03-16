@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import Phaser from 'phaser'
 import { Client, Room } from 'colyseus.js';
 import { useParams } from "react-router-dom";
+import { doc, getDoc, updateDoc, getFirestore  } from "firebase/firestore";
+const db = getFirestore();
 
 class BlackjackScene extends Phaser.Scene {
   
@@ -51,16 +53,38 @@ class BlackjackScene extends Phaser.Scene {
   // method to create the scene
   async create(data) {
     this.roomId = data.roomId;
-
+      const playerId = localStorage.getItem("firebaseIdToken");;
+      const userRef = doc(db, "users", playerId);
+      const userDoc = await getDoc(doc(db, "users", playerId));
+        try{
+        if(userDoc.data().isInGame){
+         
+      
+                    console.log(`Player with ID is already in a game.`);
+                    // open popup to inform user that they are already in a game and redirect to home page
+                    // redirect to home page
+                    window.location.href = "/";
+                    return
+                  }
+        // update isInGame to true
+        await updateDoc(userRef, {
+          isInGame: true
+        });
+        
+      }
+      catch (error) {
+        console.error('Error fetching player data:', error);
+      }
     // if room is found
+    console.log("playerId:", playerId);
     try {
-      this.room = await this.client.joinById({ customRoomId: this.roomId });
+      this.room = await this.client.joinById({ customRoomId: this.roomId, playerId: playerId || "anonymous"});
       console.log("Joining room:", this.roomId);
     } 
     // if not room is found
     catch (err) 
     {
-      this.room = await this.client.create("blackjack", { customRoomId: this.roomId });
+      this.room = await this.client.create("blackjack", { customRoomId: this.roomId ,  playerId: playerId || "anonymous"});
       console.log("Creating room:", this.roomId);
     }
 

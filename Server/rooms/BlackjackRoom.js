@@ -1,4 +1,5 @@
 const { Room } = require("@colyseus/core");
+const admin = require("../firebase");
 const {
   Card,
   BlackjackPlayer,
@@ -15,6 +16,7 @@ class BlackjackRoom extends Room {
   onCreate(options) {
     // Custom room ID (if provided)
     this.customRoomId = options.customRoomId;
+    this.playerId = options.playerId;
 
     // Initialize room state
     this.setState(new BlackjackState());
@@ -338,12 +340,32 @@ class BlackjackRoom extends Room {
   }
 
   // handles when a player joins
-  onJoin(client, options) {
+  async onJoin(client, options) {
+    console.log(options)
+    console.log(this.playerId)
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new BlackjackPlayer();
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
-    player.name = options.name || `Player ${client.sessionId}`;
+    var playerName = "";
+    if (options.playerId || this.playerId) {
+          try {
+            const playerDoc = await admin.firestore
+              .collection("users")
+              .doc(options.playerId)
+              .get();
+            if (playerDoc.exists) {
+              client.sessionId = options.playerId;
+              playerName = playerDoc.data().name;
+              player.name = playerName; 
+              console.log(`${playerName} joined!`);
+            } else {
+              console.log(`Player with ID ${options.playerId} not found.`);
+            }
+          } catch (error) {
+            console.error("Error fetching player data:", error);
+          }
+          
     player.totalCredits = options.balance || 10_000
 
     // if the game is currently in progress, put them in the waiting room
@@ -361,6 +383,7 @@ class BlackjackRoom extends Room {
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
     this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
+}
 
   // handles when a player leaves
   onLeave(client) {
@@ -382,12 +405,30 @@ class BlackjackRoom extends Room {
       }
       // remove player
       this.state.players.delete(client.sessionId);
+      // Remove player from players map
+      this.state.players.delete(client.sessionId);
+      
+          // Update isInGame to false
+      admin.firestore.collection("users").doc(client.sessionId).update({
+          isInGame: false,
+      });
+      
+      // console log to show that the player has left the game
+      console.log(`Player with ID ${client.sessionId} has left the game.`);
     }
     // if not found, check the watiting room and remove from there
     else {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
-      if(waitingPlayer)
+      if(waitingPlayer){
         this.state.waitingRoom.delete(client.sessionId)
+        admin.firestore.collection("users").doc(client.sessionId).update({
+          isInGame: false,
+      });
+      
+      // console log to show that the player has left the game
+      console.log(`Player with ID ${client.sessionId} has left the game.`);
+      }
+      
     }
     // if the room owner was the once that left, then make the next guy in line the owner
     if (!this.state.players.has(this.state.owner))
