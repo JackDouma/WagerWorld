@@ -403,8 +403,6 @@ class BlackjackRoom extends Room {
       if (currentIndex !== -1 && currentIndex < keys.length - 1) {
           nextKey = keys[currentIndex + 1]
       }
-      // remove player
-      this.state.players.delete(client.sessionId);
       // Remove player from players map
       this.state.players.delete(client.sessionId);
       
