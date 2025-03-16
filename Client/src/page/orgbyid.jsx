@@ -15,6 +15,11 @@ function ViewOrgById() {
     const [error, setError] = useState(null);
     const [client, setClient] = useState(null);
     const { orgId } = useParams();
+    const [allowedGames, setAllowedGames] = useState({
+        allowBlackJack: false,
+        allowPoker: false,
+        allowHorseRacing: false,
+    });
 
     useEffect(() => {
         const colyseusClient = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
@@ -43,6 +48,12 @@ function ViewOrgById() {
                             joinedAt: member.joinedAt?.toDate(),
                         }))
                     );
+
+                    setAllowedGames({
+                        allowBlackJack: orgData.allowBlackJack,
+                        allowPoker: orgData.allowPoker,
+                        allowHorseRacing: orgData.allowHorseRacing,
+                    });
                 }
             } 
             catch (err) 
@@ -263,42 +274,51 @@ function ViewOrgById() {
                         width: "300px"
                     }}>
                         <h2>Select Games</h2>
-                        <div>
-                            <label>
-                                Blackjack:
-                                <input 
-                                    type="number" 
-                                    min="0" 
-                                    max="3"
-                                    value={gameSelections.blackjack}
-                                    onChange={(e) => handleGameChange("blackjack", e.target.value)}
-                                />
-                            </label>
-                        </div>
-                        <div>
-                            <label>
-                                Poker:
-                                <input 
-                                    type="number" 
-                                    min="0" 
-                                    max="3"
-                                    value={gameSelections.poker}
-                                    onChange={(e) => handleGameChange("poker", e.target.value)}
-                                />
-                            </label>
-                        </div>
-                        <div>
-                            <label>
-                                Horse Racing:
-                                <input 
-                                    type="number" 
-                                    min="0" 
-                                    max="3"
-                                    value={gameSelections.horseRacing}
-                                    onChange={(e) => handleGameChange("horseRacing", e.target.value)}
-                                />
-                            </label>
-                        </div>
+                        {allowedGames.allowBlackJack && (
+                            <div>
+                                <label>
+                                    Blackjack (0-3):
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max="3"
+                                        value={gameSelections.blackjack}
+                                        onChange={(e) => handleGameChange("blackjack", e.target.value)}
+                                    />
+                                </label>
+                            </div>
+                        )}
+
+                        {allowedGames.allowPoker && (
+                            <div>
+                                <label>
+                                    Poker (0-3):
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max="3"
+                                        value={gameSelections.poker}
+                                        onChange={(e) => handleGameChange("poker", e.target.value)}
+                                    />
+                                </label>
+                            </div>
+                        )}
+
+                        {allowedGames.allowHorseRacing && (
+                            <div>
+                                <label>
+                                    Horse Racing (0-3):
+                                    <input 
+                                        type="number" 
+                                        min="0" 
+                                        max="3"
+                                        value={gameSelections.horseRacing}
+                                        onChange={(e) => handleGameChange("horseRacing", e.target.value)}
+                                    />
+                                </label>
+                            </div>
+                        )}
+                        
                         <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
                         <button onClick={handleConfirm}>Confirm</button>
                             <button onClick={() => setShowGames(false)}>Cancel</button>

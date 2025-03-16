@@ -3,8 +3,8 @@ import Phaser from "phaser";
 import { Client } from "colyseus.js";
 import { useParams } from "react-router-dom";
 import "../HorseRacingGame.css";
-import {db}  from "../../firebase";
-import { doc, getDoc, updateDoc  } from "firebase/firestore";
+import { doc, getDoc, updateDoc, getFirestore  } from "firebase/firestore";
+const db = getFirestore();
 
 const HorseRacingGame = () => {
   const gameRef = useRef(null); // Reference to the Phaser game instance

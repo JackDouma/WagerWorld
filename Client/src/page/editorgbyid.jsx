@@ -16,6 +16,7 @@ function EditOrgById()
     const [allowCrazy8s, setAllowCrazy8s] = useState(false);
     const [allowPoker, setAllowPoker] = useState(false);
     const [allowRoulette, setAllowRoulette] = useState(false);
+    const [allowHorseRacing, setAllowHorseRacing] = useState(false);
     const [error, setError] = useState('');
     
     // get current saved data from firebase
@@ -35,6 +36,7 @@ function EditOrgById()
                     setAllowCrazy8s(orgData.allowCrazy8s);
                     setAllowPoker(orgData.allowPoker);
                     setAllowRoulette(orgData.allowRoulette);
+                    setAllowHorseRacing(orgData.allowHorseRacing);
                 } 
             } 
             catch (error) 
@@ -66,7 +68,8 @@ function EditOrgById()
                 allowBlackJack,
                 allowCrazy8s,
                 allowPoker,
-                allowRoulette
+                allowRoulette,
+                allowHorseRacing
             });
 
             navigate("/admin");
@@ -154,6 +157,16 @@ function EditOrgById()
                         id="allowRoulette"
                         checked={allowRoulette}
                         onChange={(e) => setAllowRoulette(e.target.checked)}
+                    />
+                </div>
+
+                <div>
+                    <label htmlFor="allowHorseRacing">Allow Horse Racing</label>
+                    <input
+                        type="checkbox"
+                        id="allowHorseRacing"
+                        checked={allowHorseRacing}
+                        onChange={(e) => setAllowHorseRacing(e.target.checked)}
                     />
                 </div>
 
