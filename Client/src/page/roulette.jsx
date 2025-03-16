@@ -18,40 +18,6 @@ var gameOptions = {
     rotationTime: 6000
 }
  
-// once the window loads...
-// window.onload = function() {
- 
-//     // game configuration object
-//     var gameConfig = {
- 
-//         // render type
-//        type: Phaser.CANVAS,
- 
-//        // game width, in pixels
-//        width: 800,
- 
-//        // game height, in pixels
-//        height: 600,
- 
-//        // specify canvas
-//        canvas: gameCanvas,
-
-//        // game background color
-//        backgroundColor: 0x1C7022,
- 
-//        // scenes used by the game
-//        scene: [RouletteScene]
-//     };
- 
-//     // game constructor
-//     game = new Phaser.Game(gameConfig);
- 
-//     // pure javascript to give focus to the page/frame and scale the game
-//     window.focus()
-//     resize();
-//     window.addEventListener("resize", resize, false);
-// }
- 
 // Phaser scene
 class RouletteScene extends Phaser.Scene{
 
@@ -64,6 +30,7 @@ class RouletteScene extends Phaser.Scene{
         // roulette wheel @ https://www.vexels.com/png-svg/preview/151205/roulette-wheel-icon
         this.load.image("wheel", "/roulette/roulette-wheel.png");
         this.load.image("wheel-bg", "/roulette/roulette-wheel-bg.png");
+        // bet table @ https://www.freepik.com/premium-vector/american-roulette-table-layout-with-bets-options_237485384.htm
         this.load.image("betTable", "/roulette/betTable.jpg")
         this.load.image("chip", "/roulette/chip.png")
     }
@@ -117,37 +84,49 @@ class RouletteScene extends Phaser.Scene{
         this.dozensCols = new Array(6) //2:1
         this.evenMoney = new Array(6)
 
-		// add chips
-		this.numbers = new Array(36)
-        var index
-		// to move ship across row, x + 55
-		// to move chip down column, y + 37
-		var x = 165
-		var y = 103
-		for (let i=0; i < 12; i++) {
-			for (let j=0; j < 3; j++) {
-                index = i*3 + j
-                // position and size
-				let chip = this.add.image(x, y, "chip")
-                chip.scaleX = 0.2
-				chip.scaleY = 0.2
+        // Create a container for chips relative to the betTable
+        this.chipContainer = this.add.container(this.betTable.x, this.betTable.y);
+        // sync scale so chips dynamically shift position as needed
+        this.chipContainer.setScale(this.betTable.scaleX, this.betTable.scaleY)
 
-                // click event
-                chip.type = 0 // what kind of bet
-                chip.index = index
-                chip.setInteractive(/*new Phaser.Geom.Circle(146, 133, 133), Phaser.Geom.Circle.Contains*/)
-				chip.on("pointerdown", () => {
-                    this.onChipClicked(chip)
-                })
+        // Adjust these values based on betTable alignment
+        const chipOffsetX = -14;
+        const chipOffsetY = -261;
 
-                // add to array at position relative to the number
-				this.numbers[index] = chip
-				x += 55
-			}
-			y += 37
-			x = 165
-		}
+        // Position chips relative to betTable
+        this.numbers = new Array(36);
+        var x = chipOffsetX; // Starting position relative to betTable
+        var y = chipOffsetY;
 
+        for (let i = 0; i < 12; i++) {
+            for (let j = 0; j < 3; j++) {
+                let index = i * 3 + j;
+                
+                // Create chip at a relative position
+                let chip = this.add.image(x, y, "chip");
+                chip.scaleX = 0.25;
+                chip.scaleY = 0.25;
+
+                // Set interactive
+                chip.type = 0; // Bet type
+                chip.index = index;
+                chip.setInteractive();
+                chip.on("pointerdown", () => {
+                    if (this.canSpin)
+                        this.onChipClicked(chip);
+                });
+
+                // Add chip to container (relative positioning)
+                this.chipContainer.add(chip);
+
+                // Store reference
+                this.numbers[index] = chip;
+
+                x += 59; // Move across row
+            }
+            y += 47.6; // Move down column
+            x = chipOffsetX; // Reset X position for new row
+        }
         this.reset() // all bets=0 and hide chips
         this.canSpin = true;
     }
@@ -196,7 +175,6 @@ class RouletteScene extends Phaser.Scene{
                     resultTxt += value[0]
                     this.txt_spinResult.setText(resultTxt)
 
-                    this.canSpin = true;
                     if (payout == 0)
                         this.txt_info.setText("You lose.")
                     else
@@ -205,6 +183,7 @@ class RouletteScene extends Phaser.Scene{
                     setTimeout(() => {
                         // wait a couple seconds before hiding chips and resetting bets
                         this.reset()
+                        this.canSpin = true;
                     }, 3000)
                 }
             });
@@ -305,25 +284,6 @@ class RouletteScene extends Phaser.Scene{
     }
 }
 
-// ********************************************************* //
-// Irrelevant with 'config' in putting it in a react component ?
-// function resize() {
-//     var canvas = document.querySelector("canvas");
-//     var windowWidth = window.innerWidth;
-//     var windowHeight = window.innerHeight;
-//     var windowRatio = windowWidth / windowHeight;
-//     var gameRatio = game.config.width / game.config.height;
-//     if(windowRatio < gameRatio){
-//         canvas.style.width = windowWidth + "px";
-//         canvas.style.height = (windowWidth / gameRatio) + "px";
-//     }
-//     else{
-//         canvas.style.width = (windowHeight * gameRatio) + "px";
-//         canvas.style.height = windowHeight + "px";
-//     }
-// }
-// ********************************************************* //
-
 // putting it all in a React component
 const RouletteGame = () => {
   const gameRef = useRef(null)
@@ -334,7 +294,7 @@ const RouletteGame = () => {
       type: Phaser.AUTO,
       width: window.innerWidth - 10,
       height: window.innerHeight - 10,
-      backgroundColor: '#1c7022',
+      backgroundColor: '#236E45',
       parent: 'phaser-game',
       scene: RouletteScene,
       scale: {
