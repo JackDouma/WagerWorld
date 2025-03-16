@@ -45,6 +45,7 @@ function CreateOrg()
                 allowRoulette: true,
                 allowBlackJack: true,
                 allowCrazy8s: true,
+                allowHorseRacing: true,
                 memberCount: 1,
                 owner: {
                     ownerId: ownerId,
