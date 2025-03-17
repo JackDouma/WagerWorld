@@ -30,7 +30,7 @@ function RoomPage() {
             catch (error) 
             {
                 console.error("ERROR: ", error);
-                navigate("/");
+                navigate(`/signin`);
             }
         };
 

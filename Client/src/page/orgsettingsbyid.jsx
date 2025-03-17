@@ -124,7 +124,7 @@ function OrgSettingsById() {
                             }}
                         />
                         <FormControlLabel control={<Checkbox />} label="Adult Only" id="adultOnly" checked={adultOnly} onChange={(e) => setAdultOnly(e.target.checked)} sx={{ display: 'flex', justifyContent: 'center' }} />
-                        <Typography variant="general" sx={{ marginTop: '10px', }}>
+                        <Typography variant="general" sx={{ marginY: '10px' }}>
                             Allowed Games:
                         </Typography>
                         <FormGroup>
@@ -132,10 +132,10 @@ function OrgSettingsById() {
                                 <FormControlLabel control={<Checkbox />} label="Blackjack" id="allowBlackjack" checked={allowBlackJack} onChange={(e) => setAllowBlackJack(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Poker" id="allowPoker" checked={allowPoker} onChange={(e) => setAllowPoker(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Crazy 8s" id="allowCrazy8s" checked={allowCrazy8s} onChange={(e) => setAllowCrazy8s(e.target.checked)} />
-                                <FormControlLabel control={<Checkbox />} label="Roulette" id="allowRoulette" checked={allowRoulette} onChange={(e) => setAllowRoulette(e.target.checked)} />
                             </Grid>
                             <Grid container spacing={1} justifyContent={"center"}>
                                 <FormControlLabel control={<Checkbox />} label="Horse Racing" id="allowHorseRacing" checked={allowHorseRacing} onChange={(e) => setAllowHorseRacing(e.target.checked)} />
+                                <FormControlLabel control={<Checkbox />} label="Roulette" id="allowRoulette" checked={allowRoulette} onChange={(e) => setAllowRoulette(e.target.checked)} />
                             </Grid>
                         </FormGroup>
 

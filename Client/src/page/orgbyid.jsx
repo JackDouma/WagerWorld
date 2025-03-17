@@ -440,48 +440,48 @@ function ViewOrgById() {
                     <DialogContentText display="flex" flexDirection={"column"}>
 
                         {allowedGames.allowBlackJack && (
-                        <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Blackjack (0-3)" value={gameSelections.blackjack} onChange={(e) => handleGameChange("blackjack", e.target.value)}
-                            sx={{
-                                backgroundColor: 'white',
-                                '& .MuiInputLabel-root': {
-                                    ...theme.typography.general,
-                                    fontSize: "0.80rem",
-                                },
-                                '& .MuiInputBase-input': {
-                                    ...theme.typography.general,
-                                },
-                            }}
-                        />
+                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Blackjack (0-3)" value={gameSelections.blackjack} onChange={(e) => handleGameChange("blackjack", e.target.value)}
+                                sx={{
+                                    backgroundColor: 'white',
+                                    '& .MuiInputLabel-root': {
+                                        ...theme.typography.general,
+                                        fontSize: "0.80rem",
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        ...theme.typography.general,
+                                    },
+                                }}
+                            />
                         )}
 
                         {allowedGames.allowPoker && (
-                        <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Poker (0-3)" value={gameSelections.poker} onChange={(e) => handleGameChange("poker", e.target.value)}
-                            sx={{
-                                backgroundColor: 'white',
-                                '& .MuiInputLabel-root': {
-                                    ...theme.typography.general,
-                                    fontSize: "0.85rem",
-                                },
-                                '& .MuiInputBase-input': {
-                                    ...theme.typography.general,
-                                },
-                            }}
-                        />
+                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Poker (0-3)" value={gameSelections.poker} onChange={(e) => handleGameChange("poker", e.target.value)}
+                                sx={{
+                                    backgroundColor: 'white',
+                                    '& .MuiInputLabel-root': {
+                                        ...theme.typography.general,
+                                        fontSize: "0.85rem",
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        ...theme.typography.general,
+                                    },
+                                }}
+                            />
                         )}
 
                         {allowedGames.allowHorseRacing && (
-                        <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Horse Racing" value={gameSelections.horseRacing} onChange={(e) => handleGameChange("horseRacing", e.target.value)}
-                            sx={{
-                                backgroundColor: 'white',
-                                '& .MuiInputLabel-root': {
-                                    ...theme.typography.general,
-                                    fontSize: "0.85rem",
-                                },
-                                '& .MuiInputBase-input': {
-                                    ...theme.typography.general,
-                                },
-                            }}
-                        />
+                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Horse Racing" value={gameSelections.horseRacing} onChange={(e) => handleGameChange("horseRacing", e.target.value)}
+                                sx={{
+                                    backgroundColor: 'white',
+                                    '& .MuiInputLabel-root': {
+                                        ...theme.typography.general,
+                                        fontSize: "0.85rem",
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        ...theme.typography.general,
+                                    },
+                                }}
+                            />
                         )}
 
                     </DialogContentText>
