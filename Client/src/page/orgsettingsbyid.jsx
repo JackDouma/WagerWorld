@@ -20,6 +20,7 @@ function OrgSettingsById() {
     const [allowCrazy8s, setAllowCrazy8s] = useState(false);
     const [allowPoker, setAllowPoker] = useState(false);
     const [allowRoulette, setAllowRoulette] = useState(false);
+    const [allowHorseRacing, setAllowHorseRacing] = useState(false);
 
     // TODO add wagering settings when we come to a decision on what can be edited for the games
 
@@ -40,6 +41,7 @@ function OrgSettingsById() {
                     setAllowCrazy8s(orgData.allowCrazy8s);
                     setAllowPoker(orgData.allowPoker);
                     setAllowRoulette(orgData.allowRoulette);
+                    setAllowHorseRacing(orgData.allowHorseRacing);
                 }
             }
             catch (error) {
@@ -68,7 +70,8 @@ function OrgSettingsById() {
                 allowBlackJack,
                 allowCrazy8s,
                 allowPoker,
-                allowRoulette
+                allowRoulette,
+                allowHorseRacing
             });
 
             navigate(`/org/${orgId}`);
@@ -130,6 +133,9 @@ function OrgSettingsById() {
                                 <FormControlLabel control={<Checkbox />} label="Poker" id="allowPoker" checked={allowPoker} onChange={(e) => setAllowPoker(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Crazy 8s" id="allowCrazy8s" checked={allowCrazy8s} onChange={(e) => setAllowCrazy8s(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Roulette" id="allowRoulette" checked={allowRoulette} onChange={(e) => setAllowRoulette(e.target.checked)} />
+                            </Grid>
+                            <Grid container spacing={1} justifyContent={"center"}>
+                                <FormControlLabel control={<Checkbox />} label="Horse Racing" id="allowHorseRacing" checked={allowHorseRacing} onChange={(e) => setAllowHorseRacing(e.target.checked)} />
                             </Grid>
                         </FormGroup>
 

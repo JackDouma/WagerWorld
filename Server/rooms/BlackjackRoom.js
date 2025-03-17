@@ -7,19 +7,30 @@ const {
 const { ArraySchema } = require("@colyseus/schema");
 
 class BlackjackRoom extends Room {
+  constructor(firestore) {
+    super();
+    this.firestore = firestore;
+  }
+
   onCreate(options) {
+    // Custom room ID (if provided)
     this.customRoomId = options.customRoomId;
+
+    // Initialize room state
     this.setState(new BlackjackState());
 
+    // Set max clients (default to 8 if not provided)
     this.maxClients = options.maxPlayers || 8;
 
-    // Add timeout that destroys room if no players join (needed for /create-room endpoint)
+    // Add timeout to destroy room if no players join
     this.emptyRoomTimeout = setTimeout(() => {
       if (this.clients.length === 0) {
         console.log(`Room ${this.customRoomId} destroyed due to inactivity.`);
         this.disconnect();
       }
     }, 30000);
+
+    
 
     // Add logging to track player count
     console.log(`Room ${this.roomId} created. Current player count: ${this.state.players.size}`);
@@ -302,6 +313,28 @@ class BlackjackRoom extends Room {
       player.handValue = 0
       player.isReady = false
     })
+  }
+
+  onGameFinished() {
+    console.log(`Room ${this.customRoomId} Finished.`);
+
+    this.clients.forEach(client => {
+      const player = this.state.players.get(client.sessionId);
+
+      if (player && this.firestore) {
+        this.firestore.collection('players').doc(client.id).update({
+          totalCredits: admin.firestore.FieldValue.increment(player.totalCredits)
+        })
+        .then(() => {
+          console.log(`Player ${client.id} credits updated in Firestore.`);
+        })
+        .catch((error) => {
+          console.error(`Error updating player ${client.id} credits in Firestore:`, error);
+        });
+      } else {
+        console.warn(`Player ${client.id} not found in room state or Firestore not initialized.`);
+      }
+    });
   }
 
   // handles when a player joins

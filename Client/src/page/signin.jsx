@@ -30,6 +30,8 @@ function Signin() {
           const userData = userDoc.data();
           const userIsAdmin = userData.admin;
           const userOrgId = userData.org?.orgId;
+          const idToken = await user.getIdToken();
+          localStorage.setItem('firebaseIdToken', user.uid);
           if (userIsAdmin) {
             navigate("/admin");
           } else {

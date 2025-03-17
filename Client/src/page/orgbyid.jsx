@@ -19,6 +19,11 @@ function ViewOrgById() {
     const [client, setClient] = useState(null);
     const { orgId } = useParams();
     const theme = useTheme();
+    const [allowedGames, setAllowedGames] = useState({
+        allowBlackJack: false,
+        allowPoker: false,
+        allowHorseRacing: false,
+    });
 
     useEffect(() => {
         const colyseusClient = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
@@ -45,6 +50,12 @@ function ViewOrgById() {
                             joinedAt: member.joinedAt?.toDate(),
                         }))
                     );
+
+                    setAllowedGames({
+                        allowBlackJack: orgData.allowBlackJack,
+                        allowPoker: orgData.allowPoker,
+                        allowHorseRacing: orgData.allowHorseRacing,
+                    });
                 }
             }
             catch (err) {
@@ -428,7 +439,8 @@ function ViewOrgById() {
                 <DialogContent>
                     <DialogContentText display="flex" flexDirection={"column"}>
 
-                        <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Blackjack" value={gameSelections.blackjack} onChange={(e) => handleGameChange("blackjack", e.target.value)}
+                        {allowedGames.allowBlackJack && (
+                        <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Blackjack (0-3)" value={gameSelections.blackjack} onChange={(e) => handleGameChange("blackjack", e.target.value)}
                             sx={{
                                 backgroundColor: 'white',
                                 '& .MuiInputLabel-root': {
@@ -440,8 +452,10 @@ function ViewOrgById() {
                                 },
                             }}
                         />
+                        )}
 
-                        <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Poker" value={gameSelections.poker} onChange={(e) => handleGameChange("poker", e.target.value)}
+                        {allowedGames.allowPoker && (
+                        <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Poker (0-3)" value={gameSelections.poker} onChange={(e) => handleGameChange("poker", e.target.value)}
                             sx={{
                                 backgroundColor: 'white',
                                 '& .MuiInputLabel-root': {
@@ -453,7 +467,9 @@ function ViewOrgById() {
                                 },
                             }}
                         />
+                        )}
 
+                        {allowedGames.allowHorseRacing && (
                         <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Horse Racing" value={gameSelections.horseRacing} onChange={(e) => handleGameChange("horseRacing", e.target.value)}
                             sx={{
                                 backgroundColor: 'white',
@@ -466,6 +482,7 @@ function ViewOrgById() {
                                 },
                             }}
                         />
+                        )}
 
                     </DialogContentText>
                 </DialogContent>
