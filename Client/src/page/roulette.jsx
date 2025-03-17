@@ -63,9 +63,10 @@ class RouletteScene extends Phaser.Scene{
 		this.betTable.scaleY = 0.9;
 		this.betTable.angle = 90;
 
-        // log text field
-        this.txt_info = this.add.text(447, 537, "", {})
+        // log text field (centered horizontally relative to roulette wheel)
+        this.txt_info = this.add.text(this.roulette_wheel.x, 537, "", {})
         this.txt_info.setStyle({"align": "center", "fontSize": "24px"})
+        this.txt_info.setOrigin(0.5, 0)
 
         // user balance text field
         this.txt_userBal = this.add.text(450, 10, `Balance: ${this.userBal} credits`, {})
@@ -94,39 +95,88 @@ class RouletteScene extends Phaser.Scene{
         const chipOffsetY = -261;
 
         // Position chips relative to betTable
-        this.numbers = new Array(36);
+        this.chips = new Array(); // store chip references
         var x = chipOffsetX; // Starting position relative to betTable
         var y = chipOffsetY;
-
+        var chipScale = 0.20
+        
+        // straight-up bet chips
         for (let i = 0; i < 12; i++) {
-            for (let j = 0; j < 3; j++) {
+            for (let j = 0; j < 3; j++) { 
+                // index to be used in bet logic 
                 let index = i * 3 + j;
-                
+
                 // Create chip at a relative position
-                let chip = this.add.image(x, y, "chip");
-                chip.scaleX = 0.25;
-                chip.scaleY = 0.25;
+                let chip = this.add.image(x, y, "chip")
+                chip.scaleX = chipScale
+                chip.scaleY = chipScale
 
                 // Set interactive
-                chip.type = 0; // Bet type
-                chip.index = index;
-                chip.setInteractive();
+                chip.type = 0 // Bet type
+                chip.index = index
+                chip.setInteractive()
                 chip.on("pointerdown", () => {
                     if (this.canSpin)
-                        this.onChipClicked(chip);
-                });
+                        this.onChipClicked(chip)
+                })
 
                 // Add chip to container (relative positioning)
-                this.chipContainer.add(chip);
+                this.chipContainer.add(chip)
 
-                // Store reference
-                this.numbers[index] = chip;
-
-                x += 59; // Move across row
+                this.chips.push(chip) // Store reference
+                x += 59 // Move across row
             }
-            y += 47.6; // Move down column
+            y += 47.6 // Move down column
             x = chipOffsetX; // Reset X position for new row
         }
+        
+        // dozens
+        x = chipOffsetX - 48
+        y = chipOffsetY + 20
+        for (let i=0; i<3; i++) {
+            // chip creation
+            let chip = this.add.image(x, y, "chip")
+            chip.scaleX = chipScale
+            chip.scaleY = chipScale
+
+            // set interactive
+            chip.type = 6 // for bet logic
+            chip.index = i
+            chip.setInteractive(new Phaser.Geom.Rectangle(66, -75, 160, 900), Phaser.Geom.Rectangle.Contains)
+            chip.on("pointerdown", () =>{
+                if (this.canSpin)
+                    chip.alpha = 0.01
+                    this.onChipClicked(chip)
+            })
+
+            this.chipContainer.add(chip)
+            this.chips.push(chip)
+            y += 190.4
+        }
+        // columns
+        x = chipOffsetX
+        y = chipOffsetY + 571.2
+        for (let i=3; i<6; i++) {
+            // chip creation
+            let chip = this.add.image(x, y, "chip")
+            chip.scaleX = chipScale
+            chip.scaleY = chipScale
+
+            // set interactive
+            chip.type = 6 // for bet logic
+            chip.index = i
+            chip.setInteractive()
+            chip.on("pointerdown", () =>{
+                if (this.canSpin)
+                    chip.alpha = 0.01
+                    this.onChipClicked(chip)
+            })
+
+            this.chipContainer.add(chip)
+            this.chips.push(chip)
+            x += 59
+        }
+
         this.reset() // all bets=0 and hide chips
         this.canSpin = true;
     }
@@ -197,8 +247,8 @@ class RouletteScene extends Phaser.Scene{
             switch (chip.type) {
                 case 0:
                     // straight up, 35:1
-                    this.txt_info.setText(`Bet placed on ${chip.index + 1}`)
                     this.straightUp[chip.index] += 10
+                    this.txt_info.setText(`${this.straightUp[chip.index]} credits on ${chip.index + 1}`)
                     break
                 case 1:
                     // split, 17:1
@@ -222,7 +272,23 @@ class RouletteScene extends Phaser.Scene{
                     break
                 case 6:
                     // dozens and columns, 2:1
-                    this.txt_info.setText("This is a dozens bet")
+                    this.dozensCols[chip.index] += 10
+                    var txt = `${this.dozensCols[chip.index]} credits on `
+                    if (chip.index == 0) {
+                        txt += `1st dozen`
+                    } else if (chip.index == 1) {
+                        txt += `2nd dozen`
+                    } else if (chip.index == 2) {
+                        txt += `3rd dozen`
+                    } else if (chip.index == 3) {
+                        txt += `1st column`
+                    } else if (chip.index == 4) {
+                        txt += `2nd column`
+                    } else if (chip.index == 5) {
+                        txt += `3rd column`
+                    }
+                    this.txt_info.setText(txt)
+                    
                     break
                 case 7:
                     // even money
@@ -262,7 +328,7 @@ class RouletteScene extends Phaser.Scene{
         }
 
         // hide all chips
-        this.numbers.forEach(chip => {
+        this.chips.forEach(chip => {
             chip.alpha = 0.01
         });
 
@@ -274,10 +340,31 @@ class RouletteScene extends Phaser.Scene{
     payout(wheelResult) {
         var bet
         var totalPayout = 0
+        // straight up 35:1
         bet = this.straightUp[wheelResult[0] - 1] // -1 to translate to index value
-        if (bet > 0) {
-            totalPayout += bet*35
+        totalPayout += bet*36
+        // split
+        // street
+        // cornerBet
+        // line
+        /* dozens and columns 2:1 */
+        // dozens
+        var whichDozen = Math.ceil(wheelResult[0] / 12)
+        bet = this.dozensCols[whichDozen - 1] // translate to index
+        totalPayout += bet*3
+        // columns
+        var rm = wheelResult[0] % 3
+        var whichCol
+        if (rm == 1) {
+            whichCol = 3
+        } else if (rm == 2) {
+            whichCol = 4
+        } else if (rm == 0) {
+            whichCol = 5
         }
+        bet = this.dozensCols[whichCol]
+        totalPayout += bet*3
+        // even money
 
         this.userBal += totalPayout
         return totalPayout
