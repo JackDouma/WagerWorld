@@ -78,13 +78,14 @@ class BlackjackScene extends Phaser.Scene {
     // if room is found
     console.log("playerId:", playerId);
     try {
-      this.room = await this.client.joinById({ customRoomId: this.roomId, playerId: playerId || "anonymous"});
+      this.room = await this.client.joinById({ customRoomId: this.roomId, playerId: playerId || "anonymous", balance: 10000});
       console.log("Joining room:", this.roomId);
     } 
     // if not room is found
     catch (err) 
     {
-      this.room = await this.client.create("blackjack", { customRoomId: this.roomId ,  playerId: playerId || "anonymous"});
+      this.room = await this.client.create("blackjack", { customRoomId: this.roomId ,  playerId: playerId || "anonymous", balance: 10000});
+      this.clientId = this.room.playerId
       console.log("Creating room:", this.roomId);
     }
 
@@ -100,7 +101,7 @@ class BlackjackScene extends Phaser.Scene {
 
     // handling a player joining
     this.room.onMessage('playerJoin', (message) => {
-      console.log(`Player ${message.sessionId} joined the room`);
+      console.log(`Player ${message.playerName} joined the room`);
       // if cards havent been dealt yet, add the player to the table
       if(this.room.state.gamePhase == "waiting") {
         this.amountOfPlayers = Object.keys(message.players).length
@@ -115,6 +116,7 @@ class BlackjackScene extends Phaser.Scene {
       // update the total credits screen
       if (message.sessionId === this.room.sessionId) {
         this.playerCredits = message.totalCredits
+        console.log("Player credits:", this.playerCredits);
         this.totalCredits.setText(`Credits: ${this.playerCredits}`)
       }
     })
@@ -240,10 +242,11 @@ class BlackjackScene extends Phaser.Scene {
   // adding the player's names to the text boxes around the table
   getPlayerNames(){
     // do not run if someones in the waiting room
-    if(this.room.state.waitingRoom.has(this.room.sessionId)) return
+    if(this.room.state.waitingRoom.has(this.room.playerId)) return
     var j = 0
+    console.log("Players:", this.players);
     Object.keys(this.players).forEach((item) => {
-      this.allPhysicalPositions[j].setText(item);
+      this.allPhysicalPositions[j].setText(this.players[item].name);
       j++
     })
   }

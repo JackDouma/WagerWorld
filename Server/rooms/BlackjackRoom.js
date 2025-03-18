@@ -123,7 +123,7 @@ class BlackjackRoom extends Room {
           this.state.players.set(nextPlayerId, player)
           this.state.waitingRoom.delete(nextPlayerId)
           player.hand = new ArraySchema()
-          this.broadcast("playerJoin", { sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+          this.broadcast("playerJoin", {playerName: player.name,  sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
         }
       }
       this.broadcast('newGame', { waitingRoom: this.state.waitingRoom })
@@ -282,24 +282,23 @@ class BlackjackRoom extends Room {
     const payouts = {}
 
     // for each player, get their winnings and number results, where 0 = win, 1 = dealer wins, 2 = push, 3 = player busts
-    this.state.players.keys().forEach((item) => {
-      console.log(item + " started with " + (this.state.players.get(item).totalCredits + this.state.players.get(item).bet) + " and bet " + this.state.players.get(item).bet)
-      const playerValue = this.calculateHandValue(this.state.players.get(item).hand)
-      if (playerValue > 21)
-        results[item] = 3
-      else if (dealerValue > 21 || playerValue > dealerValue){
-        results[item] = 0
-        this.state.players.get(item).totalCredits += (this.state.players.get(item).bet * 2)
+    this.state.players.forEach((player, sessionId) => {
+      console.log(player.name + " started with " + (player.totalCredits + player.bet) + " and bet " + player.bet);
+      const playerValue = this.calculateHandValue(player.hand);
+      if (playerValue > 21) {
+        results[sessionId] = 3;
+      } else if (dealerValue > 21 || playerValue > dealerValue) {
+        results[sessionId] = 0;
+        player.totalCredits += (player.bet * 2);
+      } else if (playerValue < dealerValue) {
+        results[sessionId] = 1;
+      } else if (playerValue === dealerValue) {
+        results[sessionId] = 2;
+        player.totalCredits += player.bet;
       }
-      else if (playerValue < dealerValue)
-        results[item] = 1
-      else if (playerValue == dealerValue) {
-        results[item] = 2
-        this.state.players.get(item).totalCredits += this.state.players.get(item).bet
-      }
-      this.state.players.get(item).bet = 0
-      payouts[item] = this.state.players.get(item).totalCredits
-    })
+      player.bet = 0;
+      payouts[sessionId] = player.totalCredits;
+    });
 
     // set game phase to 'done', and broadcast the results back to the clients
     // this.state.gamePhase = "done"
@@ -355,7 +354,7 @@ class BlackjackRoom extends Room {
               .doc(options.playerId)
               .get();
             if (playerDoc.exists) {
-              client.sessionId = options.playerId;
+              player.fireBaseId = options.playerId;
               playerName = playerDoc.data().name;
               player.name = playerName; 
               console.log(`${playerName} joined!`);
@@ -381,7 +380,8 @@ class BlackjackRoom extends Room {
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    console.log(player.totalCredits);
+    this.broadcast("playerJoin", { playerName: player.name,  sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
 }
 
@@ -407,7 +407,7 @@ class BlackjackRoom extends Room {
       this.state.players.delete(client.sessionId);
       
           // Update isInGame to false
-      admin.firestore.collection("users").doc(client.sessionId).update({
+      admin.firestore.collection("users").doc(player.fireBaseId).update({
           isInGame: false,
       });
       
@@ -443,6 +443,16 @@ class BlackjackRoom extends Room {
     // otherwise tell the clients that someone left
     else
       this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
+  }
+
+  // handles when the room is disposed
+  onDispose() {
+    // make sure all clients are set to not in game
+    this.state.players.forEach((player) => {
+      admin.firestore.collection("users").doc(player.fireBaseId).update({
+        isInGame: false,
+      });
+    });
   }
 }
 
