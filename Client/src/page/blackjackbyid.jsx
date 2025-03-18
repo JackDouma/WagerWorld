@@ -651,7 +651,10 @@ const BlackjackGame = () => {
         }
     }, [])
 
-    return <div id="phaser-game"></div>
+    return (<>
+      <div id="phaser-game"></div>
+      <input type="hidden" id="headerRoomId" value={roomId} />
+    </>)
 }
 
 export default BlackjackGame
