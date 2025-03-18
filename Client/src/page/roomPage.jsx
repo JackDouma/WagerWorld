@@ -30,7 +30,7 @@ function RoomPage() {
             catch (error) 
             {
                 console.error("ERROR: ", error);
-                navigate("/");
+                navigate(`/signin`);
             }
         };
 
@@ -74,6 +74,7 @@ function RoomPage() {
                     </button>
                 ))}
             </div>
+            <input type="hidden" id="headerRoomId" value={roomId} />
         </div>
     );
 }

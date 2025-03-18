@@ -149,7 +149,7 @@ function Signin() {
             Signin
           </Typography>
 
-          <div className="form">
+          <div className="form" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             <TextField variant="outlined" margin="dense" type="email" label="Email" value={email} onChange={(e) => setEmail(e.target.value)}
               sx={{
                 width: '400px',
@@ -186,6 +186,7 @@ function Signin() {
                 padding: "5px 32px",
                 fontSize: "1.5rem",
                 margin: "10px 0px",
+                width: "fit-content",
               }}
             >
               {isLoading ? <CircularProgress size={42} /> : <Typography variant="btn">Sign In</Typography>}

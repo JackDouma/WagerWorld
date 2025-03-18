@@ -5,7 +5,7 @@ import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { Typography, Box, Link, Tooltip } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import { useTheme } from "@mui/material/styles";
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 
 const db = getFirestore();
 
@@ -17,9 +17,9 @@ function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
+  const { roomId } = useParams(); // get roomId from URL - returns undefined if not found
 
   useEffect(() => {
-
     // check if logged in or not
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -46,7 +46,7 @@ function Header() {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [location]);
 
   // handle sign-out
   const signOutPress = async () => {
@@ -104,7 +104,7 @@ function Header() {
 
             {/* Room name and exit link (center) */}
             <Grid size={3}>
-              {location.pathname.startsWith('/room') &&
+              {location.pathname === (`/room/${roomId}`) &&
                 <>
                   <Typography variant="heading"
                     sx={{
@@ -112,7 +112,8 @@ function Header() {
                       fontSize: "1.5rem"
                     }}
                   >
-                    Room: &lt;Room Name Here&gt;
+                    {/* TOOD: Replace with room name */}
+                    Room: {roomId}
                   </Typography>
                   <br />
                   <Link variant="general" href='/signin'
@@ -173,6 +174,7 @@ function Header() {
                     </Link>
 
                     <Typography variant="heading" fontWeight={300}>
+                      {/* TODO: Replace with user points balance */}
                       0,000 points
                     </Typography>
                   </Box>
@@ -267,7 +269,7 @@ function Header() {
         }}
       >
         <Tooltip title="Leave game" placement="right">
-          <Link href="/roomPage"
+          <Link href={`/room/${roomId}`}
             sx={{
               display: 'flex',
               alignItems: 'center',
