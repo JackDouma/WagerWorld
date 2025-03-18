@@ -3,7 +3,7 @@ import Phaser from "phaser";
 import { Client } from "colyseus.js";
 import { useParams } from "react-router-dom";
 import "../HorseRacingGame.css";
-import { doc, getDoc, updateDoc, getFirestore  } from "firebase/firestore";
+import { doc, getDoc, updateDoc, getFirestore } from "firebase/firestore";
 const db = getFirestore();
 
 const HorseRacingGame = () => {
@@ -23,24 +23,24 @@ const HorseRacingGame = () => {
         const playerId = localStorage.getItem("firebaseIdToken");
         const userRef = doc(db, "users", playerId);
         const userDoc = await getDoc(doc(db, "users", playerId));
-        try{
-        if(userDoc.data().isInGame){
-                    
-                    console.log(`Player with ID is already in a game.`);
-                    // open popup to inform user that they are already in a game and redirect to home page
-                    // redirect to home page
-                    window.location.href = "/";
-                    return
-                  }
-        // update isInGame to true
+        try {
+          if (userDoc.data().isInGame) {
 
-        await updateDoc(userRef, {
-          isInGame: true
-        });
-      }
-      catch (error) {
-        console.error('Error fetching player data:', error);
-      }
+            console.log(`Player with ID is already in a game.`);
+            // open popup to inform user that they are already in a game and redirect to home page
+            // redirect to home page
+            window.location.href = "/";
+            return
+          }
+          // update isInGame to true
+
+          await updateDoc(userRef, {
+            isInGame: true
+          });
+        }
+        catch (error) {
+          console.error('Error fetching player data:', error);
+        }
 
         const room = await client.joinOrCreate("horse_racing", {
           playerId: playerId || "anonymous",
@@ -221,6 +221,7 @@ const HorseRacingGame = () => {
           </table>
         </div>
       </div>
+      <input type="hidden" id="headerRoomId" value={roomId} />
     </div>
   );
 };

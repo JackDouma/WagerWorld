@@ -88,7 +88,7 @@ button:hover {
     margin-bottom: 20px;
 }
 
-table {
+/* table {
     width: 100%;
     border-collapse: collapse;
     margin: 20px;
@@ -123,7 +123,7 @@ table td {
 }
 table td {
     font-size: 0.9rem;
-}
+} */
 
 .link
 {
@@ -139,14 +139,14 @@ table td {
     text-decoration: underline;
 }
   
-.form 
+/* .form 
 {
     display: flex;
     align-items: center;
     flex-direction: column;
     gap: 10px;
     margin-bottom: 10px;
-}
+} */
 input 
 {
     padding: 10px;

@@ -2,13 +2,16 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, getFirestore, updateDoc } from "firebase/firestore";
 import { app } from "../../firebase";
+import { Typography, Box, TextField, Button, Card, FormControl, Checkbox, FormGroup, FormControlLabel } from "@mui/material";
+import Grid from '@mui/material/Grid2';
+import { useTheme } from "@mui/material/styles";
 
 const db = getFirestore(app)
 
-function OrgSettingsById() 
-{
+function OrgSettingsById() {
     const { orgId } = useParams();
     const navigate = useNavigate();
+    const theme = useTheme();
 
     // not adding domain as an option to edit, seems like something that would break stuff if a non site admin can adust
     const [orgName, setOrgName] = useState('');
@@ -24,146 +27,137 @@ function OrgSettingsById()
     const [error, setError] = useState('');
 
     useEffect(() => {
-            const fetchOrg = async () => {
-                try {
-                    const orgRef = doc(db, 'orgs', orgId);
-                    const orgDoc = await getDoc(orgRef);
-    
-                    if (orgDoc.exists()) 
-                    {
-                        const orgData = orgDoc.data();
-                        
-                        setOrgName(orgData.name);
-                        setAdultOnly(orgData.adultOnly);
-                        setAllowBlackJack(orgData.allowBlackJack);
-                        setAllowCrazy8s(orgData.allowCrazy8s);
-                        setAllowPoker(orgData.allowPoker);
-                        setAllowRoulette(orgData.allowRoulette);
-                        setAllowHorseRacing(orgData.allowHorseRacing);
-                    } 
-                } 
-                catch (error) 
-                {
-                    console.error("ERROR: ", error);
-                }
-            };
-            
-            fetchOrg();
-        }, [orgId]);
+        const fetchOrg = async () => {
+            try {
+                const orgRef = doc(db, 'orgs', orgId);
+                const orgDoc = await getDoc(orgRef);
 
-        const handleSave = async (e) => {
-                e.preventDefault();
-        
-                if (!orgName) 
-                {
-                    setError('All fields are required.');
-                    return;
-                }
-        
-                // update firebase with the edits
-                try {
-                    const orgRef = doc(db, 'orgs', orgId);
-        
-                    await updateDoc(orgRef, {
-                        name: orgName,
-                        adultOnly,
-                        allowBlackJack,
-                        allowCrazy8s,
-                        allowPoker,
-                        allowRoulette,
-                        allowHorseRacing
-                    });
-        
-                    navigate("/index");
-                } 
-                catch (error) 
-                {
-                    console.error("ERROR: ", error);
-                }
-            };
+                if (orgDoc.exists()) {
+                    const orgData = orgDoc.data();
 
-            return (
-                <main>
-                    <h1>Organization Settings</h1>
-                    {error && <p style={{ color: 'red' }}>{error}</p>}
-        
-                    <form className="form" onSubmit={handleSave}>
-                        <div>
-                            <label htmlFor="orgName">Organization Name</label>
-                            <input
-                                type="text"
-                                id="orgName"
-                                placeholder="Name"
-                                value={orgName}
-                                onChange={(e) => setOrgName(e.target.value)}
-                                required
-                            />
-                        </div>
-        
-                        <div>
-                            <label htmlFor="adultOnly">Adult Only</label>
-                            <input
-                                type="checkbox"
-                                id="adultOnly"
-                                checked={adultOnly}
-                                onChange={(e) => setAdultOnly(e.target.checked)}
-                            />
-                        </div>
-        
-                        <div>
-                            <label htmlFor="allowBlackJack">Allow BlackJack</label>
-                            <input
-                                type="checkbox"
-                                id="allowBlackJack"
-                                checked={allowBlackJack}
-                                onChange={(e) => setAllowBlackJack(e.target.checked)}
-                            />
-                        </div>
-        
-                        <div>
-                            <label htmlFor="allowCrazy8s">Allow Crazy 8s</label>
-                            <input
-                                type="checkbox"
-                                id="allowCrazy8s"
-                                checked={allowCrazy8s}
-                                onChange={(e) => setAllowCrazy8s(e.target.checked)}
-                            />
-                        </div>
-        
-                        <div>
-                            <label htmlFor="allowPoker">Allow Poker</label>
-                            <input
-                                type="checkbox"
-                                id="allowPoker"
-                                checked={allowPoker}
-                                onChange={(e) => setAllowPoker(e.target.checked)}
-                            />
-                        </div>
-        
-                        <div>
-                            <label htmlFor="allowRoulette">Allow Roulette</label>
-                            <input
-                                type="checkbox"
-                                id="allowRoulette"
-                                checked={allowRoulette}
-                                onChange={(e) => setAllowRoulette(e.target.checked)}
-                            />
-                        </div>
+                    setOrgName(orgData.name);
+                    setAdultOnly(orgData.adultOnly);
+                    setAllowBlackJack(orgData.allowBlackJack);
+                    setAllowCrazy8s(orgData.allowCrazy8s);
+                    setAllowPoker(orgData.allowPoker);
+                    setAllowRoulette(orgData.allowRoulette);
+                    setAllowHorseRacing(orgData.allowHorseRacing);
+                }
+            }
+            catch (error) {
+                console.error("ERROR: ", error);
+            }
+        };
 
-                        <div>
-                            <label htmlFor="allowHorseRacing">Allow Horse Racing</label>
-                            <input
-                                type="checkbox"
-                                id="allowHorseRacing"
-                                checked={allowHorseRacing}
-                                onChange={(e) => setAllowHorseRacing(e.target.checked)}
-                            />
-                        </div>
-        
-                        <button type="submit">Save</button>
-                    </form>
-                </main>
-            );
+        fetchOrg();
+    }, [orgId]);
+
+    const handleSave = async (e) => {
+        e.preventDefault();
+
+        if (!orgName) {
+            setError('All fields are required.');
+            return;
+        }
+
+        // update firebase with the edits
+        try {
+            const orgRef = doc(db, 'orgs', orgId);
+
+            await updateDoc(orgRef, {
+                name: orgName,
+                adultOnly,
+                allowBlackJack,
+                allowCrazy8s,
+                allowPoker,
+                allowRoulette,
+                allowHorseRacing
+            });
+
+            navigate(`/org/${orgId}`);
+        }
+        catch (error) {
+            console.error("ERROR: ", error);
+        }
+    };
+
+    useEffect(() => {
+        document.body.style.backgroundColor = "#ffe5bd";
+        return () => {
+            document.body.style.backgroundColor = '';
+        };
+    }, []);
+
+    return (
+        <Box component="main">
+            <Card
+                sx={{
+                    padding: '30px',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
+            >
+                <Typography variant="heading"
+                    sx={{
+                        fontSize: '2.5vw',
+                        color: theme.palette.primary.main,
+                        marginBottom: '12px',
+                    }}
+                >
+                    Organization Settings
+                </Typography>
+                {error && <p style={{ color: 'red' }}>{error}</p>}
+                <form onSubmit={handleSave}>
+                    <FormControl fullWidth>
+                        <TextField label="Name" margin="normal" variant="outlined" type="text" id="orgName" value={orgName} onChange={(e) => setOrgName(e.target.value)} required
+                            sx={{
+                                '& .MuiInputLabel-root': {
+                                    ...theme.typography.general,
+                                    '&.Mui-focused, &.MuiFormLabel-filled': {
+                                        transform: 'translate(14px, -10px) scale(0.85)',
+                                    },
+                                },
+                                '& .MuiInputBase-input': {
+                                    ...theme.typography.general,
+                                }
+                            }}
+                        />
+                        <FormControlLabel control={<Checkbox />} label="Adult Only" id="adultOnly" checked={adultOnly} onChange={(e) => setAdultOnly(e.target.checked)} sx={{ display: 'flex', justifyContent: 'center' }} />
+                        <Typography variant="general" sx={{ marginY: '10px' }}>
+                            Allowed Games:
+                        </Typography>
+                        <FormGroup>
+                            <Grid container spacing={1} justifyContent={"center"}>
+                                <FormControlLabel control={<Checkbox />} label="Blackjack" id="allowBlackjack" checked={allowBlackJack} onChange={(e) => setAllowBlackJack(e.target.checked)} />
+                                <FormControlLabel control={<Checkbox />} label="Poker" id="allowPoker" checked={allowPoker} onChange={(e) => setAllowPoker(e.target.checked)} />
+                                <FormControlLabel control={<Checkbox />} label="Crazy 8s" id="allowCrazy8s" checked={allowCrazy8s} onChange={(e) => setAllowCrazy8s(e.target.checked)} />
+                            </Grid>
+                            <Grid container spacing={1} justifyContent={"center"}>
+                                <FormControlLabel control={<Checkbox />} label="Horse Racing" id="allowHorseRacing" checked={allowHorseRacing} onChange={(e) => setAllowHorseRacing(e.target.checked)} />
+                                <FormControlLabel control={<Checkbox />} label="Roulette" id="allowRoulette" checked={allowRoulette} onChange={(e) => setAllowRoulette(e.target.checked)} />
+                            </Grid>
+                        </FormGroup>
+
+                        <Button type="submit" variant="contained" size="large"
+                            sx={{
+                                backgroundColor: theme.palette.secondary.main,
+                                color: theme.palette.secondary.contrastText,
+                                "&:hover": { backgroundColor: "#FFC700" },
+                                borderRadius: "40px",
+                                textTransform: "none",
+                                padding: "5px 30px",
+                                fontSize: "1.5rem",
+                                marginTop: "20px",
+                            }}
+                        >
+                            <Typography variant="btn">Save</Typography>
+                        </Button>
+                    </FormControl>
+                </form>
+            </Card>
+        </Box>
+    );
 }
 
 export default OrgSettingsById;
