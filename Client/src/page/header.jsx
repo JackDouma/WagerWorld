@@ -5,7 +5,7 @@ import { doc, getDoc, getFirestore } from 'firebase/firestore';
 import { Typography, Box, Link, Tooltip } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import { useTheme } from "@mui/material/styles";
-import { useLocation } from 'react-router-dom';
+import { useLocation, useParams } from 'react-router-dom';
 
 const db = getFirestore();
 
@@ -17,14 +17,9 @@ function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
-  const [roomId, setRoomId] = useState('');
+  const { roomId } = useParams(); // get roomId from URL - returns undefined if not found
 
   useEffect(() => {
-    const inputField = document.getElementById('headerRoomId');
-    if (inputField) {
-      setRoomId(inputField.value);
-    }
-
     // check if logged in or not
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
