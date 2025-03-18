@@ -39,8 +39,42 @@ function App() {
 }
 
 function AppContent() {
-    // get updated location - needed to ensure the header renders when appropriate
     const location = useLocation();
+
+    useEffect(() => {
+        const { pathname } = location;
+        let title = 'WagerWorld'; // Default title
+
+        if (pathname === '/' || pathname === '/index') {
+            title = 'Home - WagerWorld';
+        } else if (pathname === '/orgrequest') {
+            title = 'Organization Request - WagerWorld';
+        } else if (pathname.startsWith('/orgsettings')) {
+            title = 'Organization Settings - WagerWorld';
+        } else if (pathname.startsWith('/org')) {
+            title = 'My Organization - WagerWorld';
+        } else if (pathname.startsWith('/user')) {
+            title = 'User Profile - WagerWorld';
+        } else if (pathname.startsWith('/blackjack')) {
+            title = 'Blackjack - WagerWorld';
+        } else if (pathname.startsWith('/horseracing')) {
+            title = 'Horse Racing - WagerWorld';
+        } else if (pathname.startsWith('/poker')) {
+            title = 'Poker - WagerWorld';
+        } else if (pathname === '/signin') {
+            title = 'Sign In - WagerWorld';
+        } else if (pathname === '/signup') {
+            title = 'Sign Up - WagerWorld';
+        } else if (pathname === '/admin') {
+            title = 'Admin - WagerWorld';
+        } else if (pathname === '/404') {
+            title = 'Not Found - WagerWorld';
+        }
+        // TODO: Add more titles as needed
+
+        document.title = title;
+    }, [location]);
+
     useEffect(() => { }, [location]);
 
     // for now, specifying the pages that won't show the header. will do the opposite once front end is finished
