@@ -22,6 +22,7 @@ class BlackjackPlayer extends Schema {
     constructor() {
         super();
         this.name = '';
+        this.fireBaseId = '';
         this.hand = new ArraySchema();
         this.isReady = false;
         this.bet = 0;
