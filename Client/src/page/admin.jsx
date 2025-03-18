@@ -105,7 +105,7 @@ function AdminPage() {
                 <TableContainer sx={{ borderRadius: '8px' }}>
                     <Table size="small">
                         <TableHead>
-                            <TableRow sx={{ backgroundColor: theme.palette.secondary.main, '&:last-child td, &:last-child th': { border: 0 } }}>
+                            <TableRow sx={{ backgroundColor: theme.palette.secondary.main }}>
                                 <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Name</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Created At</TableCell>
                                 <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Members</TableCell>

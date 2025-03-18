@@ -395,7 +395,7 @@ function ViewOrgById() {
                             <TableContainer sx={{ borderRadius: '8px' }}>
                                 <Table size="small">
                                     <TableHead>
-                                        <TableRow sx={{ backgroundColor: theme.palette.secondary.main, '&:last-child td, &:last-child th': { border: 0 } }}>
+                                        <TableRow sx={{ backgroundColor: theme.palette.secondary.main }}>
                                             <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Type</TableCell>
                                             <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Host</TableCell>
                                             <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Game</TableCell>
@@ -408,7 +408,7 @@ function ViewOrgById() {
                                             availableRooms.map((room) => (
                                                 <TableRow
                                                     key={room.roomId}
-                                                    sx={{ backgroundColor: "#fffced" }}
+                                                    sx={{ backgroundColor: "#fffced", '&:last-child td, &:last-child th': { border: 0 } }}
                                                 >
                                                     {/* TODO: Make all of these dynamic */}
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>Public</TableCell>
@@ -419,7 +419,7 @@ function ViewOrgById() {
                                                 </TableRow>
                                             ))
                                         ) : (
-                                            <TableRow sx={{ backgroundColor: "#fffced" }}>
+                                            <TableRow sx={{ backgroundColor: "#fffced", '&:last-child td, &:last-child th': { border: 0 } }}>
                                                 <TableCell colSpan="5" sx={{ fontFamily: 'Source Code Pro' }}>No public rooms available.</TableCell>
                                             </TableRow>
                                         )}
@@ -470,7 +470,7 @@ function ViewOrgById() {
                         )}
 
                         {allowedGames.allowHorseRacing && (
-                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Horse Racing" value={gameSelections.horseRacing} onChange={(e) => handleGameChange("horseRacing", e.target.value)}
+                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Horse Racing (0-3)" value={gameSelections.horseRacing} onChange={(e) => handleGameChange("horseRacing", e.target.value)}
                                 sx={{
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {
