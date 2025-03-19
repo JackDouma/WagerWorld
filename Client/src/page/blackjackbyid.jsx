@@ -52,14 +52,12 @@ class BlackjackScene extends Phaser.Scene {
 
   // method to create the scene
   async create(data) {
-    this.roomId = data.roomId;
-      const playerId = localStorage.getItem("firebaseIdToken");;
+      console.log("Creating Scene...");
+      const playerId = localStorage.getItem("firebaseIdToken");
       const userRef = doc(db, "users", playerId);
       const userDoc = await getDoc(doc(db, "users", playerId));
         try{
-        if(userDoc.data().isInGame){
-         
-      
+        if(userDoc.data().isInGame && this.roomId === null){
                     console.log(`Player with ID is already in a game.`);
                     // open popup to inform user that they are already in a game and redirect to home page
                     // redirect to home page
@@ -78,15 +76,17 @@ class BlackjackScene extends Phaser.Scene {
     // if room is found
     console.log("playerId:", playerId);
     try {
-      this.room = await this.client.joinById({ customRoomId: this.roomId, playerId: playerId || "anonymous", balance: 10000});
+      this.roomId = data.roomId;
+      this.room = await this.client.joinById(this.roomId, { playerId: playerId || "anonymous", balance: 10000});
       console.log("Joining room:", this.roomId);
     } 
     // if not room is found
     catch (err) 
     {
-      this.room = await this.client.create("blackjack", { customRoomId: this.roomId ,  playerId: playerId || "anonymous", balance: 10000});
-      this.clientId = this.room.playerId
-      console.log("Creating room:", this.roomId);
+      // Commented this out since we only want to create rooms using lobbies.
+      // this.room = await this.client.create("blackjack", { customRoomId: this.roomId ,  playerId: playerId || "anonymous", balance: 10000});
+      // this.clientId = this.room.playerId
+      console.log(err);
     }
 
     // method is called every time there is a state change, but is only used for actually starting the game
@@ -609,6 +609,7 @@ class BlackjackScene extends Phaser.Scene {
   // method to reset the game
   async resetGame(){
     console.log("Resetting Game")
+    var roomId = this.roomId;
     this.playerHands = new Map()
     this.playerIndex = undefined
     this.currentTurn = ""
@@ -616,7 +617,7 @@ class BlackjackScene extends Phaser.Scene {
     this.started = false
     this.registry.destroy()
     this.events.off()
-    this.scene.restart(this.scene.key);
+    this.scene.restart({ roomId });
     await this.room.leave()
   }
 
