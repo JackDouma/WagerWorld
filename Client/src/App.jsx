@@ -39,64 +39,84 @@ function App() {
 }
 
 function AppContent() {
-    // get updated location - needed to ensure the header renders when appropriate
     const location = useLocation();
-    useEffect(() => { }, [location]);
 
-    // for now, specifying the pages that won't show the header. will do the opposite once front end is finished
-    const showHeader = (pathname) => {
-        return (
-            pathname === '/' ||
-            pathname === '/index' ||
-            pathname === '/signin' ||
-            pathname === '/signup' ||
-            pathname === '/orgrequest'
-        );
-    }
-    // // pages listed here will show the header (game pages included)
-    // const showHeader = (pathname) => {
-    //     return (
-    //         pathname.startsWith('/org/') ||
-    //         pathname.startsWith('/user') ||
-    //         pathname === '/404' ||
-    //         pathname === '/admin'
-    //     );
-    // };
+    useEffect(() => {
+        const { pathname } = location;
+        let title = 'WagerWorld'; // Default title
+
+        if (pathname === '/' || pathname === '/index') {
+            title = 'Home - WagerWorld';
+        } else if (pathname === '/orgrequest') {
+            title = 'Organization Request - WagerWorld';
+        } else if (pathname.startsWith('/orgsettings')) {
+            title = 'Organization Settings - WagerWorld';
+        } else if (pathname.startsWith('/org')) {
+            title = 'My Organization - WagerWorld';
+        } else if (pathname.startsWith('/user')) {
+            title = 'User Profile - WagerWorld';
+        } else if (pathname.startsWith('/blackjack')) {
+            title = 'Blackjack - WagerWorld';
+        } else if (pathname.startsWith('/horseracing')) {
+            title = 'Horse Racing - WagerWorld';
+        } else if (pathname.startsWith('/poker')) {
+            title = 'Poker - WagerWorld';
+        } else if (pathname === '/signin') {
+            title = 'Sign In - WagerWorld';
+        } else if (pathname === '/signup') {
+            title = 'Sign Up - WagerWorld';
+        } else if (pathname === '/admin') {
+            title = 'Organizations - WW Admin';
+        } else if (pathname === '/404') {
+            title = 'Not Found - WagerWorld';
+        } else if (pathname.startsWith('/room')) {
+            title = 'Room - WagerWorld';
+        } else if (pathname === '/createorg') {
+            title = 'Create Org - WW Admin';
+        } else if (pathname.startsWith('/editorg')) {
+            title = "Edit Org - WW Admin";
+        }
+        // TODO: Add more titles as needed
+
+        document.title = title;
+    }, [location]);
 
     return (
         <>
-            {!showHeader(location.pathname) && <Header />}
             <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/index" element={<Index />} />
                 <Route path="/org">
-                    <Route index element={<NoOrgRestrictedRoute><ViewOrg /></NoOrgRestrictedRoute>} />
+                    <Route index element={<NoOrgRestrictedRoute><Header /><ViewOrg /></NoOrgRestrictedRoute>} />
                     <Route
                         path=":orgId"
                         element={
                             <OrgRestrictedRoute>
+                                <Header />
                                 <ViewOrgById />
                             </OrgRestrictedRoute>
                         }
                     />
                 </Route>
                 <Route path="/user">
-                    <Route index element={<NoOrgRestrictedRoute><ViewUser /></NoOrgRestrictedRoute>} />
+                    <Route index element={<NoOrgRestrictedRoute><Header /><ViewUser /></NoOrgRestrictedRoute>} />
                     <Route
                         path=":userId"
                         element={
                             <NoOrgRestrictedRoute>
+                                <Header />
                                 <ViewUserById />
                             </NoOrgRestrictedRoute>
                         }
                     />
                 </Route>
                 <Route path="/orgsettings">
-                    <Route index element={<OwnerOnlyRoute><ViewOrgSettings /></OwnerOnlyRoute>} />
+                    <Route index element={<OwnerOnlyRoute><Header /><ViewOrgSettings /></OwnerOnlyRoute>} />
                     <Route
                         path=":orgId"
                         element={
                             <OwnerOnlyRoute>
+                                <Header />
                                 <ViewOrgSettingsById />
                             </OwnerOnlyRoute>
                         }
@@ -104,46 +124,47 @@ function AppContent() {
                 </Route>
 
                 <Route path="/blackjack">
-                    <Route index element={<BlackJack />} />
+                    <Route index element={<><Header /><BlackJack /></>} />
                     <Route
                         path=":roomId"
-                        element={<BlackJackById />}
+                        element={<><Header /><BlackJackById /></>}
                     />
                 </Route>
                 <Route path="/horseracing">
-                    <Route index element={<HorseRacing />} />
+                    <Route index element={<><Header /><HorseRacing /></>} />
                     <Route
                         path=":roomId"
-                        element={<HorseRacingById />}
+                        element={<><Header /><HorseRacingById /></>}
                     />
                 </Route>
                 <Route path="/poker">
-                    <Route index element={<Poker />} />
+                    <Route index element={<><Header /><Poker /></>} />
                     <Route
                         path=":roomId"
-                        element={<PokerById />}
+                        element={<><Header /><PokerById /></>}
                     />
                 </Route>
 
-                <Route path="/admin" element={<AdminOnlyRoute><AdminPage /></AdminOnlyRoute>} />
-                <Route path="/room/:roomId" element={<RoomPage />} />
+                <Route path="/admin" element={<AdminOnlyRoute><Header /><AdminPage /></AdminOnlyRoute>} />
+                <Route path="/room/:roomId" element={<><Header /><RoomPage /></>} />
                 <Route path="/signup" element={<Signup />} />
                 <Route path="/signin" element={<Signin />} />
                 <Route path="/orgrequest" element={<OrgRequest />} />
-                <Route path="/createorg" element={<AdminOnlyRoute><CreateOrg /></AdminOnlyRoute>} />
+                <Route path="/createorg" element={<AdminOnlyRoute><Header /><CreateOrg /></AdminOnlyRoute>} />
                 <Route path="/editorg">
-                    <Route index element={<AdminOnlyRoute><EditOrg /></AdminOnlyRoute>} />
+                    <Route index element={<AdminOnlyRoute><Header /><EditOrg /></AdminOnlyRoute>} />
                     <Route
                         path=":orgId"
                         element={
                             <AdminOnlyRoute>
+                                <Header />
                                 <EditOrgById />
                             </AdminOnlyRoute>
                         }
                     />
                 </Route>
-                <Route path="/404" element={<NotFound />} />
-                <Route path="*" element={<NotFound />} />
+                <Route path="/404" element={<><Header /><NotFound /></>} />
+                <Route path="*" element={<><Header /><NotFound /></>} />
             </Routes>
         </>
     );
