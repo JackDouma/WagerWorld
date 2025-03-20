@@ -20,7 +20,6 @@ import EditOrgById from './page/editorgbyid.jsx';
 import ViewUser from './page/user.jsx';
 import ViewUserById from './page/userbyid.jsx';
 import RoomPage from './page/roomPage.jsx';
-import BlackJack from './page/blackjack.jsx';
 import BlackJackById from './page/blackjackbyid.jsx';
 import HorseRacing from './page/horseracing.jsx';
 import HorseRacingById from './page/horseracingbyid.jsx';
@@ -124,7 +123,7 @@ function AppContent() {
                 </Route>
 
                 <Route path="/blackjack">
-                    <Route index element={<><Header /><BlackJack /></>} />
+                    <Route index element={<><Header /><BlackJackById /></>} />
                     <Route
                         path=":roomId"
                         element={<><Header /><BlackJackById /></>}
