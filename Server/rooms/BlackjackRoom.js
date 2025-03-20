@@ -354,7 +354,7 @@ class BlackjackRoom extends Room {
             if (playerDoc.exists) {
               player.fireBaseId = options.playerId;
               playerName = playerDoc.data().name;
-              player.name = playerName; 
+              player.name = playerName;
               console.log(`${playerName} joined!`);
             } else {
               console.log(`Player with ID ${options.playerId} not found.`);
@@ -362,7 +362,7 @@ class BlackjackRoom extends Room {
           } catch (error) {
             console.error("Error fetching player data:", error);
           }
-          
+
     player.totalCredits = options.balance || 10_000
 
     // if the game is currently in progress, put them in the waiting room
@@ -371,7 +371,7 @@ class BlackjackRoom extends Room {
     // otherwise add like normal, and if they're the room creator, make them the owner
     else {
       this.state.players.set(client.sessionId, player);
-      if (this.state.owner == '') {
+      if (this.state.owner == '' || this.state.owner === undefined) {
         this.state.owner = client.sessionId; // set the first player to join as the owner
       }
     }
@@ -403,12 +403,12 @@ class BlackjackRoom extends Room {
       }
       // Remove player from players map
       this.state.players.delete(client.sessionId);
-      
+
           // Update isInGame to false
       admin.firestore.collection("users").doc(player.fireBaseId).update({
           isInGame: false,
       });
-      
+
       // console log to show that the player has left the game
       console.log(`Player with ID ${client.sessionId} has left the game.`);
     }
@@ -420,11 +420,11 @@ class BlackjackRoom extends Room {
         admin.firestore.collection("users").doc(client.sessionId).update({
           isInGame: false,
       });
-      
+
       // console log to show that the player has left the game
       console.log(`Player with ID ${client.sessionId} has left the game.`);
       }
-      
+
     }
     // if the room owner was the once that left, then make the next guy in line the owner
     if (!this.state.players.has(this.state.owner))
