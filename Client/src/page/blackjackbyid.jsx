@@ -289,7 +289,7 @@ class BlackjackScene extends Phaser.Scene {
 
     // adding everything else
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
-    this.load.audio('win', 'cha-ching.mp3')
+    this.load.audio('win', '/cha-ching.mp3')
     this.createUI(true)
   }
 
