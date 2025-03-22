@@ -72,7 +72,7 @@ class BlackjackScene extends Phaser.Scene {
         this.load.image(fileName, `/Cards/${fileName}`)
       })
     })
-    this.load.audio("win", "cha-ching.mp3")
+    this.load.audio("win", "/cha-ching.mp3")
   }
 
   init(data) {
