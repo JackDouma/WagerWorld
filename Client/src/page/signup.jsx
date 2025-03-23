@@ -60,6 +60,7 @@ function Signup() {
         name: name,
         birthday: formattedBirthday,
         createdAt: new Date(),
+        balance: 100000,
         isInGame: false
       };
 
