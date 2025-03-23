@@ -100,10 +100,12 @@ function ViewOrgById() {
         }
 
         const postData = {
-            roomType: "card_room",
-            maxPlayers: 8,
-            hostId: currentUser.uid,
-            games: gameSelections,
+            roomType: "lobby",
+            options: {
+                blackjack: gameSelections.blackjack,
+                poker: gameSelections.poker,
+                horseracing: gameSelections.horseRacing
+            }
         };
 
         try {
@@ -153,7 +155,7 @@ function ViewOrgById() {
 
     const fetchAvailableRooms = async (client) => {
         try {
-            const rooms = await client.getAvailableRooms('card_room');
+            const rooms = await client.getAvailableRooms('lobby');
             setAvailableRooms(rooms);
         }
         catch (e) {

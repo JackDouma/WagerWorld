@@ -1,4 +1,5 @@
 const { Room } = require("@colyseus/core");
+const admin = require("../firebase");
 const {
   Card,
   BlackjackPlayer,
@@ -15,22 +16,21 @@ class BlackjackRoom extends Room {
   onCreate(options) {
     // Custom room ID (if provided)
     this.customRoomId = options.customRoomId;
-
-    // Initialize room state
+    this.autoDispose = false;
     this.setState(new BlackjackState());
 
     // Set max clients (default to 8 if not provided)
     this.maxClients = options.maxPlayers || 8;
 
-    // Add timeout to destroy room if no players join
+    // Add timeout that destroys room if no players join (needed for /create-room endpoint). Disabled this for lobby implementation.
+    /*
     this.emptyRoomTimeout = setTimeout(() => {
       if (this.clients.length === 0) {
         console.log(`Room ${this.customRoomId} destroyed due to inactivity.`);
         this.disconnect();
       }
     }, 30000);
-
-    
+    */
 
     // Add logging to track player count
     console.log(`Room ${this.roomId} created. Current player count: ${this.state.players.size}`);
@@ -121,7 +121,7 @@ class BlackjackRoom extends Room {
           this.state.players.set(nextPlayerId, player)
           this.state.waitingRoom.delete(nextPlayerId)
           player.hand = new ArraySchema()
-          this.broadcast("playerJoin", { sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+          this.broadcast("playerJoin", {playerName: player.name,  sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
         }
       }
       this.broadcast('newGame', { waitingRoom: this.state.waitingRoom })
@@ -280,24 +280,23 @@ class BlackjackRoom extends Room {
     const payouts = {}
 
     // for each player, get their winnings and number results, where 0 = win, 1 = dealer wins, 2 = push, 3 = player busts
-    this.state.players.keys().forEach((item) => {
-      console.log(item + " started with " + (this.state.players.get(item).totalCredits + this.state.players.get(item).bet) + " and bet " + this.state.players.get(item).bet)
-      const playerValue = this.calculateHandValue(this.state.players.get(item).hand)
-      if (playerValue > 21)
-        results[item] = 3
-      else if (dealerValue > 21 || playerValue > dealerValue){
-        results[item] = 0
-        this.state.players.get(item).totalCredits += (this.state.players.get(item).bet * 2)
+    this.state.players.forEach((player, sessionId) => {
+      console.log(player.name + " started with " + (player.totalCredits + player.bet) + " and bet " + player.bet);
+      const playerValue = this.calculateHandValue(player.hand);
+      if (playerValue > 21) {
+        results[sessionId] = 3;
+      } else if (dealerValue > 21 || playerValue > dealerValue) {
+        results[sessionId] = 0;
+        player.totalCredits += (player.bet * 2);
+      } else if (playerValue < dealerValue) {
+        results[sessionId] = 1;
+      } else if (playerValue === dealerValue) {
+        results[sessionId] = 2;
+        player.totalCredits += player.bet;
       }
-      else if (playerValue < dealerValue)
-        results[item] = 1
-      else if (playerValue == dealerValue) {
-        results[item] = 2
-        this.state.players.get(item).totalCredits += this.state.players.get(item).bet
-      }
-      this.state.players.get(item).bet = 0
-      payouts[item] = this.state.players.get(item).totalCredits
-    })
+      player.bet = 0;
+      payouts[sessionId] = player.totalCredits;
+    });
 
     // set game phase to 'done', and broadcast the results back to the clients
     // this.state.gamePhase = "done"
@@ -306,7 +305,7 @@ class BlackjackRoom extends Room {
     this.state.gamePhase = "waiting"
     this.state.dealer = new BlackjackPlayer()
     this.initializeDeck()
-        
+
     this.state.players.forEach(player => {
       player.bet = 0
       player.hand = new ArraySchema()
@@ -338,12 +337,32 @@ class BlackjackRoom extends Room {
   }
 
   // handles when a player joins
-  onJoin(client, options) {
+  async onJoin(client, options) {
+    console.log(options)
+    console.log(this.playerId)
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new BlackjackPlayer();
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
-    player.name = options.name || `Player ${client.sessionId}`;
+    var playerName = "";
+    if (options.playerId || this.playerId) {
+          try {
+            const playerDoc = await admin.firestore
+              .collection("users")
+              .doc(options.playerId)
+              .get();
+            if (playerDoc.exists) {
+              player.fireBaseId = options.playerId;
+              playerName = playerDoc.data().name;
+              player.name = playerName;
+              console.log(`${playerName} joined!`);
+            } else {
+              console.log(`Player with ID ${options.playerId} not found.`);
+            }
+          } catch (error) {
+            console.error("Error fetching player data:", error);
+          }
+
     player.totalCredits = options.balance || 10_000
 
     // if the game is currently in progress, put them in the waiting room
@@ -352,15 +371,17 @@ class BlackjackRoom extends Room {
     // otherwise add like normal, and if they're the room creator, make them the owner
     else {
       this.state.players.set(client.sessionId, player);
-      if (this.state.owner == '') {
+      if (this.state.owner == '' || this.state.owner === undefined) {
         this.state.owner = client.sessionId; // set the first player to join as the owner
       }
     }
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    console.log(player.totalCredits);
+    this.broadcast("playerJoin", { playerName: player.name,  sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
+}
 
   // handles when a player leaves
   onLeave(client) {
@@ -380,14 +401,30 @@ class BlackjackRoom extends Room {
       if (currentIndex !== -1 && currentIndex < keys.length - 1) {
           nextKey = keys[currentIndex + 1]
       }
-      // remove player
+      // Remove player from players map
       this.state.players.delete(client.sessionId);
+
+          // Update isInGame to false
+      admin.firestore.collection("users").doc(player.fireBaseId).update({
+          isInGame: false,
+      });
+
+      // console log to show that the player has left the game
+      console.log(`Player with ID ${client.sessionId} has left the game.`);
     }
     // if not found, check the watiting room and remove from there
     else {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
-      if(waitingPlayer)
+      if(waitingPlayer){
         this.state.waitingRoom.delete(client.sessionId)
+        admin.firestore.collection("users").doc(client.sessionId).update({
+          isInGame: false,
+      });
+
+      // console log to show that the player has left the game
+      console.log(`Player with ID ${client.sessionId} has left the game.`);
+      }
+
     }
     // if the room owner was the once that left, then make the next guy in line the owner
     if (!this.state.players.has(this.state.owner))
@@ -395,15 +432,27 @@ class BlackjackRoom extends Room {
 
     console.log(`Player left. Remaining players: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
 
-    // if there is nobody left in the room, then destroy it
+    // if there is nobody left in the room, then destroy it. Disabled for lobby implementation.
+    /*
     if(this.state.players.size == 0) {
       console.log("No players left, destroying room")
       this.broadcast("roomDestroyed")
       this.disconnect()
     }
+    */
+
     // otherwise tell the clients that someone left
-    else
-      this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
+    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
+  }
+
+  // handles when the room is disposed
+  onDispose() {
+    // make sure all clients are set to not in game
+    this.state.players.forEach((player) => {
+      admin.firestore.collection("users").doc(player.fireBaseId).update({
+        isInGame: false,
+      });
+    });
   }
 }
 

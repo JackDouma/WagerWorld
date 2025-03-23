@@ -34,6 +34,7 @@ type({ map: "string" })(RaceState.prototype, "players");
 
 class HorseRacingRoom extends Room {
   onCreate() {
+    this.autoDispose = false;
     this.maxClients = 10;
     this.setState(new RaceState());
 
