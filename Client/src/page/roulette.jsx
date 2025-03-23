@@ -177,6 +177,30 @@ class RouletteScene extends Phaser.Scene{
             x += 59
         }
 
+        // even money
+        x = chipOffsetX - 84
+        y = chipOffsetY + 25
+        for (let i=0; i<6; i++) {
+            // chip creation
+            let chip = this.add.image(x, y, "chip")
+            chip.scaleX = chipScale
+            chip.scaleY = chipScale
+
+            // set interactive
+            chip.type = 7 // for bet logic
+            chip.index = i
+            chip.setInteractive(new Phaser.Geom.Rectangle(66, -110, 160, 450), Phaser.Geom.Rectangle.Contains)
+            chip.on("pointerdown", () =>{
+                if (this.canSpin)
+                    chip.alpha = 0.01
+                    this.onChipClicked(chip)
+            })
+
+            this.chipContainer.add(chip)
+            this.chips.push(chip)
+            y += 95
+        }
+
         this.reset() // all bets=0 and hide chips
         this.canSpin = true;
     }
@@ -250,6 +274,7 @@ class RouletteScene extends Phaser.Scene{
                     this.straightUp[chip.index] += 10
                     this.txt_info.setText(`${this.straightUp[chip.index]} credits on ${chip.index + 1}`)
                     break
+
                 case 1:
                     // split, 17:1
                     this.txt_info.setText("This is a split bet")
@@ -270,6 +295,7 @@ class RouletteScene extends Phaser.Scene{
                     // line, 5:1
                     this.txt_info.setText("This is a line bet")
                     break
+
                 case 6:
                     // dozens and columns, 2:1
                     this.dozensCols[chip.index] += 10
@@ -288,11 +314,26 @@ class RouletteScene extends Phaser.Scene{
                         txt += `3rd column`
                     }
                     this.txt_info.setText(txt)
-                    
                     break
+
                 case 7:
-                    // even money
-                    this.txt_info.setText("This is an even money bet")
+                    // dozens and columns, 2:1
+                    this.evenMoney[chip.index] += 10
+                    var txt = `${this.evenMoney[chip.index]} credits on `
+                    if (chip.index == 0) {
+                        txt += `first 18`
+                    } else if (chip.index == 1) {
+                        txt += `Even`
+                    } else if (chip.index == 2) {
+                        txt += `Red`
+                    } else if (chip.index == 3) {
+                        txt += `Black`
+                    } else if (chip.index == 4) {
+                        txt += `Odd`
+                    } else if (chip.index == 5) {
+                        txt += `last 18`
+                    }
+                    this.txt_info.setText(txt)
                     break
             }
             this.newUserBal -= 10
@@ -340,31 +381,55 @@ class RouletteScene extends Phaser.Scene{
     payout(wheelResult) {
         var bet
         var totalPayout = 0
-        // straight up 35:1
-        bet = this.straightUp[wheelResult[0] - 1] // -1 to translate to index value
-        totalPayout += bet*36
-        // split
-        // street
-        // cornerBet
-        // line
-        /* dozens and columns 2:1 */
-        // dozens
-        var whichDozen = Math.ceil(wheelResult[0] / 12)
-        bet = this.dozensCols[whichDozen - 1] // translate to index
-        totalPayout += bet*3
-        // columns
-        var rm = wheelResult[0] % 3
-        var whichCol
-        if (rm == 1) {
-            whichCol = 3
-        } else if (rm == 2) {
-            whichCol = 4
-        } else if (rm == 0) {
-            whichCol = 5
+
+        if (wheelResult[0] != 0) { // account for special case of 0
+
+            // straight up 35:1
+            bet = this.straightUp[wheelResult[0] - 1] // -1 to translate to index value
+            totalPayout += bet*36
+
+            // split
+            // street
+            // cornerBet
+            // line
+
+            // dozens
+            var whichDozen = Math.ceil(wheelResult[0] / 12)
+            bet = this.dozensCols[whichDozen - 1] // translate to index
+            totalPayout += bet*3
+            // columns
+            var rm = wheelResult[0] % 3
+            var whichCol
+            if (rm == 1) {
+                whichCol = 3
+            } else if (rm == 2) {
+                whichCol = 4
+            } else if (rm == 0) {
+                whichCol = 5
+            }
+            bet = this.dozensCols[whichCol]
+            totalPayout += bet*3
+
+            // even money
+            // 18s
+            if (wheelResult[0] <= 18) {
+                totalPayout += this.evenMoney[0]*2
+            } else {
+                totalPayout += this.evenMoney[5]*2
+            }
+            // even and odd
+            if (wheelResult[0] % 2 == 0) {
+                totalPayout += this.evenMoney[1]*2
+            } else {
+                totalPayout += this.evenMoney[4]*2
+            }
+            // always bet on black
+            if (wheelResult[1] == 0) {
+                totalPayout += this.evenMoney[3]*2
+            } else if (wheelResult[1] == 1) {
+                totalPayout += this.evenMoney[2]*2
+            }
         }
-        bet = this.dozensCols[whichCol]
-        totalPayout += bet*3
-        // even money
 
         this.userBal += totalPayout
         return totalPayout
