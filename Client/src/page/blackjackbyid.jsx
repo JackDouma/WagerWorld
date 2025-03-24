@@ -549,7 +549,11 @@ class BlackjackScene extends Phaser.Scene {
             // once its done we change the image used, and make it fully flip
             onComplete: () => {
               // Change the texture to the new card face
-              card.setTexture(newTexture)
+              try {
+                card.setTexture(newTexture)
+              } catch (e) {
+                return; // There's a race condition here that causes problems if the user resets the scene too early. Return so that it doesn't break the scene after the reset happens.
+              }
               // make the card greyed out if it's not the user's or dealer's card
               if (tint)
                 card.setTint(0x808080)
