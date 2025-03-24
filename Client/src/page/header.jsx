@@ -222,9 +222,25 @@ function Header() {
                 )}
 
                 {userOrg && (
-                  // users that belong to an org (non-admins) have a link to their org page
-                  <Tooltip title="My Organization">
-                    <Link href={`/org/${userOrg.orgId}`}
+                  <box>
+                    {/* users that belong to an org (non-admins) have a link to their org page */}
+                    <Tooltip title="My Organization">
+                      <Link href={`/org/${userOrg.orgId}`}
+                        sx={{
+                          fontSize: "32px",
+                          color: theme.palette.primary.contrastText,
+                          padding: "0 10px",
+                          '&:hover': {
+                            color: theme.palette.primary.dark,
+                          }
+                        }}
+                      >
+                        <i class="fa-solid fa-sitemap"></i>
+                      </Link>
+                    </Tooltip>
+
+                    <Tooltip title="View Leaderboard">
+                    <Link href={`/leaderboard/${userOrg.orgId}`}
                       sx={{
                         fontSize: "32px",
                         color: theme.palette.primary.contrastText,
@@ -234,9 +250,10 @@ function Header() {
                         }
                       }}
                     >
-                      <i class="fa-solid fa-sitemap"></i>
+                      <i class="fa-solid fa-trophy"></i>
                     </Link>
                   </Tooltip>
+                </box>
                 )}
 
                 <Tooltip title="Sign Out">

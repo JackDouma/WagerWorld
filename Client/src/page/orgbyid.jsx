@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc, getFirestore, writeBatch } from "firebase/firestore";
+import { doc, getDoc, getFirestore, writeBatch, arrayUnion, updateDoc } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useParams } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
@@ -213,9 +213,35 @@ function ViewOrgById() {
         };
     }, []);
 
-     // This function resets the balance for all members to the org's defaultBalance.
-     const resetBalances = async () => {
+    // This function resets the balance for all members to the org's defaultBalance.
+    const resetBalances = async () => {
         try {
+            /////////////////////////
+            //// saving balances ////
+            /////////////////////////
+
+            const orgRef = doc(db, "orgs", orgId);
+            const orgSnap = await getDoc(orgRef);
+    
+            // create snapshot of leaderboard before resetting
+            const leaderboardSnapshot = {
+                date: new Date(),
+
+                members: members.map(member => ({
+                    name: member.name,
+                    balance: member.balance
+                }))
+            };
+    
+            // save
+            await updateDoc(orgRef, {
+                leaderboardHistory: arrayUnion(leaderboardSnapshot)
+            });
+
+            ////////////////////////////
+            //// resetting balances ////
+            ////////////////////////////
+
             const batch = writeBatch(db);
         
             for (const member of members) 
@@ -237,7 +263,7 @@ function ViewOrgById() {
             console.error("ERROR: ", error);
             alert("Failed to reset balances.");
         }
-      };
+    };
       
     
 
