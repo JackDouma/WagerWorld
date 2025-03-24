@@ -1,5 +1,7 @@
 const { Room } = require("@colyseus/core");
-const admin = require("../firebase");
+const { firestore, admin } = require("../firebase");
+const FieldValue = require('firebase-admin').firestore.FieldValue;
+
 const {
   Card,
   BlackjackPlayer,
@@ -107,6 +109,7 @@ class BlackjackRoom extends Room {
     this.onMessage("dealerTurn", (client, message) => {
       if (this.state.gamePhase == "playing")
         this.dealerTurn()
+        this.onGameFinished()
     })
 
     // once the game is reset, reset the owner as well
@@ -315,26 +318,50 @@ class BlackjackRoom extends Room {
   }
 
   onGameFinished() {
-    console.log(`Room ${this.customRoomId} Finished.`);
-
     this.clients.forEach(client => {
       const player = this.state.players.get(client.sessionId);
-
-      if (player && this.firestore) {
-        this.firestore.collection('players').doc(client.id).update({
-          totalCredits: admin.firestore.FieldValue.increment(player.totalCredits)
-        })
-        .then(() => {
-          console.log(`Player ${client.id} credits updated in Firestore.`);
-        })
-        .catch((error) => {
-          console.error(`Error updating player ${client.id} credits in Firestore:`, error);
-        });
-      } else {
-        console.warn(`Player ${client.id} not found in room state or Firestore not initialized.`);
+  
+      if (player && player.fireBaseId) 
+      {
+        firestore.collection('users').doc(player.fireBaseId).get()
+          .then(doc => {
+            if (!doc.exists) 
+            {
+              console.warn(`User doc not found for ${player.fireBaseId}`);
+              return;
+            }
+  
+            const previousBalance = doc.data().balance || 0;
+            const result = player.totalCredits - previousBalance;
+  
+            const historyEntry = {
+              date: new Date(),
+              gameName: "Blackjack",
+              result: result
+            };
+  
+            return firestore.collection('users').doc(player.fireBaseId).update({
+              balance: player.totalCredits,
+              gameHistory: FieldValue.arrayUnion(historyEntry)
+            });
+          })
+          .then(() => {
+            console.log(`Balance and game history updated for ${player.fireBaseId}`);
+          })
+          .catch((error) => {
+            console.error(`Error updating user ${player.fireBaseId}:`, error);
+          });
+  
+      } 
+      else 
+      {
+        console.warn(`Player missing ${client.sessionId}`);
       }
     });
   }
+  
+  
+  
 
   // handles when a player joins
   async onJoin(client, options) {
@@ -347,10 +374,8 @@ class BlackjackRoom extends Room {
     var playerName = "";
     if (options.playerId || this.playerId) {
           try {
-            const playerDoc = await admin.firestore
-              .collection("users")
-              .doc(options.playerId)
-              .get();
+            const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+
             if (playerDoc.exists) {
               player.fireBaseId = options.playerId;
               playerName = playerDoc.data().name;

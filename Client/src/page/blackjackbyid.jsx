@@ -3,7 +3,7 @@ import Phaser from 'phaser'
 import { Client, Room } from 'colyseus.js';
 import * as WebFontLoader from 'webfontloader'
 import { useParams } from "react-router-dom";
-import { doc, getDoc, updateDoc, getFirestore  } from "firebase/firestore";
+import { doc, getDoc, updateDoc, getFirestore } from "firebase/firestore";
 const db = getFirestore();
 
 class BlackjackScene extends Phaser.Scene {
@@ -106,7 +106,9 @@ class BlackjackScene extends Phaser.Scene {
     // if room is found
     console.log("playerId:", playerId);
     try {
-      this.room = await this.client.joinById(this.roomId, { playerId: playerId || "anonymous", balance: 10000});
+      const firestoreBalance = userDoc.data().balance || 10000;
+
+      this.room = await this.client.joinById(this.roomId, { playerId: playerId || "anonymous", balance: firestoreBalance});
       console.log("Joining room:", this.roomId);
     } 
     // if not room is found
@@ -677,7 +679,7 @@ class BlackjackScene extends Phaser.Scene {
     this.totalCredits.setText(`Credits: ${this.playerCredits}`)
 
     this.currentBet = 0
-    this.currentBetText.setText(`Current Bet: ${this.currentBet}`)
+    this.currentBetText.setText(`Current Bet: ${this.currentBet}`) 
 
     // in this case, 0 = win, 1 = dealer wins, 2 = push, 3 = player busts
     const result = playerResults[this.room.sessionId]
