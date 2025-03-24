@@ -8,11 +8,10 @@ function RoomPage() {
     const { roomId } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
+    const [loading, setLoading] = useState(true);
     const [room, setRoom] = useState(null);
     const [gamePhase, setGamePhase] = useState("waiting");
-
-    // get selected games
-    const selectedGames = location.state?.games || { blackjack: 1, poker: 1, horseRacing: 1 };
+    const [games, setGames] = useState([]);
 
     useEffect(() => {
         const joinRoom = async () => {
@@ -26,6 +25,37 @@ function RoomPage() {
                 });
 
                 joinedRoom.onLeave(() => navigate("/"));
+
+                joinedRoom.onMessage('rooms', (message) => {
+                    setGames([]);
+                    if (typeof message.blackjack !== 'undefined' && message.blackjack.length > 0) {
+                        for (let i = 0; i < message.blackjack.length; i++) {
+                            setGames(prevGames => [
+                                ...prevGames,
+                                { name: "Blackjack", path: `/blackjack/${message.blackjack[i]}` }
+                            ]);
+                        }
+                    }
+                    if (typeof message.poker !== 'undefined' && message.poker.length > 0) {
+                        for (let i = 0; i < message.poker.length; i++) {
+                            setGames(prevGames => [
+                                ...prevGames,
+                                { name: "Poker", path: `/poker/${message.poker[i]}` }
+                            ]);
+                        }
+                    }
+                    if (typeof message.horseracing !== 'undefined' && message.horseracing.length > 0) {
+                        for (let i = 0; i < message.horseracing.length; i++) {
+                            setGames(prevGames => [
+                                ...prevGames,
+                                { name: "Horse Racing", path: `/horseracing/${message.horseracing[i]}` }
+                            ]);
+                        }
+                    }
+                    setLoading(false);
+                });
+                
+                joinedRoom.send('getRooms');
             } 
             catch (error) 
             {
@@ -37,6 +67,7 @@ function RoomPage() {
         joinRoom();
     }, [roomId, navigate]);
 
+    /*
     // create game buttons
     const games = [];
 
@@ -61,6 +92,7 @@ function RoomPage() {
             games.push({ name: "Horse Racing", path: `/horseracing/${roomId}` });
         }
     }
+    */
 
     return (
         <div>
@@ -68,7 +100,7 @@ function RoomPage() {
             <h2>Select a Game:</h2>
             
             <div className="games">
-                {games.map((game, index) => (
+                {!loading && games.map((game, index) => (
                     <button key={index} onClick={() => navigate(game.path)}>
                         {game.name}
                     </button>

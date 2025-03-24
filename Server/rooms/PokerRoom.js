@@ -1,4 +1,7 @@
 const { Room } = require("@colyseus/core");
+const { firestore, admin } = require("../firebase");
+const FieldValue = require('firebase-admin').firestore.FieldValue;
+
 const {
   Card,
   PokerPlayer,
@@ -8,6 +11,7 @@ const { ArraySchema } = require("@colyseus/schema");
 
 class PokerRoom extends Room {
   onCreate(options) {
+    this.autoDispose = false;
     this.setState(new PokerState());
 
     this.dealerRaceCheck = false;
@@ -16,13 +20,15 @@ class PokerRoom extends Room {
     this.suits = [ "hearts", "diamonds", "clubs", "spades" ];
     this.ranks = [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace", ];
 
-    // Add timeout that destroys room if no players join (needed for /create-room endpoint)
+    // Add timeout that destroys room if no players join (needed for /create-room endpoint). Disabled for lobby implementation.
+    /*
     this.emptyRoomTimeout = setTimeout(() => {
       if (this.clients.length === 0) {
         console.log(`Room ${this.roomId} destroyed due to inactivity.`);
         this.disconnect();
       }
     }, 30000);
+    */
 
     // Add logging to track player count
     console.log(`Room ${this.roomId} created. Current player count: ${this.state.players.size}`);
@@ -186,7 +192,7 @@ class PokerRoom extends Room {
 
     const playerIds = Array.from(this.state.players.keys());
     const hands = {}
-    
+
     // Deal initial cards with a slight delay
     const dealCards = async () => {
       // each player's first card
@@ -298,12 +304,56 @@ class PokerRoom extends Room {
     }
   }
 
+  onGameFinished() 
+  {
+    this.clients.forEach(client => {
+        const player = this.state.players.get(client.sessionId);
+    
+        if (player && player.fireBaseId) 
+        {
+          firestore.collection('users').doc(player.fireBaseId).get()
+            .then(doc => {
+              if (!doc.exists) 
+              {
+                console.warn(`User doc not found for ${player.fireBaseId}`);
+                return;
+              }
+    
+              const previousBalance = doc.data().balance || 0;
+              const result = player.totalCredits - previousBalance;
+    
+              const historyEntry = {
+                date: new Date(),
+                gameName: "Poker",
+                result: result
+              };
+    
+              return firestore.collection('users').doc(player.fireBaseId).update({
+                balance: player.totalCredits,
+                gameHistory: FieldValue.arrayUnion(historyEntry)
+              });
+            })
+            .then(() => {
+              console.log(`Balance and game history updated for ${player.fireBaseId}`);
+            })
+            .catch((error) => {
+              console.error(`Error updating user ${player.fireBaseId}:`, error);
+            });
+    
+        } 
+        else 
+        {
+          console.warn(`Player missing ${client.sessionId}`);
+        }
+      });
+  }
+
   // method to end the game and show results
   endGame(res) {
     const activePlayers = Array.from(this.state.players.entries()).filter(([id, player]) => player.lastAction !== "fold");
 
     let winnerId, winner, result;
-    
+
     if (activePlayers.length === 1) {
         // ✅ If only one player remains, they win automatically
         [winnerId, winner] = activePlayers[0];
@@ -329,7 +379,7 @@ class PokerRoom extends Room {
         this.state.gamePhase = "waiting"
         this.state.dealer = new ArraySchema()
         this.initializeDeck()
-        
+
         this.state.players.forEach(player => {
             player.bet = 0
             player.hand = new ArraySchema()
@@ -343,6 +393,8 @@ class PokerRoom extends Room {
     } else {
         console.log("Error: Winner not found in state.");
     }
+    
+    onGameFinished()
   }
 
   rotateBlinds() {
@@ -380,7 +432,7 @@ class PokerRoom extends Room {
     fullHand.forEach(card => {
         const rank = card.rank;
         const suit = card.suit;
-        
+
         counts[rank] = (counts[rank] || 0) + 1
         suits[suit] = (suits[suit] || 0) + 1
 
@@ -492,7 +544,7 @@ class PokerRoom extends Room {
           this.state.players.get(playerIds[0]).blind = 0
         }
       }
-      
+
       this.state.players.set(client.sessionId, player);
 
       if (this.state.owner == '') {
@@ -522,7 +574,7 @@ class PokerRoom extends Room {
 
   //     console.log(`New Small Blind: ${playerIds[0]}, New Big Blind: ${playerIds[1]}`)
   //   }
-    
+
   // }
 
   // handles when a player leaves
@@ -577,12 +629,16 @@ class PokerRoom extends Room {
 
     console.log(`Player left. Remaining players: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
 
-    // if there is nobody left in the room, then destroy it
+    // if there is nobody left in the room, then destroy it. Disabled for lobby implementation.
+    /*
     if(this.state.players.size == 0) {
       console.log("No players left, destroying room")
       this.broadcast("roomDestroyed")
       this.disconnect()
     }
+    */
+
+    if (false) {} // Just here to make sure the following code still happens.
     // otherwise tell the clients that someone left
     else {
       this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});

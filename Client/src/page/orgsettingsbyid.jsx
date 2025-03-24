@@ -21,6 +21,7 @@ function OrgSettingsById() {
     const [allowPoker, setAllowPoker] = useState(false);
     const [allowRoulette, setAllowRoulette] = useState(false);
     const [allowHorseRacing, setAllowHorseRacing] = useState(false);
+    const [defaultBalance, setDefaultBalance] = useState(false);
 
     // TODO add wagering settings when we come to a decision on what can be edited for the games
 
@@ -42,6 +43,7 @@ function OrgSettingsById() {
                     setAllowPoker(orgData.allowPoker);
                     setAllowRoulette(orgData.allowRoulette);
                     setAllowHorseRacing(orgData.allowHorseRacing);
+                    setDefaultBalance(orgData.defaultBalance);
                 }
             }
             catch (error) {
@@ -71,7 +73,8 @@ function OrgSettingsById() {
                 allowCrazy8s,
                 allowPoker,
                 allowRoulette,
-                allowHorseRacing
+                allowHorseRacing,
+                defaultBalance
             });
 
             navigate(`/org/${orgId}`);
@@ -116,6 +119,19 @@ function OrgSettingsById() {
                                     ...theme.typography.general,
                                     '&.Mui-focused, &.MuiFormLabel-filled': {
                                         transform: 'translate(14px, -10px) scale(0.85)',
+                                    },
+                                },
+                                '& .MuiInputBase-input': {
+                                    ...theme.typography.general,
+                                }
+                            }}
+                        />
+                        <TextField label="Default Balance" margin="normal" variant="outlined" type="number" id="defaultBalance" value={defaultBalance} onChange={(e) => setDefaultBalance(e.target.value)} required
+                            sx={{
+                                '& .MuiInputLabel-root': {
+                                    ...theme.typography.general,
+                                    '&.Mui-focused, &.MuiFormLabel-filled': {
+                                        transform: 'translate(14px, -10px) scale(0.63)',
                                     },
                                 },
                                 '& .MuiInputBase-input': {

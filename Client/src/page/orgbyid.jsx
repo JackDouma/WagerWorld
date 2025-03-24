@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { doc, getDoc, getFirestore } from "firebase/firestore";
+import { doc, getDoc, getFirestore, writeBatch } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { useParams } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
@@ -24,6 +24,8 @@ function ViewOrgById() {
         allowPoker: false,
         allowHorseRacing: false,
     });
+    const [defaultBalance, setDefaultBalance] = useState(0);
+    const [isOwner, setIsOwner] = useState(false);
 
     useEffect(() => {
         const colyseusClient = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
@@ -43,13 +45,23 @@ function ViewOrgById() {
                 if (orgDoc.exists()) {
                     const orgData = orgDoc.data();
                     setOrgName(orgData.name || "Unknown Organization");
+                    setDefaultBalance(orgData.defaultBalance || 0);
 
-                    setMembers(
-                        (orgData.member || []).map((member) => ({
-                            ...member,
-                            joinedAt: member.joinedAt?.toDate(),
-                        }))
+                    const memberList = await Promise.all(
+                        (orgData.member || []).map(async (member) => {
+                            const userRef = doc(db, "users", member.id);
+                            const userSnap = await getDoc(userRef);
+
+                            return {
+                                ...member,
+                                joinedAt: member.joinedAt?.toDate(),
+                                balance: userSnap.exists() ? (userSnap.data().balance ?? 0) : 0,
+                            };
+                        })
                     );
+
+                    memberList.sort((a, b) => b.balance - a.balance);
+                    setMembers(memberList);
 
                     setAllowedGames({
                         allowBlackJack: orgData.allowBlackJack,
@@ -70,6 +82,27 @@ function ViewOrgById() {
         fetchOrgData();
         return () => clearInterval(interval);
     }, [orgId]);
+
+    // check if user is an owner
+    useEffect(() => {
+        const checkOwner = async () => {
+        const currentUser = auth.currentUser;
+
+            if (currentUser) 
+            {
+                const userDocRef = doc(db, "users", currentUser.uid);
+                const userDoc = await getDoc(userDocRef);
+
+                // if user is an owner
+                if (userDoc.exists() && userDoc.data().owner === true) 
+                {
+                    setIsOwner(true);
+                }
+            }
+        };
+        
+        checkOwner();
+      }, []);
 
     const [roomId, setRoomId] = useState("");
     const [availableRooms, setAvailableRooms] = useState([]);
@@ -100,10 +133,12 @@ function ViewOrgById() {
         }
 
         const postData = {
-            roomType: "card_room",
-            maxPlayers: 8,
-            hostId: currentUser.uid,
-            games: gameSelections,
+            roomType: "lobby",
+            options: {
+                blackjack: gameSelections.blackjack,
+                poker: gameSelections.poker,
+                horseracing: gameSelections.horseRacing
+            }
         };
 
         try {
@@ -153,7 +188,7 @@ function ViewOrgById() {
 
     const fetchAvailableRooms = async (client) => {
         try {
-            const rooms = await client.getAvailableRooms('card_room');
+            const rooms = await client.getAvailableRooms('lobby');
             setAvailableRooms(rooms);
         }
         catch (e) {
@@ -178,6 +213,33 @@ function ViewOrgById() {
         };
     }, []);
 
+     // This function resets the balance for all members to the org's defaultBalance.
+     const resetBalances = async () => {
+        try {
+            const batch = writeBatch(db);
+        
+            for (const member of members) 
+            {
+                const userRef = doc(db, "users", member.id);
+                const userSnap = await getDoc(userRef);
+            
+                if (userSnap.exists()) 
+                {
+                    batch.update(userRef, { balance: defaultBalance });
+                }
+            }
+      
+            await batch.commit();
+            alert("Balances reset successfully!");
+        } 
+        catch (error) 
+        {
+            console.error("ERROR: ", error);
+            alert("Failed to reset balances.");
+        }
+      };
+      
+    
 
     return (
         <Box component="main" sx={{ padding: 0, height: mainHeight }}>
@@ -254,12 +316,32 @@ function ViewOrgById() {
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}><Link href={`/user/${member.id}`} sx={{ color: "#998100", textDecorationColor: "#d9b800" }}>{member.name}</Link></TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.email}</TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{new Date(member.joinedAt).toLocaleDateString()}</TableCell>
-                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>0</TableCell> {/* TODO: Add Balance leaderboard */}
+                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.balance}</TableCell> 
                                                 </TableRow>
                                             ))}
                                         </TableBody>
                                     </Table>
                                 </TableContainer>
+
+                                {/*reset balance button for owners*/}
+                                {isOwner && (
+                                <Button 
+                                    onClick={resetBalances}
+                                    variant="contained"
+                                    sx={{
+                                        marginTop: '10px',
+                                        backgroundColor: theme.palette.error.main,
+                                        color: theme.palette.error.contrastText,
+                                        "&:hover": {
+                                            backgroundColor: theme.palette.error.dark,
+                                        },
+                                        textTransform: "none",
+                                    }}
+                                >
+                                    Reset Balances
+                                </Button>
+                                )}
+
                             </>
                         )}
                         {!loading && members.length === 0 && <p>No members found.</p>}

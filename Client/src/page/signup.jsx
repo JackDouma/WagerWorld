@@ -60,6 +60,8 @@ function Signup() {
         name: name,
         birthday: formattedBirthday,
         createdAt: new Date(),
+        balance: 100000,
+        isInGame: false
       };
 
       // Check Firestore for an organization with a domain matching the users email.
