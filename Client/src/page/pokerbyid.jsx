@@ -49,7 +49,7 @@ class PokerScene extends Phaser.Scene {
   }
 
   // method to create the scene
-  create() {
+  async create() {
     this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height)
     // randomizing player count and user position randomly for now
     this.amountOfPlayers = 8 /*Math.floor(Math.random() * (8)) + 1*/
@@ -58,11 +58,33 @@ class PokerScene extends Phaser.Scene {
       this.playerCardCounts.push(0)
     this.createDeck()
     this.createUI()
-
+const playerId = localStorage.getItem("firebaseIdToken");
+      const userRef = doc(db, "users", playerId);
+      const userDoc = await getDoc(doc(db, "users", playerId));
+        try{
+        if(userDoc.data().isInGame && this.roomId === null){
+                    console.log(`Player with ID is already in a game.`);
+                    // open popup to inform user that they are already in a game and redirect to home page
+                    // redirect to home page
+                    window.location.href = "/";
+                    return
+                  }
+        // update isInGame to true
+        await updateDoc(userRef, {
+          isInGame: true
+        });
+        
+      }
+      catch (error) {
+        console.error('Error fetching player data:', error);
+      }
+    // if room is found
+    console.log("playerId:", playerId);
     try {
       const firestoreBalance = userDoc.data().balance || 10000;
 
-      this.room = this.client.joinById(this.roomId, { playerId: playerId || "anonymous", balance: firestoreBalance});
+      this.room = await this.client.joinById(this.roomId, { playerId: playerId || "anonymous", balance: firestoreBalance});
+      console.log("Joining room:", this.roomId);
     } 
     // if not room is found
     catch (err) 
