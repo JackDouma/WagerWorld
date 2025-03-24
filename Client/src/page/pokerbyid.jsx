@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Phaser from 'phaser'
 import { useParams } from "react-router-dom";
+import { doc, getDoc, updateDoc, getFirestore } from "firebase/firestore";
+const db = getFirestore();
 
 class PokerScene extends Phaser.Scene {
 
@@ -56,6 +58,17 @@ class PokerScene extends Phaser.Scene {
       this.playerCardCounts.push(0)
     this.createDeck()
     this.createUI()
+
+    try {
+      const firestoreBalance = userDoc.data().balance || 10000;
+
+      this.room = this.client.joinById(this.roomId, { playerId: playerId || "anonymous", balance: firestoreBalance});
+    } 
+    // if not room is found
+    catch (err) 
+    {
+      console.log(err);
+    }
   }
 
   // creating a randomly shuffled deck

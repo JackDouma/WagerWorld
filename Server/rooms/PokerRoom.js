@@ -1,4 +1,7 @@
 const { Room } = require("@colyseus/core");
+const { firestore, admin } = require("../firebase");
+const FieldValue = require('firebase-admin').firestore.FieldValue;
+
 const {
   Card,
   PokerPlayer,
@@ -301,6 +304,50 @@ class PokerRoom extends Room {
     }
   }
 
+  onGameFinished() 
+  {
+    this.clients.forEach(client => {
+        const player = this.state.players.get(client.sessionId);
+    
+        if (player && player.fireBaseId) 
+        {
+          firestore.collection('users').doc(player.fireBaseId).get()
+            .then(doc => {
+              if (!doc.exists) 
+              {
+                console.warn(`User doc not found for ${player.fireBaseId}`);
+                return;
+              }
+    
+              const previousBalance = doc.data().balance || 0;
+              const result = player.totalCredits - previousBalance;
+    
+              const historyEntry = {
+                date: new Date(),
+                gameName: "Poker",
+                result: result
+              };
+    
+              return firestore.collection('users').doc(player.fireBaseId).update({
+                balance: player.totalCredits,
+                gameHistory: FieldValue.arrayUnion(historyEntry)
+              });
+            })
+            .then(() => {
+              console.log(`Balance and game history updated for ${player.fireBaseId}`);
+            })
+            .catch((error) => {
+              console.error(`Error updating user ${player.fireBaseId}:`, error);
+            });
+    
+        } 
+        else 
+        {
+          console.warn(`Player missing ${client.sessionId}`);
+        }
+      });
+  }
+
   // method to end the game and show results
   endGame(res) {
     const activePlayers = Array.from(this.state.players.entries()).filter(([id, player]) => player.lastAction !== "fold");
@@ -346,6 +393,8 @@ class PokerRoom extends Room {
     } else {
         console.log("Error: Winner not found in state.");
     }
+    
+    onGameFinished()
   }
 
   rotateBlinds() {
