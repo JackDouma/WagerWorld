@@ -12,12 +12,17 @@ function RoomPage() {
     const [room, setRoom] = useState(null);
     const [gamePhase, setGamePhase] = useState("waiting");
     const [games, setGames] = useState([]);
+    const [roomType, setRoomType] = useState(null);
 
     useEffect(() => {
         const joinRoom = async () => {
             try {
                 const joinedRoom = await client.joinById(roomId);
                 setRoom(joinedRoom);
+                if (location.state && location.state.lobbyType) {
+                    setRoomType(location.state.lobbyType);
+                }
+
 
                 joinedRoom.onStateChange((state) => {
                     console.log("State changed:", state);
@@ -97,6 +102,7 @@ function RoomPage() {
     return (
         <div>
             <h1>Room ID: {roomId}</h1>
+            <h2>Room Type: {roomType}</h2>
             <h2>Select a Game:</h2>
             
             <div className="games">
