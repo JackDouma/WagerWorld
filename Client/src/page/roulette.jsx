@@ -42,38 +42,52 @@ class RouletteScene extends Phaser.Scene{
         // ******************************************************* //
         this.newUserBal = 10000 // temp save in case page is refreshed before the wheel is spun
 
+        // get window size
+        const sceneWidth = this.scale.width
+        const sceneHeight = this.scale.width
+
+        const scaleFactor = Math.min(sceneWidth / 1150, sceneHeight / 600)
+
+        // scene container
+        this.sceneContainer = this.add.container(0, 0);
+        this.sceneContainer.setScale(scaleFactor)
+        //this.scale.on('resize', this.resizeScene, this);
+
         // roulette_wheel @ @ https://www.vexels.com/png-svg/preview/151205/roulette-wheel-icon
         // set for input and add circular hit area
-		this.roulette_wheel = this.add.sprite(575, 299, "wheel").setInteractive(new Phaser.Geom.Circle(240.5, 240.5, 235), Phaser.Geom.Circle.Contains);
-		this.roulette_wheel.scaleX = 0.8;
-		this.roulette_wheel.scaleY = 0.8;
+		this.roulette_wheel = this.add.sprite(800, 299, "wheel").setInteractive(new Phaser.Geom.Circle(240.5, 240.5, 235), Phaser.Geom.Circle.Contains);
+		this.roulette_wheel.setScale(0.8)
+        this.sceneContainer.add(this.roulette_wheel)
         // listener to call spinWheel
         this.roulette_wheel.on("pointerdown", () => {  
             this.spinWheel()
         })
 
 		// roulette_wheel_bg
-		this.roulette_wheel_bg = this.add.image(575, 299, "wheel-bg");
-		this.roulette_wheel_bg.scaleX = 0.77;
-		this.roulette_wheel_bg.scaleY = 0.77;
+		this.roulette_wheel_bg = this.add.image(800, 299, "wheel-bg");
+		this.roulette_wheel_bg.setScale(0.77)
+        this.sceneContainer.add(this.roulette_wheel_bg)
 
 		// betTable @ https://stock.adobe.com/search?k=roulette+table&asset_id=409514024
-		this.betTable = this.add.image(182, 295, "betTable");
-		this.betTable.scaleX = 0.9;
-		this.betTable.scaleY = 0.9;
+		this.betTable = this.add.image(240, 295, "betTable");
+		this.betTable.setScale(0.85)
 		this.betTable.angle = 90;
+        this.sceneContainer.add(this.betTable)
 
         // log text field (centered horizontally relative to roulette wheel)
         this.txt_info = this.add.text(this.roulette_wheel.x, 537, "", {})
         this.txt_info.setStyle({"align": "center", "fontSize": "24px"})
         this.txt_info.setOrigin(0.5, 0)
+        this.sceneContainer.add(this.txt_info)
 
         // user balance text field
-        this.txt_userBal = this.add.text(450, 10, `Balance: ${this.userBal} credits`, {})
+        this.txt_userBal = this.add.text(625, 10, `Balance: ${this.userBal} credits`, {})
         this.txt_userBal.setStyle({"align": "center", "fontSize": "24px"})
+        this.sceneContainer.add(this.txt_userBal)
 
         // result of roulette spin text field
-        this.txt_spinResult = this.add.text(545, 82, "", {})
+        this.txt_spinResult = this.add.text(770, 82, "", {})
+        this.sceneContainer.add(this.txt_spinResult)
         
         // arrays for betting logic
         this.straightUp = new Array(36) //35:1
@@ -89,6 +103,7 @@ class RouletteScene extends Phaser.Scene{
         this.chipContainer = this.add.container(this.betTable.x, this.betTable.y);
         // sync scale so chips dynamically shift position as needed
         this.chipContainer.setScale(this.betTable.scaleX, this.betTable.scaleY)
+        this.sceneContainer.add(this.chipContainer)
 
         // Adjust these values based on betTable alignment
         const chipOffsetX = -14;
@@ -202,11 +217,10 @@ class RouletteScene extends Phaser.Scene{
         }
 
         this.reset() // all bets=0 and hide chips
-        this.canSpin = true;
     }
 
     spinWheel(){
-        if(this.canSpin){
+        if(this.canSpin && this.betsPlaced){
             // number of rotations
             var rounds = Phaser.Math.Between(2, 4);
             // randomly selected stopping point
@@ -257,7 +271,6 @@ class RouletteScene extends Phaser.Scene{
                     setTimeout(() => {
                         // wait a couple seconds before hiding chips and resetting bets
                         this.reset()
-                        this.canSpin = true;
                     }, 3000)
                 }
             });
@@ -342,6 +355,7 @@ class RouletteScene extends Phaser.Scene{
         else {
             this.txt_info.setText("Out of credits")
         }
+        this.betsPlaced = true
     }
 
     reset() {
@@ -376,6 +390,9 @@ class RouletteScene extends Phaser.Scene{
         // clear info text
         this.txt_info.setText("")
         this.txt_spinResult.setText("")
+
+        this.canSpin = true
+        this.betsPlaced = false
     }
 
     payout(wheelResult) {
@@ -433,6 +450,11 @@ class RouletteScene extends Phaser.Scene{
 
         this.userBal += totalPayout
         return totalPayout
+    }
+
+    resizeScene(gameSize) {
+        const scaleFactor = Math.min(gameSize.width / 1150, gameSize.height / 600)
+        this.sceneContainer.setScale(scaleFactor)
     }
 }
 
