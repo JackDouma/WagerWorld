@@ -4,7 +4,7 @@ import { getAuth } from "firebase/auth";
 import { useParams } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
 import { Client } from 'colyseus.js';
-import { Typography, Box, TextField, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Link, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Card } from "@mui/material";
+import { Typography, Box, TextField, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Link, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Card, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import { useTheme } from "@mui/material/styles";
 
@@ -24,6 +24,7 @@ function ViewOrgById() {
         allowPoker: false,
         allowHorseRacing: false,
     });
+    const [lobbyType, setLobbyType] = useState("Public");
     const [defaultBalance, setDefaultBalance] = useState(0);
     const [isOwner, setIsOwner] = useState(false);
 
@@ -134,6 +135,7 @@ function ViewOrgById() {
 
         const postData = {
             roomType: "lobby",
+            lobbyType: lobbyType,
             options: {
                 blackjack: gameSelections.blackjack,
                 poker: gameSelections.poker,
@@ -156,7 +158,7 @@ function ViewOrgById() {
 
             // pass games to room
             if (response.ok && jsonResponse.roomId) {
-                navigate(`/room/${jsonResponse.roomId}`, { state: { games: gameSelections } });
+                navigate(`/room/${jsonResponse.roomId}`, { state: { games: gameSelections, lobbyType: lobbyType } });
             }
             else {
                 console.error("ERROR: ", jsonResponse);
@@ -594,6 +596,35 @@ function ViewOrgById() {
 
                     </DialogContentText>
                 </DialogContent>
+
+                <DialogTitle><Typography variant="heading">Lobby Info</Typography></DialogTitle>
+                <DialogContent>
+                    <FormControl fullWidth sx={{ marginTop: 1 }}>
+                        <InputLabel>Lobby Type</InputLabel>
+
+                        <Select
+                            value={lobbyType}
+                            onChange={(e) => setLobbyType(e.target.value)}
+                            label="Lobby Type"
+
+                            sx={{
+                                backgroundColor: 'white',
+                                '& .MuiInputLabel-root': {
+                                    fontSize: "0.85rem",
+                                },
+                                '& .MuiInputBase-input': {
+                                    fontSize: "0.85rem",
+                                },
+                            }}
+                        >
+
+                        <MenuItem value="Public">Public</MenuItem>
+                        <MenuItem value="Private">Private</MenuItem>
+
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+
                 <DialogActions
                     sx={{
                         display: 'flex',
