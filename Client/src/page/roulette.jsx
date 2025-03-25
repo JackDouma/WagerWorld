@@ -36,17 +36,17 @@ class RouletteScene extends Phaser.Scene{
     }
  
     create(){
-        // ******************************************************* //
+        // ************************--TO-DO--************************ //
         // get user balance from db
         this.userBal = 10000
-        // ******************************************************* //
-        this.newUserBal = 10000 // temp save in case page is refreshed before the wheel is spun
+        // ********************************************************* //
+        this.newUserBal = 10000 // temp save necessary in case page is refreshed before the wheel is spun     
 
         // get window size
         const sceneWidth = this.scale.width
         const sceneHeight = this.scale.width
 
-        const scaleFactor = Math.min(sceneWidth / 1150, sceneHeight / 600)
+        const scaleFactor = Math.min(sceneWidth / 1920, sceneHeight / 1080)
 
         // scene container
         this.sceneContainer = this.add.container(0, 0);
@@ -55,7 +55,7 @@ class RouletteScene extends Phaser.Scene{
 
         // roulette_wheel @ @ https://www.vexels.com/png-svg/preview/151205/roulette-wheel-icon
         // set for input and add circular hit area
-		this.roulette_wheel = this.add.sprite(800, 299, "wheel").setInteractive(new Phaser.Geom.Circle(240.5, 240.5, 235), Phaser.Geom.Circle.Contains);
+		this.roulette_wheel = this.add.sprite(960, 299, "wheel").setInteractive(new Phaser.Geom.Circle(240.5, 240.5, 235), Phaser.Geom.Circle.Contains);
 		this.roulette_wheel.setScale(0.8)
         this.sceneContainer.add(this.roulette_wheel)
         // listener to call spinWheel
@@ -64,14 +64,14 @@ class RouletteScene extends Phaser.Scene{
         })
 
 		// roulette_wheel_bg
-		this.roulette_wheel_bg = this.add.image(800, 299, "wheel-bg");
+		this.roulette_wheel_bg = this.add.image(960, 299, "wheel-bg");
 		this.roulette_wheel_bg.setScale(0.77)
         this.sceneContainer.add(this.roulette_wheel_bg)
 
 		// betTable @ https://stock.adobe.com/search?k=roulette+table&asset_id=409514024
-		this.betTable = this.add.image(240, 295, "betTable");
+		this.betTable = this.add.image(960, 700, "betTable");
 		this.betTable.setScale(0.85)
-		this.betTable.angle = 90;
+		//this.betTable.angle = 90; // used with first version where p1's bet table is vertical on the left
         this.sceneContainer.add(this.betTable)
 
         // log text field (centered horizontally relative to roulette wheel)
@@ -81,12 +81,12 @@ class RouletteScene extends Phaser.Scene{
         this.sceneContainer.add(this.txt_info)
 
         // user balance text field
-        this.txt_userBal = this.add.text(625, 10, `Balance: ${this.userBal} credits`, {})
+        this.txt_userBal = this.add.text(800, 10, `Balance: ${this.userBal} credits`, {})
         this.txt_userBal.setStyle({"align": "center", "fontSize": "24px"})
         this.sceneContainer.add(this.txt_userBal)
 
         // result of roulette spin text field
-        this.txt_spinResult = this.add.text(770, 82, "", {})
+        this.txt_spinResult = this.add.text(930, 82, "", {})
         this.sceneContainer.add(this.txt_spinResult)
         
         // arrays for betting logic
@@ -215,6 +215,32 @@ class RouletteScene extends Phaser.Scene{
             this.chips.push(chip)
             y += 95
         }
+        this.chipContainer.angle = -90 // angle due to chips initially aligned to vertical bet table
+
+        /* other players */
+        // betting tables
+        this.p2BetTable = this.add.image(500, 295, "betTable");
+		this.p2BetTable.setScale(0.85)
+		this.p2BetTable.angle = 90;
+        this.sceneContainer.add(this.p2BetTable)
+
+        this.p3BetTable = this.add.image(1420, 295, "betTable");
+		this.p3BetTable.setScale(0.85)
+		this.p3BetTable.angle = -90;
+        this.sceneContainer.add(this.p3BetTable)
+
+        // chip containers
+        // *************** BROKEN: positioning and scaling no bueno. orientation is correct though... ************** //
+        this.p2Container = this.add.container(this.p2BetTable.x, this.p2BetTable.y)
+        this.p2Container.setScale(this.p2BetTable.scaleX, this.p2BetTable.scaleY)
+        this.populateBetTables(this.p2Container)
+        this.sceneContainer.add(this.p2Container)
+        
+        this.p3Container = this.add.container(this.p3BetTable.x, this.p3BetTable.y)
+        this.p3Container.setScale(this.p3BetTable.scaleX, this.p3BetTable.scaleY)
+        this.populateBetTables(this.p3Container)
+        this.p3Container.angle = 180
+        this.sceneContainer.add(this.p3Container)
 
         this.reset() // all bets=0 and hide chips
     }
@@ -450,6 +476,59 @@ class RouletteScene extends Phaser.Scene{
 
         this.userBal += totalPayout
         return totalPayout
+    }
+
+    // populate the bet table of the other players with chip images
+    populateBetTables(container) {
+        // all this code is the same as with p1's bet table but with no interactive aspects
+        const chipOffsetX = -14
+        const chipOffsetY = -261
+        var x = chipOffsetX;
+        var y = chipOffsetY;
+        var chipScale = 0.20
+
+        // straight-up bet chips
+        for (let i = 0; i < 12; i++) {
+            for (let j = 0; j < 3; j++) { 
+                let chip = this.add.image(x, y, "chip")
+                chip.setScale(chipScale)
+                chip.alpha = 0.01
+                container.add(chip)
+                x += 59
+            }
+            y += 47.6
+            x = chipOffsetX
+        }
+        // dozens
+        x = chipOffsetX - 48
+        y = chipOffsetY + 20
+        for (let i=0; i<3; i++) {
+            let chip = this.add.image(x, y, "chip")
+            chip.setScale(chipScale)
+            chip.alpha = 0.01
+            container.add(chip)
+            y += 190.4
+        }
+        // columns
+        x = chipOffsetX
+        y = chipOffsetY + 571.2
+        for (let i=3; i<6; i++) {
+            let chip = this.add.image(x, y, "chip")
+            chip.setScale(chipScale)
+            chip.alpha = 0.01
+            container.add(chip)
+            x += 59
+        }
+        // even money
+        x = chipOffsetX - 84
+        y = chipOffsetY + 25
+        for (let i=0; i<6; i++) {
+            let chip = this.add.image(x, y, "chip")
+            chip.setScale(chipScale)
+            chip.alpha = 0.01
+            container.add(chip)
+            y += 95
+        }
     }
 
     resizeScene(gameSize) {
