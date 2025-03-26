@@ -277,6 +277,7 @@ class PokerRoom extends Room {
 
   // handling the dealer's turn
   dealerTurn() {
+    console.log("HERE", this.dealerRaceCheck)
     if (!this.dealerRaceCheck) {
       const gamePhase = parseInt(this.state.gamePhase.replace(/\D/g, ""), 10)
       if (gamePhase < 4) {
@@ -396,7 +397,7 @@ class PokerRoom extends Room {
         console.log("Error: Winner not found in state.");
     }
     
-    onGameFinished()
+    this.onGameFinished()
   }
 
   rotateBlinds() {
@@ -464,8 +465,6 @@ class PokerRoom extends Room {
     const threeOfAKind = Object.entries(counts).filter(([rank, count]) => count === 3).map(([rank]) => rank)
     const fourOfAKind = Object.entries(counts).filter(([rank, count]) => count === 4).map(([rank]) => rank)
     const fullHouse = threeOfAKind.size > 0 && pairs.size > 0;
-
-    highCard = this.ranks[highCard]
 
     if (isFlush && isStraight && straightHigh === 12) return { rank: 1, name: "Royal Flush", highCard };
     if (isFlush && isStraight) return { rank: 2, name: "Straight Flush", highCard: straightHigh };
@@ -572,7 +571,7 @@ class PokerRoom extends Room {
 
       this.state.players.set(client.sessionId, player);
 
-      if (this.state.owner == '') {
+      if (this.state.owner == '' || this.state.owner === undefined) {
         this.state.owner = client.sessionId; // set the first player to join as the owner
       }
     }
