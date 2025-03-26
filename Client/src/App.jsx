@@ -27,6 +27,8 @@ import Poker from './page/poker.jsx';
 import PokerById from './page/pokerbyid.jsx';
 import OrgRequest from './page/orgrequest.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
+import ViewLeaderboard from './page/leaderboard.jsx';
+import ViewLeaderboardById from './page/leaderboardbyid.jsx';
 import "./styles.css";
 
 function App() {
@@ -75,6 +77,9 @@ function AppContent() {
         } else if (pathname.startsWith('/editorg')) {
             title = "Edit Org - WW Admin";
         }
+        else if (pathname.startsWith('/leaderboard')) {
+            title = "Leaderboard - WagerWorld";
+        }
         // TODO: Add more titles as needed
 
         document.title = title;
@@ -97,6 +102,20 @@ function AppContent() {
                         }
                     />
                 </Route>
+
+                <Route path="/leaderboard">
+                    <Route index element={<NoOrgRestrictedRoute><Header /><ViewLeaderboard /></NoOrgRestrictedRoute>} />
+                    <Route
+                        path=":orgId"
+                        element={
+                            <OrgRestrictedRoute>
+                                <Header />
+                                <ViewLeaderboardById />
+                            </OrgRestrictedRoute>
+                        }
+                    />
+                </Route>
+
                 <Route path="/user">
                     <Route index element={<NoOrgRestrictedRoute><Header /><ViewUser /></NoOrgRestrictedRoute>} />
                     <Route
