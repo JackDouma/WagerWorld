@@ -35,6 +35,7 @@ class BlackjackScene extends Phaser.Scene {
     this.resultsText
     this.activeCards = []
     this.isWaiting = false
+    this.disconnectCount = 0
     this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`)
     this.room = Room
   }
@@ -127,6 +128,9 @@ class BlackjackScene extends Phaser.Scene {
 
     this.room.onMessage('gameStart', (message) => {
       if (message.gamePhase == "playing" && !this.started) {
+        for(var i = 0; i < this.disconnectCount; i++)
+          this.playerIndex--
+        this.disconnectCount = 0
         this.currentTurn = message.owner
         this.playerHands = message.hands
         this.dealerHand = message.dealerHand
@@ -178,8 +182,11 @@ class BlackjackScene extends Phaser.Scene {
         this.editPlayerSlots()
       }
       // if the game is in progress, update the name of the player slot with Disconnected
-      if(this.room.state.gamePhase == "playing")
+      if(this.room.state.gamePhase == "playing") {
         this.allPhysicalPositions[message.index].setText("Disconnected");
+        if (this.playerIndex >= message.index)
+          this.disconnectCount++
+      }
       // if it was the disconnected players turn, handle that on the server
       if(this.currentTurn == message.sessionId)
         this.room.send("currentTurnDisconnect", { nextPlayer: message.nextPlayer })
