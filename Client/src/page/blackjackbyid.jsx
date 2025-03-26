@@ -35,6 +35,7 @@ class BlackjackScene extends Phaser.Scene {
     this.resultsText
     this.activeCards = []
     this.isWaiting = false
+    this.disconnectCount = 0
     this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`)
     this.room = Room
   }
@@ -127,6 +128,9 @@ class BlackjackScene extends Phaser.Scene {
 
     this.room.onMessage('gameStart', (message) => {
       if (message.gamePhase == "playing" && !this.started) {
+        for(var i = 0; i < this.disconnectCount; i++)
+          this.playerIndex--
+        this.disconnectCount = 0
         this.currentTurn = message.owner
         this.playerHands = message.hands
         this.dealerHand = message.dealerHand
@@ -178,8 +182,11 @@ class BlackjackScene extends Phaser.Scene {
         this.editPlayerSlots()
       }
       // if the game is in progress, update the name of the player slot with Disconnected
-      if(this.room.state.gamePhase == "playing")
+      if(this.room.state.gamePhase == "playing") {
         this.allPhysicalPositions[message.index].setText("Disconnected");
+        if (this.playerIndex >= message.index)
+          this.disconnectCount++
+      }
       // if it was the disconnected players turn, handle that on the server
       if(this.currentTurn == message.sessionId)
         this.room.send("currentTurnDisconnect", { nextPlayer: message.nextPlayer })
@@ -549,7 +556,11 @@ class BlackjackScene extends Phaser.Scene {
             // once its done we change the image used, and make it fully flip
             onComplete: () => {
               // Change the texture to the new card face
-              card.setTexture(newTexture)
+              try {
+                card.setTexture(newTexture)
+              } catch (e) {
+                return; // There's a race condition here that causes problems if the user resets the scene too early. Return so that it doesn't break the scene after the reset happens.
+              }
               // make the card greyed out if it's not the user's or dealer's card
               if (tint)
                 card.setTint(0x808080)

@@ -430,7 +430,7 @@ class BlackjackRoom extends Room {
       this.state.players.delete(client.sessionId);
 
           // Update isInGame to false
-      admin.firestore.collection("users").doc(player.fireBaseId).update({
+      firestore.collection("users").doc(player.fireBaseId).update({
           isInGame: false,
       });
 
@@ -442,7 +442,7 @@ class BlackjackRoom extends Room {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
       if(waitingPlayer){
         this.state.waitingRoom.delete(client.sessionId)
-        admin.firestore.collection("users").doc(client.sessionId).update({
+        firestore.collection("users").doc(client.sessionId).update({
           isInGame: false,
       });
 
@@ -474,7 +474,7 @@ class BlackjackRoom extends Room {
   onDispose() {
     // make sure all clients are set to not in game
     this.state.players.forEach((player) => {
-      admin.firestore.collection("users").doc(player.fireBaseId).update({
+      firestore.collection("users").doc(player.fireBaseId).update({
         isInGame: false,
       });
     });
