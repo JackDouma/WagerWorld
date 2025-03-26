@@ -18,6 +18,7 @@ function Header() {
   const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
   const { roomId } = useParams(); // get roomId from URL - returns undefined if not found
+  const [userBalance, setUserBalance] = useState(null);
 
   useEffect(() => {
     // check if logged in or not
@@ -34,6 +35,7 @@ function Header() {
           setIsAdmin(userData.admin === true);
           setIsOwner(userData.owner === true);
           setUserOrg(userData.org || null);
+          setUserBalance(userData.balance || 0);
         }
       }
       else {
@@ -174,8 +176,7 @@ function Header() {
                     </Link>
 
                     <Typography variant="heading" fontWeight={300}>
-                      {/* TODO: Replace with user points balance */}
-                      0,000 points
+                      {userBalance} Credits
                     </Typography>
                   </Box>
                 )}
@@ -222,9 +223,25 @@ function Header() {
                 )}
 
                 {userOrg && (
-                  // users that belong to an org (non-admins) have a link to their org page
-                  <Tooltip title="My Organization">
-                    <Link href={`/org/${userOrg.orgId}`}
+                  <box>
+                    {/* users that belong to an org (non-admins) have a link to their org page */}
+                    <Tooltip title="My Organization">
+                      <Link href={`/org/${userOrg.orgId}`}
+                        sx={{
+                          fontSize: "32px",
+                          color: theme.palette.primary.contrastText,
+                          padding: "0 10px",
+                          '&:hover': {
+                            color: theme.palette.primary.dark,
+                          }
+                        }}
+                      >
+                        <i class="fa-solid fa-sitemap"></i>
+                      </Link>
+                    </Tooltip>
+
+                    <Tooltip title="View Leaderboard">
+                    <Link href={`/leaderboard/${userOrg.orgId}`}
                       sx={{
                         fontSize: "32px",
                         color: theme.palette.primary.contrastText,
@@ -234,9 +251,10 @@ function Header() {
                         }
                       }}
                     >
-                      <i class="fa-solid fa-sitemap"></i>
+                      <i class="fa-solid fa-trophy"></i>
                     </Link>
                   </Tooltip>
+                </box>
                 )}
 
                 <Tooltip title="Sign Out">
