@@ -520,12 +520,30 @@ class PokerRoom extends Room {
 
 
   // handles when a player joins
-  onJoin(client, options) {
+  async onJoin(client, options) {
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new PokerPlayer();
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
-    player.name = options.name || `Player ${client.sessionId}`;
+
+    var playerName = "";
+    if (options.playerId || this.playerId) {
+          try {
+            const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+
+            if (playerDoc.exists) {
+              player.fireBaseId = options.playerId;
+              playerName = playerDoc.data().name;
+              player.name = playerName;
+              console.log(`${playerName} joined!`);
+            } else {
+              console.log(`Player with ID ${options.playerId} not found.`);
+            }
+          } catch (error) {
+            console.error("Error fetching player data:", error);
+          }
+        }
+
     player.totalCredits = options.balance || 10_000
 
     // if the game is currently in progress, put them in the waiting room
@@ -555,7 +573,7 @@ class PokerRoom extends Room {
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    this.broadcast("playerJoin", { playerName: player.name, sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
 
   // assignBlinds() {
