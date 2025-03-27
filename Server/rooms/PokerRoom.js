@@ -144,7 +144,7 @@ class PokerRoom extends Room {
           this.broadcast("playerJoin", { sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
         }
       }
-      this.broadcast('newGame', { waitingRoom: this.state.waitingRoom })
+      this.broadcast('newGame', { players: this.state.players, waitingRoom: this.state.waitingRoom })
     })
   }
 
@@ -238,7 +238,7 @@ class PokerRoom extends Room {
     };
 
     dealCards();
-    this.broadcast('gameStart', { hands, players: this.state.players, dealerHand: this.state.dealer.hand, currentTurn: this.state.currentTurn, gamePhase: this.state.gamePhase })
+    this.broadcast('gameStart', { hands, players: this.state.players, dealerHand: this.state.dealer.hand, currentTurn: this.state.currentTurn, gamePhase: this.state.gamePhase, pot: this.state.pot })
   }
 
   // allowing the next client in line to go
@@ -423,6 +423,8 @@ class PokerRoom extends Room {
     // assign new blind values to the players
     this.state.players.get(playerIds[newSbIndex]).blind = 1
     this.state.players.get(playerIds[newBbIndex]).blind = 2
+
+    console.log('blinds after rotation:', playerIds[newSbIndex], playerIds[newBbIndex])
   }
 
   evaluateHand(playerHand, communityCards) {

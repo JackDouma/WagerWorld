@@ -83,7 +83,7 @@ class PokerScene extends Phaser.Scene {
         this.playerHands = message.hands
         this.started = true
         console.log(this.currentTurn)
-        this.startGame()
+        this.startGame(message.pot)
       }
     })
 
@@ -206,8 +206,9 @@ class PokerScene extends Phaser.Scene {
       this.playerHands = {}
       if(this.playerBetValues) this.playerBetValues.forEach(item => item.destroy())
       this.activeCards.forEach(item => item.destroy())
+      this.players = message.players
       this.waitingRoom = message.waitingRoom
-      this.createUI(!this.isWaiting)
+      this.createUI(this.isWaiting)
     })
 
     // if the client refreshes or leaves, only alert them if the game is in play and they are not in the waiting room
@@ -427,7 +428,7 @@ class PokerScene extends Phaser.Scene {
   }
 
   // method to show the amount of money each player has bet total during the game
-  showWagers(){
+  showWagers(pot){
     this.playerBetValues = []
     var i = 0
     Object.keys(this.players).forEach((item) => {
@@ -448,10 +449,10 @@ class PokerScene extends Phaser.Scene {
       }
       i++
     })
-    this.totalPotText.setText(`Total Pot: ${this.room.state.pot}`)
+    this.totalPotText.setText(`Total Pot: ${pot}`)
   }
 
-  startGame(){
+  startGame(pot){
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
 
@@ -484,7 +485,7 @@ class PokerScene extends Phaser.Scene {
     }
 
     // showing all wagers (each starts at 0, except for big and small blinds)
-    this.showWagers()
+    this.showWagers(pot)
 
     // for testing purposes
     this.b = true
@@ -525,7 +526,11 @@ class PokerScene extends Phaser.Scene {
             // once its done we change the image used, and make it fully flip
             onComplete: () => {
               // Change the texture to the new card face
-              card.setTexture(newTexture)
+              try { // Fix for race condition. I haven't replicated it in poker but it was happening in blackjack so I've added this just in case.
+                card.setTexture(newTexture)
+              } catch (e) {
+                return;
+              }
               // Flip back to full size
               this.tweens.add({
                 targets: card,
@@ -554,7 +559,11 @@ class PokerScene extends Phaser.Scene {
       // once its done we change the image used, and make it fully flip
       onComplete: () => {
         // Change the texture to the new card face
-        card.setTexture(newTexture)
+        try { // Fix for race condition. I haven't replicated it in poker but it was happening in blackjack so I've added this just in case.
+          card.setTexture(newTexture)
+        } catch (e) {
+          return;
+        }
         // Flip back to full size
         this.tweens.add({
           targets: card,
