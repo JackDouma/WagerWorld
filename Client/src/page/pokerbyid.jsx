@@ -62,7 +62,7 @@ class PokerScene extends Phaser.Scene {
   }
 
   init(data) {
-    console.log("Init: ", data.roomId);
+    console.log("Init here: ", data.roomId);
     this.roomId = data.roomId;
   }
 
