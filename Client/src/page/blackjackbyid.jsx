@@ -31,7 +31,6 @@ class BlackjackScene extends Phaser.Scene {
     this.possibleRemoveBetButtons = []
     this.totalCredits
     this.currentBetText
-    this.placeBetsText
     this.placeBetsButton
     this.resultsText
     this.activeCards = []
@@ -51,7 +50,7 @@ class BlackjackScene extends Phaser.Scene {
         this.totalCredits.setFontFamily('"Rowdies"')
         this.currentBetText.setFontFamily('"Rowdies"')
         this.resultsText.setFontFamily('"Rowdies"')
-        this.placeBetsText.setFontFamily('"Rowdies"')
+        this.placeBetsButton.setFontFamily('"Rowdies"')
         this.possibleRemoveBetButtons.forEach((item) => {item.setFontFamily('"Rowdies')})
         this.allPhysicalPositions.forEach((item) => {item.setFontFamily('"Rowdies')})
       }
@@ -158,7 +157,6 @@ class BlackjackScene extends Phaser.Scene {
       else if (this.room.state.gamePhase == "playing" && this.room.sessionId in this.waitingRoom) {
         this.resultsText.setText("Waiting for Game to Finish...").setVisible(true)
         this.removeBetButtons()
-        this.placeBetsText.setVisible(false)
         this.placeBetsButton.setActive(false).setVisible(false)
         this.isWaiting = true
       }
@@ -202,8 +200,8 @@ class BlackjackScene extends Phaser.Scene {
       this.room.send("disconnectionHandled")
       // show hit and stand buttons to the correct user
       if (this.currentTurn == this.room.sessionId) {
-        this.changeActionButtonState(true, this.hitText, this.hitButton, this.hitGraphics)
-        this.changeActionButtonState(true, this.standText, this.standButton, this.standGraphics)
+        this.hitButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
+        this.standButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
       }
       // if the last player diconnected, go straight to the dealer
       if (this.currentTurn == "dealer")
@@ -250,12 +248,12 @@ class BlackjackScene extends Phaser.Scene {
       // set hit and stand buttons inivisible for the one who finished, and visible for the next player
       this.currentTurn = message.nextPlayer
       if (this.currentTurn == this.room.sessionId) {
-        this.changeActionButtonState(true, this.hitText, this.hitButton, this.hitGraphics)
-        this.changeActionButtonState(true, this.standText, this.standButton, this.standGraphics)
+        this.hitButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
+        this.standButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
       }
       if (message.prevPlayer == this.room.sessionId) {
-        this.changeActionButtonState(false, this.hitText, this.hitButton, this.hitGraphics)
-        this.changeActionButtonState(false, this.standText, this.standButton, this.standGraphics)
+        this.hitButton.setActive(false).setVisible(false)
+        this.standButton.setActive(false).setVisible(false)
       }
 
       // if the last player finished, go to the dealer
@@ -272,8 +270,8 @@ class BlackjackScene extends Phaser.Scene {
     // reset game message from the server
     this.room.onMessage("newGame", (message) => { 
       this.started = false
-      if(this.playAgainButton) this.destroyButtons(this.playAgainText, this.playAgainButton, this.playAgainGraphics)
-      if(this.quitButton) this.destroyButtons(this.quitText, this.quitButton, this.quitGraphics)
+      if(this.playAgainButton) this.playAgainButton.destroy()
+      if(this.quitButton) this.quitButton.destroy()
       this.playerHands = {}
       this.currentBetText.destroy()
       this.totalCredits.destroy()
@@ -314,49 +312,6 @@ class BlackjackScene extends Phaser.Scene {
       this.allPhysicalPositions[j].setText(this.players[item].name);
       j++
     })
-  }
-
-  // method to create buttons, including text and hoverr effects
-  addActionButtons(action, x, y, onClick, size, colour) {
-    const buttonRadius = 20;
-    const buttonGraphics = this.add.graphics();
-    buttonGraphics.fillStyle(0x000000, 0.5).setVisible(false).setActive(false);
-
-    const text = this.add.text(x, y, action, { fontSize: size, fill: colour }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"').setVisible(false)
-
-    buttonGraphics.fillRoundedRect((text.x - text.width / 2) - 10, (text.y - text.height / 2) - 10, text.width + 20, text.height + 20, buttonRadius);
-    
-    const button = this.add.zone(text.x - 10, text.y - 10, text.width + 20, text.height + 20)
-        .setOrigin(0.5, 0.5)
-        .setInteractive().on('pointerdown', () => onClick()).setVisible(false).setActive(false)
-
-    button.on('pointerover', () => {
-      buttonGraphics.clear();
-      buttonGraphics.fillStyle(0x555555, 0.7);
-      buttonGraphics.fillRoundedRect((text.x - text.width / 2) - 10, (text.y - text.height / 2) - 10, text.width + 20, text.height + 20, buttonRadius);
-    });
-
-    button.on('pointerout', () => {
-      buttonGraphics.clear();
-      buttonGraphics.fillStyle(0x000000, 0.5);
-      buttonGraphics.fillRoundedRect((text.x - text.width / 2) - 10, (text.y - text.height / 2) - 10, text.width + 20, text.height + 20, buttonRadius);
-    });
-
-    return [text, button, buttonGraphics]
-  }
-
-  // method to enable / disable the buttons
-  changeActionButtonState(state, text, button, graphics) {
-    text.setVisible(state).setFontFamily('"Rowdies"')
-    button.setActive(state).setVisible(state)
-    graphics.setActive(state).setVisible(state)
-  }
-
-  // method to destroy the buttons
-  destroyButtons(text, button, graphics) {
-    text.destroy()
-    button.destroy()
-    graphics.destroy()
   }
 
   // adding the buttons to make a bet
@@ -461,8 +416,7 @@ class BlackjackScene extends Phaser.Scene {
     }
 
     // game starts once all bets are finalized
-    [this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics] = this.addActionButtons("Place Bets", centerX, centerY + (this.scale.height / 4), () => this.room.send("bet", { value: this.currentBet }), '72px', '#FFD700')
-    this.changeActionButtonState(true, this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics)
+    this.placeBetsButton = this.add.text(centerX, centerY + (this.scale.height / 4), "Place Bets", { fontSize: '72px', fill: '#FFD700' }).setOrigin(0.5, 0.5).setInteractive().on('pointerdown', () => this.room.send("bet", { value: this.currentBet })).setFontFamily('"Rowdies"')
 
     // text to show any results of a player (ie. busted, standing, waiting, etc.)
     this.resultsText = this.add.text(centerX, centerY + (this.scale.height / 20), 'Waiting...', { fontSize: '60px', fill: '#fff' }).setOrigin(0.5, 0.5).setVisible(false).setFontFamily('"Rowdies"')
@@ -501,9 +455,7 @@ class BlackjackScene extends Phaser.Scene {
   removeBetButtons(){
     this.possibleBetButtons.forEach((item) => {item.setActive(false).setVisible(false)})
     this.possibleRemoveBetButtons.forEach((item) => {item.setActive(false).setVisible(false)})
-    this.placeBetsText.destroy()
     this.placeBetsButton.destroy()
-    this.placeBetsGraphics.destroy()
   }
 
   // method to actually start the game up
@@ -558,15 +510,16 @@ class BlackjackScene extends Phaser.Scene {
     this.playerValueText = this.add.text(this.allPhysicalPositions[this.playerIndex].x + horiz, this.allPhysicalPositions[this.playerIndex].y + vert,
       this.calculateHandValue(this.playerHands[this.room.sessionId]), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
-    const [hitText, hitButton, hitGraphics] = this.addActionButtons('Hit', centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), () => this.hit(this.playerIndex), '48px','#0f0')
-    this.hitText = hitText
-    this.hitButton = hitButton
-    this.hitGraphics = hitGraphics
+    // creating the hit and stand button
+    this.hitButton = this.add
+      .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Hit', { fontSize: '48px', fill: '#0f0' })
+      .setInteractive()
+      .on('pointerdown', () => this.hit(this.playerIndex)).setOrigin(0.5,0.5).setActive(false).setVisible(false)
 
-    const [standText, standButton, standGraphics] = this.addActionButtons('Stand', centerX + (this.scale.width / 5), centerY + (this.scale.height / 6), () => this.stand(this.playerIndex), '48px', '#f00')
-    this.standText = standText
-    this.standButton = standButton
-    this.standGraphics = standGraphics
+    this.standButton = this.add
+      .text(centerX + (this.scale.width / 5), centerY + (this.scale.height / 6), 'Stand', { fontSize: '48px', fill: '#f00' })
+      .setInteractive()
+      .on('pointerdown', () => this.stand(this.playerIndex)).setOrigin(0.5,0.5).setActive(false).setVisible(false)
   }
 
   //method to animate a card going from above the screen, down to its indicated position, and flipped over
@@ -626,9 +579,9 @@ class BlackjackScene extends Phaser.Scene {
         else{
           this.dealerValueText = this.add.text(card.x - (this.scale.width / 12), card.y, this.currentTurn != "dealer" ? (isNaN(this.dealerHand[0].rank) ? 10 : this.dealerHand[0].rank) : 
             this.calculateHandValue(this.dealerHand), { fontSize: '36px', fill: '#fff' }).setOrigin(0.5, 0.5)
-          if (this.currentTurn == this.room.sessionId && order == 3) {
-            this.changeActionButtonState(true, this.hitText, this.hitButton, this.hitGraphics)
-            this.changeActionButtonState(true, this.standText, this.standButton, this.standGraphics)
+          if (this.currentTurn == this.room.sessionId) {
+            this.hitButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
+            this.standButton.setActive(true).setVisible(true).setFontFamily('"Rowdies"')
           }
         }
       },
@@ -775,28 +728,23 @@ class BlackjackScene extends Phaser.Scene {
       this.sound.play("win")
 
     // replace the hit and stand buttons with play again and quit
-    this.destroyButtons(this.hitText, this.hitButton, this.hitGraphics)
-    this.destroyButtons(this.standText, this.standButton, this.standGraphics)
-
-    const [playAgainText, playAgainButton, playAgainGraphics] = this.addActionButtons("Play Again", centerX - (this.scale.width / 6), centerY + (this.scale.height / 6.5), 
-      () => {
+    this.hitButton.destroy()
+    this.standButton.destroy()
+    this.playAgainButton = this.add
+      .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Play Again', { fontSize: '48px', fill: '#0f0' })
+      .setInteractive()
+      .on('pointerdown', () => {
         this.resultsText.setText('Waiting for room owner...')
-        this.destroyButtons(this.playAgainText, this.playAgainButton, this.playAgainGraphics)
-        this.destroyButtons(this.quitText, this.quitButton, this.quitGraphics)
+        this.playAgainButton.destroy()
+        this.quitButton.destroy()
         if (this.room.sessionId == this.room.state.owner)
           this.room.send("newGame")
-      }, '72px', '#0f0')
-    this.playAgainText = playAgainText
-    this.playAgainButton = playAgainButton
-    this.playAgainGraphics = playAgainGraphics
+      }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
 
-    const [quitText, quitButton, quitGraphics] = this.addActionButtons("Quit", centerX + (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => window.location.href = '/', '72px', '#f00')
-    this.quitText = quitText
-    this.quitButton = quitButton
-    this.quitGraphics = quitGraphics
-
-    this.changeActionButtonState(true, playAgainText, playAgainButton, playAgainGraphics)
-    this.changeActionButtonState(true, quitText, quitButton, quitGraphics)
+    this.quitButton = this.add
+      .text(centerX + (this.scale.width / 5), centerY + (this.scale.height / 6), 'Quit', { fontSize: '48px', fill: '#f00' })
+      .setInteractive()
+      .on('pointerdown', () => window.location.href = '/').setOrigin(0.5, 0.5) .setFontFamily('"Rowdies"')
   }
 }
 

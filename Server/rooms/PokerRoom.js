@@ -528,32 +528,10 @@ class PokerRoom extends Room {
     const player = new PokerPlayer();
     console.log(options)
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
-<<<<<<< HEAD
-=======
-
->>>>>>> main
     var playerName = "";
     if (options.playerId || this.playerId) {
           try {
             const playerDoc = await firestore.collection("users").doc(options.playerId).get();
-<<<<<<< HEAD
-=======
-
-            if (playerDoc.exists) {
-              player.fireBaseId = options.playerId;
-              playerName = playerDoc.data().name;
-              player.name = playerName;
-              console.log(`${playerName} joined!`);
-            } else {
-              console.log(`Player with ID ${options.playerId} not found.`);
-            }
-          } catch (error) {
-            console.error("Error fetching player data:", error);
-          }
-        }
-
-    player.totalCredits = options.balance || 10_000
->>>>>>> main
 
             if (playerDoc.exists) {
               player.fireBaseId = options.playerId;
@@ -602,7 +580,7 @@ class PokerRoom extends Room {
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { playerName: player.name, sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
 
   // assignBlinds() {
