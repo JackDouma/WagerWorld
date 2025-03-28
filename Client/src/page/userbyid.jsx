@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, deleteDoc, getFirestore } from "firebase/firestore";
 import { auth } from "../../firebase";
 import { signOut, deleteUser, onAuthStateChanged } from "firebase/auth";
-import { Typography, Box, TextField, Button, Card, TableContainer, Table, TableHead, TableRow, TableCell, TableBody } from "@mui/material";
+import { Typography, Box, TextField, Button, Card, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, TablePagination } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 
 const db = getFirestore();
@@ -19,6 +19,8 @@ function ViewUserById() {
     const [editMode, setEditMode] = useState(false);
     const [isAccountOwner, setIsAccountOwner] = useState(false);
     const [gameHistory, setGameHistory] = useState([]);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
     const theme = useTheme();
 
     useEffect(() => {
@@ -98,6 +100,15 @@ function ViewUserById() {
         catch (error) {
             console.error("ERROR: ", error);
         }
+    };
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
     };
 
     useEffect(() => {
@@ -190,16 +201,45 @@ function ViewUserById() {
                             </TableRow>
                         </TableHead>
                         <TableBody>
-                            {gameHistory.map((game, index) => (
-                                <TableRow key={index} sx={{ backgroundColor: "#fffced", '&:last-child td, &:last-child th': { border: 0 } }}>
-                                    <TableCell>{game.gameName}</TableCell>
-                                    <TableCell>{game.result}</TableCell>
-                                    <TableCell>{game.date.toDate().toLocaleString()}</TableCell>
-                                </TableRow>
-                            ))}
+                            {gameHistory
+                                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // pagination
+                                .map((game, index) => (
+                                    <TableRow
+                                        key={index}
+                                        sx={{
+                                            backgroundColor: "#fffced",
+                                            '&:last-child td, &:last-child th': { border: 0 },
+                                        }}
+                                    >
+                                        <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{game.gameName}</TableCell>
+                                        <TableCell
+                                            sx={{
+                                                fontFamily: 'Source Code Pro',
+                                                backgroundColor: game.result > 0 ? "#d4f8d4" : "#f8d4d4", // light green for positive, light red for negative
+                                            }}
+                                        >
+                                            {game.result}
+                                        </TableCell>
+                                        <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{game.date.toDate().toLocaleString()}</TableCell>
+                                    </TableRow>
+                                ))}
                         </TableBody>
                     </Table>
                 </TableContainer>
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={gameHistory.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    sx={{
+                        '& .MuiTablePagination-toolbar, & .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows, & .MuiTablePagination-select': {
+                            fontFamily: 'Source Code Pro',
+                        },
+                    }}
+                />
 
                 {isAccountOwner && (
                     <Box display={"flex"} sx={{ marginTop: '20px' }}>
