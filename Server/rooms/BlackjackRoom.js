@@ -373,20 +373,20 @@ class BlackjackRoom extends Room {
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
     var playerName = "";
     if (options.playerId || this.playerId) {
-          try {
-            const playerDoc = await firestore.collection("users").doc(options.playerId).get();
-
-            if (playerDoc.exists) {
-              player.fireBaseId = options.playerId;
-              playerName = playerDoc.data().name;
-              player.name = playerName;
-              console.log(`${playerName} joined!`);
-            } else {
-              console.log(`Player with ID ${options.playerId} not found.`);
-            }
-          } catch (error) {
-            console.error("Error fetching player data:", error);
-          }
+      try {
+        const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+        if (playerDoc.exists) {
+          player.fireBaseId = options.playerId;
+          playerName = playerDoc.data().name;
+          player.name = playerName;
+          console.log(`${playerName} joined!`);
+        } else {
+          console.log(`Player with ID ${options.playerId} not found.`);
+        }
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+      }
+    }
 
     player.totalCredits = options.balance || 10_000
 
@@ -406,7 +406,6 @@ class BlackjackRoom extends Room {
     console.log(player.totalCredits);
     this.broadcast("playerJoin", { playerName: player.name,  sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
-}
 
   // handles when a player leaves
   onLeave(client) {

@@ -530,29 +530,23 @@ class PokerRoom extends Room {
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
     var playerName = "";
     if (options.playerId || this.playerId) {
-          try {
-            const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+      try {
+        const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+         if (playerDoc.exists) {
+          player.fireBaseId = options.playerId;
+          playerName = playerDoc.data().name;
+          player.name = playerName;
+          console.log(`${playerName} joined!`);
+        } else {
+          console.log(`Player with ID ${options.playerId} not found.`);
+        }
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+      }
+    }
 
-            if (playerDoc.exists) {
-              player.fireBaseId = options.playerId;
-              playerName = playerDoc.data().name;
-              player.name = playerName;
-              console.log(`${playerName} joined!`);
-            } else {
-              console.log(`Player with ID ${options.playerId} not found.`);
-            }
-          } catch (error) {
-            console.error("Error fetching player data:", error);
-          }
-          player.totalCredits = options.balance || 10_000
-  // log and broadcast that a new player has joined
-  console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-  console.log(player.totalCredits);
-  this.broadcast("playerJoin", { playerName: player.name,  sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
-          }
-      
-        
-        
+    player.totalCredits = options.balance || 10_000
+    
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase.includes("playing"))
       this.state.waitingRoom.set(client.sessionId, player);
@@ -580,28 +574,8 @@ class PokerRoom extends Room {
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    this.broadcast("playerJoin", { playerName: player.name, sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
-
-  // assignBlinds() {
-  //   const playerIds = Array.from(this.state.players.keys());
-  //   console.log("???")
-
-  //   if (playerIds.length < 2) {
-  //       console.log("Not enough players for blinds.");
-  //       return;
-  //   }
-
-  //   if (this.state.players.get(playerIds[0]).blind != 0 && this.state.players.get(playerIds[1]).blind != 0) {
-  //     this.state.players.forEach(player => player.blind = 0)
-
-  //     this.state.players.get(playerIds[0]).blind = 1
-  //     this.state.players.get(playerIds[1]).blind = 2
-
-  //     console.log(`New Small Blind: ${playerIds[0]}, New Big Blind: ${playerIds[1]}`)
-  //   }
-
-  // }
 
   // handles when a player leaves
   onLeave(client) {
