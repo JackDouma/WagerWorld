@@ -158,8 +158,7 @@ class BlackjackScene extends Phaser.Scene {
       else if (this.room.state.gamePhase == "playing" && this.room.sessionId in this.waitingRoom) {
         this.resultsText.setText("Waiting for Game to Finish...").setVisible(true)
         this.removeBetButtons()
-        this.placeBetsText.setVisible(false)
-        this.placeBetsButton.setActive(false).setVisible(false)
+        this.changeActionButtonState(this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics)
         this.isWaiting = true
       }
       // update the total credits screen
@@ -785,12 +784,12 @@ class BlackjackScene extends Phaser.Scene {
         this.destroyButtons(this.quitText, this.quitButton, this.quitGraphics)
         if (this.room.sessionId == this.room.state.owner)
           this.room.send("newGame")
-      }, '72px', '#0f0')
+      }, '48px', '#0f0')
     this.playAgainText = playAgainText
     this.playAgainButton = playAgainButton
     this.playAgainGraphics = playAgainGraphics
 
-    const [quitText, quitButton, quitGraphics] = this.addActionButtons("Quit", centerX + (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => window.location.href = '/', '72px', '#f00')
+    const [quitText, quitButton, quitGraphics] = this.addActionButtons("Quit", centerX + (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => window.location.href = '/', '48px', '#f00')
     this.quitText = quitText
     this.quitButton = quitButton
     this.quitGraphics = quitGraphics
