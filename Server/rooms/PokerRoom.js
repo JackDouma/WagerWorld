@@ -519,15 +519,13 @@ class PokerRoom extends Room {
     return [winner, bestHand.name];
   }
 
-
-
   // handles when a player joins
   async onJoin(client, options) {
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new PokerPlayer();
-    console.log(options)
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
+
     var playerName = "";
     if (options.playerId || this.playerId) {
       try {
@@ -546,7 +544,7 @@ class PokerRoom extends Room {
     }
 
     player.totalCredits = options.balance || 10_000
-    
+
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase.includes("playing"))
       this.state.waitingRoom.set(client.sessionId, player);
@@ -594,7 +592,7 @@ class PokerRoom extends Room {
         nextKey = keys[(currentIndex + 1) % keys.length]
         console.log('next key', nextKey)
       }
-      // ✅ If the player was the Small Blind, shift the blinds
+      // if the player was the small blind, shift the blinds
       if (player.blind === 1) {
         console.log("Small Blind disconnected, rotating blinds...");
         if (keys.length > 1) { // More than 2 players
@@ -605,7 +603,7 @@ class PokerRoom extends Room {
             this.state.players.get(newBB).blind = 2;
         }
       }
-      // ✅ If the player was the Big Blind, shift the big blind
+      // if the player was the big blind, shift the big blind
       else if (player.blind === 2) {
           console.log("Big Blind disconnected, shifting big blind...");
           if (keys.length > 1) { // More than 2 players
@@ -617,7 +615,7 @@ class PokerRoom extends Room {
       // remove player
       this.state.players.delete(client.sessionId);
     }
-    // if not found, check the watiting room and remove from there
+    // if not found, check the waiting room and remove from there
     else {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
       if(waitingPlayer)
