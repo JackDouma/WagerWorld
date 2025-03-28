@@ -404,7 +404,7 @@ class BlackjackRoom extends Room {
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
     console.log(player.totalCredits);
-    this.broadcast("playerJoin", { playerName: player.name,  sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    this.broadcast("playerJoin", { playerName: player.name, sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
 
   // handles when a player leaves
@@ -464,6 +464,10 @@ class BlackjackRoom extends Room {
       this.disconnect()
     }
     */
+
+    // if there is nobody left in the room, revert it back to 
+    if(this.state.players.size == 0)
+      this.state.gamePhase = "waiting"
 
     // otherwise tell the clients that someone left
     this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
