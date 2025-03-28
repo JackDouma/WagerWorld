@@ -526,8 +526,8 @@ class PokerRoom extends Room {
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new PokerPlayer();
+    console.log(options)
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
-
     var playerName = "";
     if (options.playerId || this.playerId) {
       try {
@@ -546,7 +546,7 @@ class PokerRoom extends Room {
     }
 
     player.totalCredits = options.balance || 10_000
-
+    
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase.includes("playing"))
       this.state.waitingRoom.set(client.sessionId, player);
