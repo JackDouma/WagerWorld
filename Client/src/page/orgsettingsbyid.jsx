@@ -21,6 +21,7 @@ function OrgSettingsById() {
     const [allowPoker, setAllowPoker] = useState(false);
     const [allowRoulette, setAllowRoulette] = useState(false);
     const [allowHorseRacing, setAllowHorseRacing] = useState(false);
+    const [allowBaccarat, setAllowBaccarat] = useState(false);
 
     // TODO add wagering settings when we come to a decision on what can be edited for the games
 
@@ -42,6 +43,7 @@ function OrgSettingsById() {
                     setAllowPoker(orgData.allowPoker);
                     setAllowRoulette(orgData.allowRoulette);
                     setAllowHorseRacing(orgData.allowHorseRacing);
+                    setAllowBaccarat(orgData.allowBaccarat);
                 }
             }
             catch (error) {
@@ -71,7 +73,8 @@ function OrgSettingsById() {
                 allowCrazy8s,
                 allowPoker,
                 allowRoulette,
-                allowHorseRacing
+                allowHorseRacing,
+                allowBaccarat
             });
 
             navigate(`/org/${orgId}`);
@@ -136,6 +139,7 @@ function OrgSettingsById() {
                             <Grid container spacing={1} justifyContent={"center"}>
                                 <FormControlLabel control={<Checkbox />} label="Horse Racing" id="allowHorseRacing" checked={allowHorseRacing} onChange={(e) => setAllowHorseRacing(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Roulette" id="allowRoulette" checked={allowRoulette} onChange={(e) => setAllowRoulette(e.target.checked)} />
+                                <FormControlLabel control={<Checkbox />} label="Baccarat" id="allowBaccarat" checked={allowBaccarat} onChange={(e) => setAllowBaccarat(e.target.checked)} />
                             </Grid>
                         </FormGroup>
 

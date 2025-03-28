@@ -10,7 +10,8 @@ class Lobby extends Room {
     this.rooms = {
       "blackjack": [],
       "poker": [],
-      "horseracing": []
+      "horseracing": [],
+      "baccarat": []
     }
 
     this.createRooms(options);
@@ -53,6 +54,9 @@ class Lobby extends Room {
               break;
             case "horseracing":
               room = await matchMaker.createRoom("horse_racing", {});
+              break;
+            case "baccarat":
+              room = await matchMaker.createRoom("baccarat", {});
               break;
             default:
               // Key was in rooms but did not match a case. Move to next item in options.

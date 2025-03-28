@@ -23,6 +23,7 @@ function ViewOrgById() {
         allowBlackJack: false,
         allowPoker: false,
         allowHorseRacing: false,
+        allowBaccarat: false,
     });
 
     useEffect(() => {
@@ -55,6 +56,7 @@ function ViewOrgById() {
                         allowBlackJack: orgData.allowBlackJack,
                         allowPoker: orgData.allowPoker,
                         allowHorseRacing: orgData.allowHorseRacing,
+                        allowBaccarat: orgData.allowBaccarat,
                     });
                 }
             }
@@ -81,6 +83,7 @@ function ViewOrgById() {
         blackjack: 0,
         poker: 0,
         horseRacing: 0,
+        baccarat: 0,
     });
 
     // open game selection screen when user presses create room
@@ -90,7 +93,7 @@ function ViewOrgById() {
 
     // when the user is okay with the games selected
     const handleConfirm = async () => {
-        const totalRooms = gameSelections.blackjack + gameSelections.poker + gameSelections.horseRacing;
+        const totalRooms = gameSelections.blackjack + gameSelections.poker + gameSelections.horseRacing + gameSelections.baccarat;
         const currentUser = auth.currentUser;
 
         // if no games are chosen, return and give error message
@@ -104,7 +107,8 @@ function ViewOrgById() {
             options: {
                 blackjack: gameSelections.blackjack,
                 poker: gameSelections.poker,
-                horseracing: gameSelections.horseRacing
+                horseracing: gameSelections.horseRacing,
+                baccarat: gameSelections.baccarat,
             }
         };
 
@@ -486,6 +490,21 @@ function ViewOrgById() {
                             />
                         )}
 
+                        {allowedGames.allowBaccarat && (
+                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Baccarat (0-3)" value={gameSelections.baccarat} onChange={(e) => handleGameChange("baccarat", e.target.value)}
+                                sx={{
+                                    backgroundColor: 'white',
+                                    '& .MuiInputLabel-root': {
+                                        ...theme.typography.general,
+                                        fontSize: "0.85rem",
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        ...theme.typography.general,
+                                    },
+                                }}
+                            />
+                        )}
+
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions
@@ -523,162 +542,6 @@ function ViewOrgById() {
                 </DialogActions>
             </Dialog>
         </Box >
-
-
-
-
-
-        // CODE PRE-STYLING
-
-        // <main>
-        //     <h1>{orgName}</h1>
-
-        //     <div>
-        //         <div>
-        //             <h2>Create New Room</h2>
-        //             <button onClick={openGameSelection}>Create Room</button>
-        //         </div>
-
-        //         <div>
-        //             <h2>Public Rooms</h2>
-        //             <table>
-        //                 <thead>
-        //                     <tr>
-        //                         <th>Type</th>
-        //                         <th>Host</th>
-        //                         <th>Game</th>
-        //                         <th>Players</th>
-        //                         <th>Action</th>
-        //                     </tr>
-        //                 </thead>
-        //                 <tbody>
-        //                     {availableRooms.length > 0 ? (
-        //                         availableRooms.map((room) => (
-        //                             <tr key={room.roomId}>
-        //                                 {/* TODO: Make all of these dynamic */}
-        //                                 <td>Public</td>
-        //                                 <td>Temp</td>
-        //                                 <td>Temp</td>
-        //                                 <td>{room.clients}</td>
-        //                                 <td><a href={`/room/${room.roomId}`}>Join</a></td>
-        //                             </tr>
-        //                         ))
-        //                     ) : (
-        //                         <tr>
-        //                             <td colSpan="5">No public rooms available.</td>
-        //                         </tr>
-        //                     )}
-        //                 </tbody>
-        //             </table>
-        //         </div>
-
-        //         <div>
-        //             <h2>Join Room by Code</h2>
-        //             <div>
-        //                 <input
-        //                     type="text"
-        //                     value={roomId}
-        //                     onChange={(e) => setRoomId(e.target.value)}
-        //                     placeholder="Enter Room ID"
-        //                 />
-        //                 <button onClick={() => joinRoom(roomId)}>Join</button>
-        //             </div>
-        //         </div>
-        //     </div>
-
-        //     {loading && <p>Loading...</p>}
-        //     {error && <p>{error}</p>}
-        //     {!loading && members.length > 0 && (
-        //         <div>
-        //             <h2>Members</h2>
-        //             <table>
-        //                 <thead>
-        //                     <tr>
-        //                         <th>Name</th>
-        //                         <th>Email</th>
-        //                         <th>Joined At</th>
-        //                         <th>Balance</th>
-        //                     </tr>
-        //                 </thead>
-        //                 <tbody>
-        //                     {members.map((member, index) => (
-        //                         <tr key={index}>
-        //                             <td><a href={`/user/${member.id}`}>{member.name}</a></td>
-        //                             <td>{member.email}</td>
-        //                             <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
-        //                             <td>0</td> {/* TODO: Add Balance leaderboard */}
-        //                         </tr>
-        //                     ))}
-        //                 </tbody>
-        //             </table>
-        //         </div>
-        //     )}
-        //     {!loading && members.length === 0 && <p>No members found.</p>}
-
-        //     {/* when user selects create room, show this */}
-        //     {showGames&& (
-        //         <div style={{
-        //             position: "fixed",
-        //             top: 0,
-        //             left: 0,
-        //             width: "100%",
-        //             height: "100%",
-        //             backgroundColor: "rgba(0,0,0,0.5)",
-        //             display: "flex",
-        //             alignItems: "center",
-        //             justifyContent: "center"
-        //         }}>
-        //             <div style={{
-        //                 backgroundColor: "#fff",
-        //                 padding: "20px",
-        //                 borderRadius: "5px",
-        //                 width: "300px"
-        //             }}>
-        //                 <h2>Select Games</h2>
-        //                 <div>
-        //                     <label>
-        //                         Blackjack:
-        //                         <input 
-        //                             type="number" 
-        //                             min="0" 
-        //                             max="3"
-        //                             value={gameSelections.blackjack}
-        //                             onChange={(e) => handleGameChange("blackjack", e.target.value)}
-        //                         />
-        //                     </label>
-        //                 </div>
-        //                 <div>
-        //                     <label>
-        //                         Poker:
-        //                         <input 
-        //                             type="number" 
-        //                             min="0" 
-        //                             max="3"
-        //                             value={gameSelections.poker}
-        //                             onChange={(e) => handleGameChange("poker", e.target.value)}
-        //                         />
-        //                     </label>
-        //                 </div>
-        //                 <div>
-        //                     <label>
-        //                         Horse Racing:
-        //                         <input 
-        //                             type="number" 
-        //                             min="0" 
-        //                             max="3"
-        //                             value={gameSelections.horseRacing}
-        //                             onChange={(e) => handleGameChange("horseRacing", e.target.value)}
-        //                         />
-        //                     </label>
-        //                 </div>
-        //                 <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
-        //                 <button onClick={handleConfirm}>Confirm</button>
-        //                     <button onClick={() => setShowGames(false)}>Cancel</button>
-        //                 </div>
-        //             </div>
-        //         </div>
-        //     )}
-        // </main>
     );
 }
 
