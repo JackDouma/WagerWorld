@@ -176,7 +176,7 @@ function Header() {
                     </Link>
 
                     <Typography variant="heading" fontWeight={300}>
-                      {userBalance} Credits
+                      {userBalance?.toLocaleString()} Credits
                     </Typography>
                   </Box>
                 )}

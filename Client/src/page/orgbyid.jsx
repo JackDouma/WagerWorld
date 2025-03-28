@@ -4,7 +4,7 @@ import { getAuth } from "firebase/auth";
 import { useParams } from "react-router-dom";
 import { useNavigate } from 'react-router-dom';
 import { Client } from 'colyseus.js';
-import { Typography, Box, TextField, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Link, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Card, FormControl, InputLabel, Select, MenuItem } from "@mui/material";
+import { Typography, Box, TextField, Button, Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Link, Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Card, FormControl, InputLabel, Select, MenuItem, CircularProgress } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import { useTheme } from "@mui/material/styles";
 
@@ -27,6 +27,7 @@ function ViewOrgById() {
     const [lobbyType, setLobbyType] = useState("Public");
     const [defaultBalance, setDefaultBalance] = useState(0);
     const [isOwner, setIsOwner] = useState(false);
+    const [buttonIsLoading, setButtonIsLoading] = useState(false);
 
     useEffect(() => {
         const colyseusClient = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
@@ -87,23 +88,21 @@ function ViewOrgById() {
     // check if user is an owner
     useEffect(() => {
         const checkOwner = async () => {
-        const currentUser = auth.currentUser;
+            const currentUser = auth.currentUser;
 
-            if (currentUser) 
-            {
+            if (currentUser) {
                 const userDocRef = doc(db, "users", currentUser.uid);
                 const userDoc = await getDoc(userDocRef);
 
                 // if user is an owner
-                if (userDoc.exists() && userDoc.data().owner === true) 
-                {
+                if (userDoc.exists() && userDoc.data().owner === true) {
                     setIsOwner(true);
                 }
             }
         };
-        
+
         checkOwner();
-      }, []);
+    }, []);
 
     const [roomId, setRoomId] = useState("");
     const [availableRooms, setAvailableRooms] = useState([]);
@@ -218,6 +217,7 @@ function ViewOrgById() {
 
     // This function resets the balance for all members to the org's defaultBalance.
     const resetBalances = async () => {
+        setButtonIsLoading(true);
         try {
             /////////////////////////
             //// saving balances ////
@@ -225,7 +225,7 @@ function ViewOrgById() {
 
             const orgRef = doc(db, "orgs", orgId);
             const orgSnap = await getDoc(orgRef);
-    
+
             // create snapshot of leaderboard before resetting
             const leaderboardSnapshot = {
                 date: new Date(),
@@ -235,7 +235,7 @@ function ViewOrgById() {
                     balance: member.balance
                 }))
             };
-    
+
             // save
             await updateDoc(orgRef, {
                 leaderboardHistory: arrayUnion(leaderboardSnapshot)
@@ -246,29 +246,29 @@ function ViewOrgById() {
             ////////////////////////////
 
             const batch = writeBatch(db);
-        
-            for (const member of members) 
-            {
+
+            for (const member of members) {
                 const userRef = doc(db, "users", member.id);
                 const userSnap = await getDoc(userRef);
-            
-                if (userSnap.exists()) 
-                {
+
+                if (userSnap.exists()) {
                     batch.update(userRef, { balance: defaultBalance });
                 }
             }
-      
+
             await batch.commit();
+            setButtonIsLoading(false);
             alert("Balances reset successfully!");
-        } 
-        catch (error) 
-        {
+            window.location.reload();
+        }
+        catch (error) {
             console.error("ERROR: ", error);
+            setButtonIsLoading(false);
             alert("Failed to reset balances.");
         }
     };
-      
-    
+
+
 
     return (
         <Box component="main" sx={{ padding: 0, height: mainHeight }}>
@@ -345,7 +345,7 @@ function ViewOrgById() {
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}><Link href={`/user/${member.id}`} sx={{ color: "#998100", textDecorationColor: "#d9b800" }}>{member.name}</Link></TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.email}</TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{new Date(member.joinedAt).toLocaleDateString()}</TableCell>
-                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.balance}</TableCell> 
+                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.balance}</TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
@@ -354,21 +354,22 @@ function ViewOrgById() {
 
                                 {/*reset balance button for owners*/}
                                 {isOwner && (
-                                <Button 
-                                    onClick={resetBalances}
-                                    variant="contained"
-                                    sx={{
-                                        marginTop: '10px',
-                                        backgroundColor: theme.palette.error.main,
-                                        color: theme.palette.error.contrastText,
-                                        "&:hover": {
-                                            backgroundColor: theme.palette.error.dark,
-                                        },
-                                        textTransform: "none",
-                                    }}
-                                >
-                                    Reset Balances
-                                </Button>
+                                    <Button
+                                        onClick={resetBalances}
+                                        variant="contained"
+                                        disabled={buttonIsLoading}
+                                        sx={{
+                                            marginTop: '10px',
+                                            backgroundColor: theme.palette.error.main,
+                                            color: theme.palette.error.contrastText,
+                                            "&:hover": {
+                                                backgroundColor: theme.palette.error.dark,
+                                            },
+                                            textTransform: "none",
+                                        }}
+                                    >
+                                        {buttonIsLoading ? <CircularProgress size={25} /> : <Typography variant="btn">Reset Balances</Typography>}
+                                    </Button>
                                 )}
 
                             </>
@@ -556,7 +557,7 @@ function ViewOrgById() {
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {
                                         ...theme.typography.general,
-                                        fontSize: "0.80rem",
+                                        fontSize: "0.75rem",
                                     },
                                     '& .MuiInputBase-input': {
                                         ...theme.typography.general,
@@ -571,7 +572,7 @@ function ViewOrgById() {
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {
                                         ...theme.typography.general,
-                                        fontSize: "0.85rem",
+                                        fontSize: "0.80rem",
                                     },
                                     '& .MuiInputBase-input': {
                                         ...theme.typography.general,
@@ -586,7 +587,7 @@ function ViewOrgById() {
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {
                                         ...theme.typography.general,
-                                        fontSize: "0.85rem",
+                                        fontSize: "0.80rem",
                                     },
                                     '& .MuiInputBase-input': {
                                         ...theme.typography.general,
@@ -601,27 +602,32 @@ function ViewOrgById() {
                 <DialogTitle><Typography variant="heading">Lobby Info</Typography></DialogTitle>
                 <DialogContent>
                     <FormControl fullWidth sx={{ marginTop: 1 }}>
-                        <InputLabel>Lobby Type</InputLabel>
+                        <InputLabel
+                            sx={{
+                                ...theme.typography.general,
+                                fontSize: "0.85rem",
+                            }}
+                        >
+                            Lobby Type
+                        </InputLabel>
 
                         <Select
                             value={lobbyType}
                             onChange={(e) => setLobbyType(e.target.value)}
                             label="Lobby Type"
-
                             sx={{
                                 backgroundColor: 'white',
                                 '& .MuiInputLabel-root': {
                                     fontSize: "0.85rem",
                                 },
                                 '& .MuiInputBase-input': {
+                                    ...theme.typography.general,
                                     fontSize: "0.85rem",
                                 },
                             }}
                         >
-
-                        <MenuItem value="Public">Public</MenuItem>
-                        <MenuItem value="Private">Private</MenuItem>
-
+                            <MenuItem value="Public" sx={{ ...theme.typography.general }}>Public</MenuItem>
+                            <MenuItem value="Private" sx={{ ...theme.typography.general }}>Private</MenuItem>
                         </Select>
                     </FormControl>
                 </DialogContent>
@@ -661,162 +667,6 @@ function ViewOrgById() {
                 </DialogActions>
             </Dialog>
         </Box >
-
-
-
-
-
-        // CODE PRE-STYLING
-
-        // <main>
-        //     <h1>{orgName}</h1>
-
-        //     <div>
-        //         <div>
-        //             <h2>Create New Room</h2>
-        //             <button onClick={openGameSelection}>Create Room</button>
-        //         </div>
-
-        //         <div>
-        //             <h2>Public Rooms</h2>
-        //             <table>
-        //                 <thead>
-        //                     <tr>
-        //                         <th>Type</th>
-        //                         <th>Host</th>
-        //                         <th>Game</th>
-        //                         <th>Players</th>
-        //                         <th>Action</th>
-        //                     </tr>
-        //                 </thead>
-        //                 <tbody>
-        //                     {availableRooms.length > 0 ? (
-        //                         availableRooms.map((room) => (
-        //                             <tr key={room.roomId}>
-        //                                 {/* TODO: Make all of these dynamic */}
-        //                                 <td>Public</td>
-        //                                 <td>Temp</td>
-        //                                 <td>Temp</td>
-        //                                 <td>{room.clients}</td>
-        //                                 <td><a href={`/room/${room.roomId}`}>Join</a></td>
-        //                             </tr>
-        //                         ))
-        //                     ) : (
-        //                         <tr>
-        //                             <td colSpan="5">No public rooms available.</td>
-        //                         </tr>
-        //                     )}
-        //                 </tbody>
-        //             </table>
-        //         </div>
-
-        //         <div>
-        //             <h2>Join Room by Code</h2>
-        //             <div>
-        //                 <input
-        //                     type="text"
-        //                     value={roomId}
-        //                     onChange={(e) => setRoomId(e.target.value)}
-        //                     placeholder="Enter Room ID"
-        //                 />
-        //                 <button onClick={() => joinRoom(roomId)}>Join</button>
-        //             </div>
-        //         </div>
-        //     </div>
-
-        //     {loading && <p>Loading...</p>}
-        //     {error && <p>{error}</p>}
-        //     {!loading && members.length > 0 && (
-        //         <div>
-        //             <h2>Members</h2>
-        //             <table>
-        //                 <thead>
-        //                     <tr>
-        //                         <th>Name</th>
-        //                         <th>Email</th>
-        //                         <th>Joined At</th>
-        //                         <th>Balance</th>
-        //                     </tr>
-        //                 </thead>
-        //                 <tbody>
-        //                     {members.map((member, index) => (
-        //                         <tr key={index}>
-        //                             <td><a href={`/user/${member.id}`}>{member.name}</a></td>
-        //                             <td>{member.email}</td>
-        //                             <td>{new Date(member.joinedAt).toLocaleDateString()}</td>
-        //                             <td>0</td> {/* TODO: Add Balance leaderboard */}
-        //                         </tr>
-        //                     ))}
-        //                 </tbody>
-        //             </table>
-        //         </div>
-        //     )}
-        //     {!loading && members.length === 0 && <p>No members found.</p>}
-
-        //     {/* when user selects create room, show this */}
-        //     {showGames&& (
-        //         <div style={{
-        //             position: "fixed",
-        //             top: 0,
-        //             left: 0,
-        //             width: "100%",
-        //             height: "100%",
-        //             backgroundColor: "rgba(0,0,0,0.5)",
-        //             display: "flex",
-        //             alignItems: "center",
-        //             justifyContent: "center"
-        //         }}>
-        //             <div style={{
-        //                 backgroundColor: "#fff",
-        //                 padding: "20px",
-        //                 borderRadius: "5px",
-        //                 width: "300px"
-        //             }}>
-        //                 <h2>Select Games</h2>
-        //                 <div>
-        //                     <label>
-        //                         Blackjack:
-        //                         <input 
-        //                             type="number" 
-        //                             min="0" 
-        //                             max="3"
-        //                             value={gameSelections.blackjack}
-        //                             onChange={(e) => handleGameChange("blackjack", e.target.value)}
-        //                         />
-        //                     </label>
-        //                 </div>
-        //                 <div>
-        //                     <label>
-        //                         Poker:
-        //                         <input 
-        //                             type="number" 
-        //                             min="0" 
-        //                             max="3"
-        //                             value={gameSelections.poker}
-        //                             onChange={(e) => handleGameChange("poker", e.target.value)}
-        //                         />
-        //                     </label>
-        //                 </div>
-        //                 <div>
-        //                     <label>
-        //                         Horse Racing:
-        //                         <input 
-        //                             type="number" 
-        //                             min="0" 
-        //                             max="3"
-        //                             value={gameSelections.horseRacing}
-        //                             onChange={(e) => handleGameChange("horseRacing", e.target.value)}
-        //                         />
-        //                     </label>
-        //                 </div>
-        //                 <div style={{ marginTop: "20px", display: "flex", justifyContent: "space-between" }}>
-        //                 <button onClick={handleConfirm}>Confirm</button>
-        //                     <button onClick={() => setShowGames(false)}>Cancel</button>
-        //                 </div>
-        //             </div>
-        //         </div>
-        //     )}
-        // </main>
     );
 }
 
