@@ -137,6 +137,7 @@ function ViewOrgById() {
             roomType: "lobby",
             lobbyType: lobbyType,
             options: {
+                owner: localStorage.getItem("firebaseIdToken"),
                 blackjack: gameSelections.blackjack,
                 poker: gameSelections.poker,
                 horseracing: gameSelections.horseRacing
