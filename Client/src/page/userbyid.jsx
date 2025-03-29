@@ -215,7 +215,7 @@ function ViewUserById() {
                                         <TableCell
                                             sx={{
                                                 fontFamily: 'Source Code Pro',
-                                                backgroundColor: game.result > 0 ? "#d4f8d4" : "#f8d4d4", // light green for positive, light red for negative
+                                                backgroundColor: game.result == 0 ? "#def2ff" : (game.result > 0 ? "#d4f8d4" : "#f8d4d4"), // light green for positive, light red for negative
                                             }}
                                         >
                                             {game.result}

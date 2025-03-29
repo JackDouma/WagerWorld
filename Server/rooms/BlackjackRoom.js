@@ -48,6 +48,23 @@ class BlackjackRoom extends Room {
         if (player) {
           player.bet = message.value
           player.totalCredits -= player.bet
+          firestore.collection('users').doc(player.fireBaseId).get()
+          .then(doc => {
+            if (!doc.exists) 
+            {
+              console.warn(`User doc not found for ${player.fireBaseId}`);
+              return;
+            }
+            return firestore.collection('users').doc(player.fireBaseId).update({
+              balance: player.totalCredits,
+            });
+          })
+          .then(() => {
+            console.log(`Balance updated for ${player.fireBaseId}`);
+          })
+          .catch((error) => {
+            console.error(`Error updating user ${player.fireBaseId}:`, error);
+          });
           player.isReady = true;
           this.checkGameStart(client.sessionId);
         }
@@ -331,8 +348,7 @@ class BlackjackRoom extends Room {
               return;
             }
   
-            const previousBalance = doc.data().balance || 0;
-            const result = player.totalCredits - previousBalance;
+            const result = player.totalCredits - player.startingCredits;
   
             const historyEntry = {
               date: new Date(),
@@ -389,6 +405,7 @@ class BlackjackRoom extends Room {
     }
 
     player.totalCredits = options.balance || 10_000
+    player.startingCredits = player.totalCredits
 
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase == "playing")
