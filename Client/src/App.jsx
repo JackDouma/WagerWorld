@@ -21,7 +21,7 @@ import ViewUser from './page/user.jsx';
 import ViewUserById from './page/userbyid.jsx';
 import RoomPage from './page/roomPage.jsx';
 import BlackJackById from './page/blackjackbyid.jsx';
-import HorseRacing from './page/horseracing.jsx';
+import HorseRacing from './page/horseRacing.jsx';
 import HorseRacingById from './page/horseracingbyid.jsx';
 import Poker from './page/poker.jsx';
 import PokerById from './page/pokerbyid.jsx';

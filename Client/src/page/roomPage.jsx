@@ -13,11 +13,13 @@ function RoomPage() {
     const [gamePhase, setGamePhase] = useState("waiting");
     const [games, setGames] = useState([]);
     const [roomType, setRoomType] = useState(null);
+    const [isOwner, setIsOwner] = useState(false);
 
     useEffect(() => {
         const joinRoom = async () => {
             try {
-                const joinedRoom = await client.joinById(roomId);
+                const token = localStorage.getItem('firebaseIdToken');
+                const joinedRoom = await client.joinById(roomId, { playerId: token });
                 setRoom(joinedRoom);
                 if (location.state && location.state.lobbyType) {
                     setRoomType(location.state.lobbyType);
@@ -29,7 +31,11 @@ function RoomPage() {
                     setGamePhase(state.gamePhase);
                 });
 
-                joinedRoom.onLeave(() => navigate("/"));
+                joinedRoom.onLeave(() => navigate("/signin")); // redirects to org page if signed in
+
+                joinedRoom.onMessage('owner', () => {
+                    setIsOwner(true);
+                });
 
                 joinedRoom.onMessage('rooms', (message) => {
                     setGames([]);
@@ -72,6 +78,12 @@ function RoomPage() {
         joinRoom();
     }, [roomId, navigate]);
 
+    function destroyRoom() {
+        var token = localStorage.getItem("firebaseIdToken");
+        room.send('destroyLobby', { playerId: token });
+        navigate('/signin');
+    }
+
     /*
     // create game buttons
     const games = [];
@@ -111,6 +123,9 @@ function RoomPage() {
                         {game.name}
                     </button>
                 ))}
+            </div>
+            <div>
+                {!loading && isOwner ? <button onClick={() => destroyRoom()}>Delete Lobby</button> : ""}
             </div>
             <input type="hidden" id="headerRoomId" value={roomId} />
         </div>

@@ -373,20 +373,20 @@ class BlackjackRoom extends Room {
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
     var playerName = "";
     if (options.playerId || this.playerId) {
-          try {
-            const playerDoc = await firestore.collection("users").doc(options.playerId).get();
-
-            if (playerDoc.exists) {
-              player.fireBaseId = options.playerId;
-              playerName = playerDoc.data().name;
-              player.name = playerName;
-              console.log(`${playerName} joined!`);
-            } else {
-              console.log(`Player with ID ${options.playerId} not found.`);
-            }
-          } catch (error) {
-            console.error("Error fetching player data:", error);
-          }
+      try {
+        const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+        if (playerDoc.exists) {
+          player.fireBaseId = options.playerId;
+          playerName = playerDoc.data().name;
+          player.name = playerName;
+          console.log(`${playerName} joined!`);
+        } else {
+          console.log(`Player with ID ${options.playerId} not found.`);
+        }
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+      }
+    }
 
     player.totalCredits = options.balance || 10_000
 
@@ -404,9 +404,8 @@ class BlackjackRoom extends Room {
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
     console.log(player.totalCredits);
-    this.broadcast("playerJoin", { playerName: player.name,  sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    this.broadcast("playerJoin", { playerName: player.name, sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
-}
 
   // handles when a player leaves
   onLeave(client) {
@@ -430,7 +429,7 @@ class BlackjackRoom extends Room {
       this.state.players.delete(client.sessionId);
 
           // Update isInGame to false
-      admin.firestore.collection("users").doc(player.fireBaseId).update({
+      firestore.collection("users").doc(player.fireBaseId).update({
           isInGame: false,
       });
 
@@ -442,7 +441,7 @@ class BlackjackRoom extends Room {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
       if(waitingPlayer){
         this.state.waitingRoom.delete(client.sessionId)
-        admin.firestore.collection("users").doc(client.sessionId).update({
+        firestore.collection("users").doc(client.sessionId).update({
           isInGame: false,
       });
 
@@ -466,6 +465,10 @@ class BlackjackRoom extends Room {
     }
     */
 
+    // if there is nobody left in the room, revert it back to 
+    if(this.state.players.size == 0)
+      this.state.gamePhase = "waiting"
+
     // otherwise tell the clients that someone left
     this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
   }
@@ -474,7 +477,7 @@ class BlackjackRoom extends Room {
   onDispose() {
     // make sure all clients are set to not in game
     this.state.players.forEach((player) => {
-      admin.firestore.collection("users").doc(player.fireBaseId).update({
+      firestore.collection("users").doc(player.fireBaseId).update({
         isInGame: false,
       });
     });

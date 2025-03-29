@@ -17,10 +17,28 @@ function Header() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [isOwner, setIsOwner] = useState(false);
   const [userOrg, setUserOrg] = useState(null);
-  const { roomId } = useParams(); // get roomId from URL - returns undefined if not found
+  const { roomId } = useParams();
   const [userBalance, setUserBalance] = useState(null);
+  const [roomHistory, setRoomHistory] = useState(() => {
+    const savedHistory = localStorage.getItem('roomHistory');
+    return savedHistory ? JSON.parse(savedHistory) : [];
+  });
 
   useEffect(() => {
+    // clear roomHistory array if user goes back to the org page
+    if (location.pathname.startsWith('/org/') && roomHistory.length > 0) {
+      setRoomHistory([]);
+      localStorage.removeItem('roomHistory');
+      return;
+    }
+
+    // add roomId to roomHistory if it is not equal to the most recently added element
+    if (roomId && roomHistory[roomHistory.length - 1] !== roomId) {
+      const updatedHistory = [...roomHistory, roomId];
+      setRoomHistory(updatedHistory);
+      localStorage.setItem('roomHistory', JSON.stringify(updatedHistory));
+    }
+
     // check if logged in or not
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) {
@@ -48,7 +66,7 @@ function Header() {
     });
 
     return () => unsubscribe();
-  }, [location]);
+  }, [location, roomId, roomHistory]);
 
   // handle sign-out
   const signOutPress = async () => {
@@ -176,7 +194,7 @@ function Header() {
                     </Link>
 
                     <Typography variant="heading" fontWeight={300}>
-                      {userBalance} Credits
+                      {userBalance?.toLocaleString()} Credits
                     </Typography>
                   </Box>
                 )}
@@ -217,13 +235,13 @@ function Header() {
                         }
                       }}
                     >
-                      <i class="fa-solid fa-gears"></i>
+                      <i className="fa-solid fa-gears"></i>
                     </Link>
                   </Tooltip>
                 )}
 
                 {userOrg && (
-                  <box>
+                  <Box>
                     {/* users that belong to an org (non-admins) have a link to their org page */}
                     <Tooltip title="My Organization">
                       <Link href={`/org/${userOrg.orgId}`}
@@ -236,25 +254,25 @@ function Header() {
                           }
                         }}
                       >
-                        <i class="fa-solid fa-sitemap"></i>
+                        <i className="fa-solid fa-sitemap"></i>
                       </Link>
                     </Tooltip>
 
                     <Tooltip title="View Leaderboard">
-                    <Link href={`/leaderboard/${userOrg.orgId}`}
-                      sx={{
-                        fontSize: "32px",
-                        color: theme.palette.primary.contrastText,
-                        padding: "0 10px",
-                        '&:hover': {
-                          color: theme.palette.primary.dark,
-                        }
-                      }}
-                    >
-                      <i class="fa-solid fa-trophy"></i>
-                    </Link>
-                  </Tooltip>
-                </box>
+                      <Link href={`/leaderboard/${userOrg.orgId}`}
+                        sx={{
+                          fontSize: "32px",
+                          color: theme.palette.primary.contrastText,
+                          padding: "0 10px",
+                          '&:hover': {
+                            color: theme.palette.primary.dark,
+                          }
+                        }}
+                      >
+                        <i className="fa-solid fa-trophy"></i>
+                      </Link>
+                    </Tooltip>
+                  </Box>
                 )}
 
                 <Tooltip title="Sign Out">
@@ -287,7 +305,16 @@ function Header() {
         }}
       >
         <Tooltip title="Leave game" placement="right">
-          <Link href={`/room/${roomId}`}
+          <Link
+            href={`/room/${(() => {
+              // find the most recent unique roomId in roomHistory array (need id of lobby room instead of game room)
+              for (let i = roomHistory.length - 2; i >= 0; i--) {
+                if (roomHistory[i] !== roomHistory[roomHistory.length - 1]) {
+                  return roomHistory[i];
+                }
+              }
+            })()
+              }`}
             sx={{
               display: 'flex',
               alignItems: 'center',

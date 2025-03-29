@@ -23,7 +23,7 @@ class PokerPlayer extends Schema {
         super();
         this.name = '';
         this.hand = new ArraySchema();
-        this.fireBaseId = '';
+        this.fireBaseId = ''
         this.isReady = false;
         this.lastAction = "none"
         this.blind = 0;
