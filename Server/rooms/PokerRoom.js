@@ -250,7 +250,6 @@ class PokerRoom extends Room {
           player.hand.push(card);
           hands[playerId] = this.state.players.get(playerId).hand
         }
-        player.startingCredits = player.totalCredits
       }
 
       const smallBlind = Array.from(this.state.players.values()).find(player => player.blind === 1);
@@ -585,6 +584,7 @@ class PokerRoom extends Room {
     }
 
     player.totalCredits = options.balance || 10_000
+    player.startingCredits = player.totalCredits
 
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase.includes("playing"))

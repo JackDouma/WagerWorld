@@ -28,6 +28,7 @@ class BlackjackPlayer extends Schema {
         this.bet = 0;
         this.handValue = 0;
         this.totalCredits = 0;
+        this.startingCredits = 0;
     }
 }
 schema.defineTypes(BlackjackPlayer, {
@@ -36,7 +37,8 @@ schema.defineTypes(BlackjackPlayer, {
     isReady: "boolean",
     bet: "number",
     handValue: "number",
-    totalCredits: "number"
+    totalCredits: "number",
+    startingCredits: "number"
 });
 
 class BlackjackState extends Schema {
