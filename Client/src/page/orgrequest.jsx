@@ -62,7 +62,7 @@ function OrgRequest() {
             ownerPassword: ownerPassword
         };
 
-        emailjs.send('service_q2zk9g9', 'template_p2ohttt', templateParams, { publicKey: `${import.meta.env.VITE_EMAILJS_PUBLIC_KEY}` }).then(
+        emailjs.send('service_q2zk9g9', 'template_p2ohttt', templateParams, { publicKey: `DyzEHBZpfGWn5Zgek` }).then(
             (response) => {
                 setEmailjsResponse(response.status);
                 handleClickOpen("SUCCESS", "Request submitted successfully! WagerWorld will reach out once your organization has been created.");
@@ -70,11 +70,7 @@ function OrgRequest() {
             },
             (error) => {
                 console.log('Error occurred when sending email: ', error);
-                if (!(import.meta.env.VITE_EMAILJS_PUBLIC_KEY)) {
-                    handleClickOpen("ERROR", "Failed to submit request (missing environment variable).");
-                } else {
-                    handleClickOpen("ERROR", "Failed to submit request. Please try again later.");
-                }
+                handleClickOpen("ERROR", "Failed to submit request. Please try again later.");
                 setIsLoading(false);
             },
         );
