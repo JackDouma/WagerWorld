@@ -157,7 +157,8 @@ class BlackjackScene extends Phaser.Scene {
       else if (this.room.state.gamePhase == "playing" && this.room.sessionId in this.waitingRoom) {
         this.resultsText.setText("Waiting for Game to Finish...").setVisible(true)
         this.removeBetButtons()
-        this.changeActionButtonState(this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics)
+        this.changeActionButtonState(false, this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics)
+        this.changeActionButtonState(false, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
         this.isWaiting = true
       }
       // update the total credits screen
@@ -459,14 +460,14 @@ class BlackjackScene extends Phaser.Scene {
     }
 
     // game starts once all bets are finalized
-    [this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics] = this.addActionButtons("Place Bets", centerX, centerY + (this.scale.height / 4), () => this.room.send("bet", { value: this.currentBet }), '72px', '#FFD700')
+    [this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics] = this.addActionButtons("Place Bets", centerX - (this.scale.width / 6), centerY + (this.scale.height / 4), () => this.room.send("bet", { value: this.currentBet }), '72px', '#FFD700')
     this.changeActionButtonState(true, this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics)
     // TODO: ADD A BACK TO LOBBY BUTTON ON START SCREEN OF BLACKJACK
-    // const [leaveRoomText, leaveRoomButton, leaveRoomGraphics] = this.addActionButtons("Back To Lobby", centerX, centerY + (this.scale.height / 6), () => { 
-    //   if(this.room) this.room.leave()
-    //   history.back() }, '72px', '#f00')
-    // this.leaveRoomText = leaveRoomText, this.leaveRoomButton = leaveRoomButton, this.leaveRoomGraphics = leaveRoomGraphics
-    // this.changeActionButtonState(true, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
+    const [leaveRoomText, leaveRoomButton, leaveRoomGraphics] = this.addActionButtons("Back To Lobby", centerX + (this.scale.width / 6), centerY + (this.scale.height / 4), () => { 
+      if(this.room) this.room.leave()
+      history.back() }, '72px', '#f00')
+    this.leaveRoomText = leaveRoomText, this.leaveRoomButton = leaveRoomButton, this.leaveRoomGraphics = leaveRoomGraphics
+    this.changeActionButtonState(true, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
     // text to show any results of a player (ie. busted, standing, waiting, etc.)
     this.resultsText = this.add.text(centerX, centerY + (this.scale.height / 20), 'Waiting...', { fontSize: '60px', fill: '#fff' }).setOrigin(0.5, 0.5).setVisible(false).setFontFamily('"Rowdies"')
   }
@@ -504,9 +505,8 @@ class BlackjackScene extends Phaser.Scene {
   removeBetButtons(){
     this.possibleBetButtons.forEach((item) => {item.setActive(false).setVisible(false)})
     this.possibleRemoveBetButtons.forEach((item) => {item.setActive(false).setVisible(false)})
-    this.placeBetsText.destroy()
-    this.placeBetsButton.destroy()
-    this.placeBetsGraphics.destroy()
+    this.destroyButtons(this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics)
+    this.destroyButtons(this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
   }
 
   // method to actually start the game up
