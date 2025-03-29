@@ -428,7 +428,7 @@ class BlackjackRoom extends Room {
       // Remove player from players map
       this.state.players.delete(client.sessionId);
 
-          // Update isInGame to false
+      // Update isInGame to false
       firestore.collection("users").doc(player.fireBaseId).update({
           isInGame: false,
       });
@@ -443,10 +443,10 @@ class BlackjackRoom extends Room {
         this.state.waitingRoom.delete(client.sessionId)
         firestore.collection("users").doc(client.sessionId).update({
           isInGame: false,
-      });
+        });
 
-      // console log to show that the player has left the game
-      console.log(`Player with ID ${client.sessionId} has left the game.`);
+        // console log to show that the player has left the game
+        console.log(`Player with ID ${client.sessionId} has left the game.`);
       }
 
     }
