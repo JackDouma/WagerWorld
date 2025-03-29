@@ -161,7 +161,7 @@ function CreateOrg() {
                             }}
                         />
 
-                        <TextField label="Owner Password" margin="dense" variant="outlined" type="text" value={ownerPassword} onChange={(e) => setOwnerPassword(e.target.value)}
+                        <TextField label="Owner Password" margin="dense" variant="outlined" type="password" value={ownerPassword} onChange={(e) => setOwnerPassword(e.target.value)}
                             sx={{
                                 '& .MuiInputLabel-root': {
                                     ...theme.typography.general,

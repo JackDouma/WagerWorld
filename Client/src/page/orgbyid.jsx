@@ -345,7 +345,7 @@ function ViewOrgById() {
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}><Link href={`/user/${member.id}`} sx={{ color: "#998100", textDecorationColor: "#d9b800" }}>{member.name}</Link></TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.email}</TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{new Date(member.joinedAt).toLocaleDateString()}</TableCell>
-                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.balance}</TableCell>
+                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{member.balance.toLocaleString()}</TableCell>
                                                 </TableRow>
                                             ))}
                                         </TableBody>
@@ -441,7 +441,7 @@ function ViewOrgById() {
                                 }}
                             >
                                 <Box className="form" sx={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alighnItems: 'center', width: '100%' }}>
-                                    <TextField flexGrow='1' variant="outlined" margin="dense" type="text" label="Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)}
+                                    <TextField flexgrow='1' variant="outlined" margin="dense" type="text" label="Room ID" value={roomId} onChange={(e) => setRoomId(e.target.value)}
                                         sx={{
                                             flexGrow: 1,
                                             marginRight: '10px',
@@ -508,9 +508,10 @@ function ViewOrgById() {
                                 <Table size="small">
                                     <TableHead>
                                         <TableRow sx={{ backgroundColor: theme.palette.secondary.main }}>
-                                            <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Type</TableCell>
-                                            <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Host</TableCell>
-                                            <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Game</TableCell>
+                                            {/* <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Type</TableCell> */}
+                                            {/* <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Host</TableCell> */}
+                                            {/* <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Game</TableCell> */}
+                                            <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Room ID</TableCell>
                                             <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Players</TableCell>
                                             <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Action</TableCell>
                                         </TableRow>
@@ -522,10 +523,10 @@ function ViewOrgById() {
                                                     key={room.roomId}
                                                     sx={{ backgroundColor: "#fffced", '&:last-child td, &:last-child th': { border: 0 } }}
                                                 >
-                                                    {/* TODO: Make all of these dynamic */}
-                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>Public</TableCell>
-                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>Temp</TableCell>
-                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>Temp</TableCell>
+                                                    {/* <TableCell sx={{ fontFamily: 'Source Code Pro' }}>Public</TableCell> */}
+                                                    {/* <TableCell sx={{ fontFamily: 'Source Code Pro' }}>Temp</TableCell> */}
+                                                    {/* <TableCell sx={{ fontFamily: 'Source Code Pro' }}>Temp</TableCell> */}
+                                                    <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{room.roomId}</TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{room.clients}</TableCell>
                                                     <TableCell sx={{ fontFamily: 'Source Code Pro' }}><Link href={`/room/${room.roomId}`} sx={{ color: "#998100", textDecorationColor: "#d9b800" }}>Join</Link></TableCell>
                                                 </TableRow>
