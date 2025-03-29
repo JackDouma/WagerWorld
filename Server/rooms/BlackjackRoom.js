@@ -124,9 +124,10 @@ class BlackjackRoom extends Room {
 
     // once its the dealer's turn, make him draw cards
     this.onMessage("dealerTurn", (client, message) => {
-      if (this.state.gamePhase == "playing")
+      if (this.state.gamePhase == "playing") {
         this.dealerTurn()
         this.onGameFinished()
+      }
     })
 
     // once the game is reset, reset the owner as well
