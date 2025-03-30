@@ -68,6 +68,7 @@ function CreateOrg() {
                 name: ownerName,
                 email: ownerEmail,
                 owner: true,
+                balance: 100000,
                 createdAt: new Date(),
                 org: {
                     orgId: orgRef.id,
