@@ -26,13 +26,23 @@ class RouletteScene extends Phaser.Scene{
         super("RouletteScene");
         this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`)
         this.room = Room
+        this.sessionID
+        this.player2 = null
+        this.player3 = null
+    }
+
+    // index, of chip clicked, to be passed to server
+    inputPayload = {
+        chipIndex: 0,
     }
  
     preload(){
         // images
+        // logo (credit goes to Mike)
+        this.load.image("logo", "/roulette/roulette-logo.png")
         // roulette wheel @ https://www.vexels.com/png-svg/preview/151205/roulette-wheel-icon
-        this.load.image("wheel", "/roulette/roulette-wheel.png");
-        this.load.image("wheel-bg", "/roulette/roulette-wheel-bg.png");
+        this.load.image("wheel", "/roulette/roulette-wheel.png")
+        this.load.image("wheel-bg", "/roulette/roulette-wheel-bg.png")
         // bet table @ https://www.freepik.com/premium-vector/american-roulette-table-layout-with-bets-options_237485384.htm
         this.load.image("betTable", "/roulette/betTable.jpg")
         this.load.image("chip", "/roulette/chip.png")
@@ -45,6 +55,7 @@ class RouletteScene extends Phaser.Scene{
         } catch (e) {
             console.error(e)
         }
+
         // ************************--TO-DO--************************ //
         // get user balance from db
         this.userBal = 10000
@@ -56,12 +67,17 @@ class RouletteScene extends Phaser.Scene{
         const sceneHeight = this.scale.height
 
         const centerX = this.scale.width / 2
-        const scaleFactor = Math.min(sceneWidth / 1920, sceneHeight / 1080)
+        const scaleFactor = Math.min(sceneWidth / 1600, sceneHeight / 850)
 
         // scene container
         this.sceneContainer = this.add.container(centerX, 0);
         this.sceneContainer.setScale(scaleFactor)
         //this.scale.on('resize', this.resizeScene, this); // not doing anything... why?
+
+        // logo
+        this.logo = this.add.image(0, 40, "logo")
+        this.logo.setScale(0.5)
+        this.sceneContainer.add(this.logo)
 
         // roulette_wheel @ @ https://www.vexels.com/png-svg/preview/151205/roulette-wheel-icon
         // set for input and add circular hit area
@@ -76,6 +92,7 @@ class RouletteScene extends Phaser.Scene{
 		// roulette_wheel_bg
 		this.roulette_wheel_bg = this.add.image(0, 299, "wheel-bg");
 		this.roulette_wheel_bg.setScale(0.77)
+        this.roulette_wheel_bg.angle = -0.5
         this.sceneContainer.add(this.roulette_wheel_bg)
 
 		// betTable @ https://stock.adobe.com/search?k=roulette+table&asset_id=409514024
@@ -91,7 +108,7 @@ class RouletteScene extends Phaser.Scene{
         this.sceneContainer.add(this.txt_info)
 
         // user balance text field
-        this.txt_userBal = this.add.text(-160, 10, `Balance: ${this.userBal} credits`, {})
+        this.txt_userBal = this.add.text(-275, 560, `Balance: ${this.userBal} credits`, {})
         this.txt_userBal.setStyle({"align": "center", "fontSize": "24px"})
         this.sceneContainer.add(this.txt_userBal)
 
@@ -254,6 +271,59 @@ class RouletteScene extends Phaser.Scene{
         this.sceneContainer.add(this.p3Container)
 
         this.reset() // all bets=0 and hide chips
+
+        // get session ID
+        this.room.onMessage("joinConfirm", (payload) => {
+            this.sessionID = payload.sessionId
+            console.log(`Session ID: ${this.sessionID}`)
+            if (payload.otherPlayers[0] != null) {
+                console.log(`P2: ${payload.otherPlayers[0]}`)
+                this.player2 = payload.otherPlayers[0].sessionId
+                this.updateBetTables(this.p2Container, payload.otherPlayers[0].chipAlphas)
+            } else if (payload.otherPlayers[1] != null) {
+                console.log(`P3: ${payload.otherPlayers[1]}`)
+                this.player2 = payload.otherPlayers[1].sessionId
+                this.updateBetTables(this.p2Container, payload.otherPlayers[1].chipAlphas)
+            }
+        })
+        this.room.state.players.onAdd((player, sessionId) => {
+            if (this.sessionID == null) return // if it's its own connection response
+            else {
+                if (this.player2 == null) {
+                    this.player2 = sessionId
+                    
+                }
+                else if (this.player3 == null) {
+                    this.player3 = sessionId
+                }
+                console.log(`P2: ${this.player2}\nP3: ${this.player3}`)
+            }
+        })
+        this.room.onMessage("betPlaced", (payload) => {
+            // update betting tables
+            const player = payload.player
+            const index = payload.chipIndex
+            // [use player name to determine which betting table (container to reference) to update ]
+            if (player == this.player2)
+                // reveal chip
+                this.p2Container.getAt(index).alpha = 100
+            else if (player == this.player3)
+                this.p3Container.getAt(index).alpha = 100
+        })
+        this.room.onMessage("playerLeft", (payload) => {
+            if (payload.sessionID == this.player2) {
+                this.player2 = null
+                this.p2Container.getAll().forEach(chip => {
+                    chip.alpha = 0.01
+                })
+            }
+            else if (payload.sessionID == this.player3) {
+                this.player3 = null
+                this.p3Container.getAll().forEach(chip => {
+                    chip.alpha = 0.01
+                })
+            }
+        })
     }
 
     spinWheel(){
@@ -296,7 +366,7 @@ class RouletteScene extends Phaser.Scene{
                     else if (value[1] == 1)
                         resultTxt = "Red "
                     else
-                        resultTxt = ""
+                        resultTxt = "  "
                     resultTxt += value[0]
                     this.txt_spinResult.setText(resultTxt)
 
@@ -315,7 +385,13 @@ class RouletteScene extends Phaser.Scene{
     }
 
     onChipClicked(chip) {
+        // make chip visible
         chip.alpha = 100
+
+        // update payload and send to server
+        this.inputPayload.chipIndex = this.chipContainer.getIndex(chip)
+        this.room.send("bet", this.inputPayload)
+
         // different logic for each type of bet
         if (this.userBal >= 10) {
             switch (chip.type) {
@@ -420,8 +496,12 @@ class RouletteScene extends Phaser.Scene{
         }
 
         // hide all chips
+        var iter = 0
         this.chips.forEach(chip => {
             chip.alpha = 0.01
+            this.p2Container.getAt(iter).alpha = 0.01
+            this.p3Container.getAt(iter).alpha = 0.01
+            iter++
         });
 
         // clear info text
@@ -540,6 +620,14 @@ class RouletteScene extends Phaser.Scene{
             container.add(chip)
             y += 95
         }
+    }
+
+    updateBetTables(container, alphasArr) {
+        var iter = 0
+        container.getAll().forEach(chip => {
+            chip.alpha = alphasArr[iter]
+            iter++
+        })
     }
 
     resizeScene(gameSize) {

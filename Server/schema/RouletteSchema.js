@@ -6,20 +6,17 @@ class RoulettePlayer extends Schema {
     constructor() {
         super();
         this.name = '';
-        this.hand = new ArraySchema();
         this.isReady = false;
-        this.score = 0;
+        this.chipAlphas = new ArraySchema(0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01)
         this.bet = 0;
-        this.handValue = 0;
         this.totalCredits = 0;
     }
 }
 schema.defineTypes(RoulettePlayer, {
     name: "string",
     isReady: "boolean",
-    score: "number",
+    chipAlphas: ["number"],
     bet: "number",
-    handValue: "number",
     totalCredits: "number"
 });
 

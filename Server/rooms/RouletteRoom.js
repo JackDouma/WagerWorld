@@ -24,22 +24,27 @@ class RouletteRoom extends Room {
     console.log(`Room created. Current player count: ${this.state.players.size}`);
     this.state.gamePhase = 'waiting'
 
-    // when a bet is made take the clients money and put them in ready state
-    this.onMessage("bet", (client, message) => {
-        console.log(client.sessionId + " is betting " + message.value)
+    // when a bet is made, display where the chip was placed
+    this.onMessage("bet", (client, payload) => {
+        console.log(client.sessionId + " placed chip at " + payload.chipIndex)
         const player = this.state.players.get(client.sessionId);
         if (player) {
-          player.bet = message.value
-          player.totalCredits -= player.bet
-          player.isReady = true;
+          player.bet = 0
+          player.totalCredits -= 10
+          player.chipAlphas[payload.chipIndex] = 100
           this.checkGameStart(client.sessionId);
         }
+        this.broadcast("betPlaced", {player: player.name, chipIndex: payload.chipIndex})
     })
 
     // once the game is reset, reset the owner as well
     this.onMessage("resetGame", (client) => {
       console.log("Resetting Game...")
       this.state.owner = ''
+      const player = this.state.players.get(client.sessionId);
+      for (var i=0; i<48; i++) {
+        player.chipAlphas[i] = 0.01
+      }
       this.broadcast("resetGame", {client: client.sessionId})
     })
   }
@@ -70,10 +75,11 @@ class RouletteRoom extends Room {
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new RoulettePlayer();
-    // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
-    player.name = options.name || `Player ${client.sessionId}`;
-    player.totalCredits = options.balance || 10_000
 
+    // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
+    player.name = options.name || client.sessionId;
+    player.totalCredits = options.balance || 10_000
+    
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase == "playing")
       this.state.waitingRoom.set(client.sessionId, player);
@@ -87,7 +93,26 @@ class RouletteRoom extends Room {
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    var otherPlayers = []
+    if (this.state.players.size > 1) {
+      this.state.players.forEach((player, sessionId) => {
+        if (sessionId == client.sessionId) {
+          // continue
+        }
+        else {
+          // send session ID and what his current bet table looks like
+          console.log(sessionId, Array.from(player.chipAlphas))
+          otherPlayers.push({
+            sessionId: sessionId,
+            chipAlphas: Array.from(player.chipAlphas)})
+        }
+      })
+    }
+    client.send("joinConfirm", {
+      sessionId: client.sessionId,
+      otherPlayers: otherPlayers
+    })
+    //this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
 
   // handles when a player leaves
@@ -119,7 +144,7 @@ class RouletteRoom extends Room {
     }
     // otherwise tell the clients that someone left
     else
-      this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players, nextPlayer: nextKey, index: currentIndex});
+      this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players});
   }
 }
 
