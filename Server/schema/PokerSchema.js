@@ -23,11 +23,13 @@ class PokerPlayer extends Schema {
         super();
         this.name = '';
         this.hand = new ArraySchema();
+        this.fireBaseId = ''
         this.isReady = false;
         this.lastAction = "none"
         this.blind = 0;
         this.bet = 0;
         this.totalCredits = 0;
+        this.startingCredits = 0;
     }
 }
 schema.defineTypes(PokerPlayer, {
@@ -37,7 +39,8 @@ schema.defineTypes(PokerPlayer, {
     lastAction: "string",
     blind: "number",
     bet: "number",
-    totalCredits: "number"
+    totalCredits: "number",
+    startingCredits: "number"
 });
 
 class PokerState extends Schema {

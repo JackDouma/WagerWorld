@@ -2,179 +2,180 @@ import React, { useEffect, useRef, useState } from "react";
 import Phaser from "phaser";
 import { Client } from "colyseus.js";
 import { useParams } from "react-router-dom";
+import { doc, getDoc, updateDoc, getFirestore } from "firebase/firestore";
 import "../HorseRacingGame.css";
-import { doc, getDoc, updateDoc, getFirestore  } from "firebase/firestore";
+
 const db = getFirestore();
 
 const HorseRacingGame = () => {
-  const gameRef = useRef(null); // Reference to the Phaser game instance
-  const roomRef = useRef(null); // Reference to the Colyseus room
-  const [selectedHorse, setSelectedHorse] = useState(null); // Selected horse for betting
-  const [bets, setBets] = useState([]); // List of bets placed by clients
-  const [gameStatus, setGameStatus] = useState("waiting"); // Current game status
+  const gameRef = useRef(null);
+  const roomRef = useRef(null);
+  const [selectedHorse, setSelectedHorse] = useState(null);
+  const [betAmount, setBetAmount] = useState(100);
+  const [bets, setBets] = useState([]);
+  const [gameStatus, setGameStatus] = useState("waiting");
+  const [horseStats, setHorseStats] = useState([]);
+  const [playerCredits, setPlayerCredits] = useState(1000);
+  const [raceResult, setRaceResult] = useState(null);
   const { roomId } = useParams();
 
-  // Initialize game and connect to Colyseus room
   useEffect(() => {
     const client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
 
-    async function connectToRoom() {
+    const connectToRoom = async () => {
       try {
         const playerId = localStorage.getItem("firebaseIdToken");
         const userRef = doc(db, "users", playerId);
-        const userDoc = await getDoc(doc(db, "users", playerId));
-        try{
-        if(userDoc.data().isInGame){
-                    
-                    console.log(`Player with ID is already in a game.`);
-                    // open popup to inform user that they are already in a game and redirect to home page
-                    // redirect to home page
-                    window.location.href = "/";
-                    return
-                  }
-        // update isInGame to true
+        const userDoc = await getDoc(userRef);
 
-        await updateDoc(userRef, {
-          isInGame: true
-        });
-      }
-      catch (error) {
-        console.error('Error fetching player data:', error);
-      }
+        if (userDoc.exists() && userDoc.data().isInGame) {
+          console.log("Player is already in a game.");
+          window.location.href = "/";
+          return;
+        }
 
+        await updateDoc(userRef, { isInGame: true });
         const room = await client.joinOrCreate("horse_racing", {
           playerId: playerId || "anonymous",
         });
 
-        // Set room reference
         roomRef.current = room;
 
-        // Handle game state updates
+        room.state.players.onAdd = (player, sessionId) => {
+          if (sessionId === room.sessionId) setPlayerCredits(player.totalCredits);
+        };
+
+        // Sync player credits
+        room.state.players.onAdd = (player, sessionId) => {
+          if (sessionId === room.sessionId) setPlayerCredits(player.totalCredits);
+        };
+
+        // Sync bets from server state
+        room.state.bets.onAdd = (betStr, clientId) => {
+          const bet = JSON.parse(betStr);
+          setBets((prev) => [
+            ...prev.filter((b) => b.clientId !== clientId),
+            { clientId, horseIndex: bet.horseIndex, amount: bet.amount },
+          ]);
+        };
+
+        room.state.bets.onRemove = (betStr, clientId) => {
+          setBets((prev) => prev.filter((b) => b.clientId !== clientId));
+        };
+
         room.onStateChange((state) => {
           if (gameRef.current) {
-            // Update horse positions and animations
             state.horses.forEach((horse, index) => {
-              const gameHorse =
-                gameRef.current.scene.scenes[0].children.list.find(
-                  (obj) => obj.getData("horseIndex") === index
-                );
+              const gameHorse = gameRef.current.scene.scenes[0].children.list.find(
+                (obj) => obj.getData("horseIndex") === index
+              );
               if (gameHorse) {
                 gameHorse.x = horse.x;
-                if (horse.speed > 0) {
-                  gameHorse.anims.play("gallop", true);
-                } else {
-                  gameHorse.anims.pause();
-                }
+                gameHorse.setTint(parseInt(horse.color.replace("#", ""), 16));
+                horse.speed > 0 ? gameHorse.anims.play("gallop", true) : gameHorse.anims.pause();
               }
             });
-
-            // Update bets
-            setBets([]); // Clear previous bets
-            state.bets.forEach((horseIndex, clientId) => {
-              setBets((bets) => [...bets, { clientId, horseIndex }]);
-            });
+            setGameStatus(state.gamePhase);
           }
         });
 
-        // Handle race result messages
+        room.send("getHorseStats");
+        room.onMessage("horseStats", setHorseStats);
+
+        room.onMessage("betPlaced", (data) => {
+          setBets((prev) => [
+            ...prev.filter((b) => b.clientId !== data.sessionId),
+            { clientId: data.sessionId, horseIndex: data.horseIndex, amount: data.amount },
+          ]);
+          if (data.sessionId === room.sessionId) setPlayerCredits((prev) => prev - data.amount);
+        });
+
         room.onMessage("raceResult", (message) => {
-          setGameStatus(message.won ? "You won!" : "You lost!");
+          setRaceResult(message);
+          if (message.payouts[room.sessionId]?.won) {
+            setPlayerCredits((prev) => prev + message.payouts[room.sessionId].amount);
+          }
+        });
+
+        room.onMessage("raceReset", (message) => {
+          setBets([]);
+          setRaceResult(null);
+          setSelectedHorse(null);
+          setHorseStats(message.horseStats);
+          setGameStatus("waiting");
+        });
+
+        room.onMessage("playerJoin", (message) => {
+          if (message.sessionId === room.sessionId) {
+            setPlayerCredits(message.totalCredits);
+            setHorseStats(message.horseStats);
+          }
         });
       } catch (error) {
         console.error("Could not connect to room:", error);
       }
-    }
+    };
 
-    // Phaser game configuration
     const config = {
       type: Phaser.AUTO,
       parent: "game-container",
       width: 800,
       height: 400,
-      backgroundColor: "#7cba3d", // Green background for the race track
+      backgroundColor: "#7cba3d",
       scene: {
-        preload: function () {
-          // Load horse spritesheet
+        preload() {
           this.load.spritesheet("horse", "/horse_run_cycle.png", {
             frameWidth: 82,
             frameHeight: 66,
           });
         },
-        create: function () {
-          // Create galloping animation
+        create() {
           this.anims.create({
             key: "gallop",
-            frames: this.anims.generateFrameNumbers("horse", {
-              start: 0,
-              end: 4,
-            }),
+            frames: this.anims.generateFrameNumbers("horse", { start: 0, end: 4 }),
             frameRate: 12,
             repeat: -1,
           });
 
-          // Draw race track lines
           for (let i = 0; i < 5; i++) {
-            this.add
-              .line(0, (i + 1) * 80, 0, 0, 800, 0, 0xffffff)
-              .setLineWidth(2)
-              .setOrigin(0);
-          }
-
-          // Draw finish line
-          this.add.rectangle(700, 200, 10, 400, 0xffffff);
-
-          // Create horses with unique colors
-          const colors = [0xffffff, 0xffcccc, 0xccffcc, 0xccccff, 0xffeecc];
-          for (let i = 0; i < 5; i++) {
+            this.add.line(0, (i + 1) * 80, 0, 0, 800, 0, 0xffffff).setLineWidth(2).setOrigin(0);
             const horse = this.add
               .sprite(50, (i + 1) * 80 - 40, "horse")
               .setInteractive()
-              .setData("horseIndex", i)
-              .setTint(colors[i]);
-
+              .setData("horseIndex", i);
             horse.anims.play("gallop");
             horse.anims.pause();
-
-            // Add click handler for selecting a horse
-            horse.on("pointerdown", () => {
-              setSelectedHorse(i);
-            });
-
-            // Add horse labels
-            this.add.text(100, (i + 1) * 80 - 40, `Horse ${i + 1}`, {
+            horse.on("pointerdown", () => setSelectedHorse(i));
+            this.add.text(10, (i + 1) * 80 - 40, `Horse ${i + 1}`, {
               color: "#000",
               fontSize: "16px",
             });
           }
+          this.add.rectangle(700, 200, 10, 400, 0xffffff);
         },
       },
     };
 
-    // Initialize Phaser game
     const game = new Phaser.Game(config);
     gameRef.current = game;
-
-    // Connect to Colyseus room
     connectToRoom();
 
-    // Cleanup on component unmount
     return () => {
       game.destroy(true);
-      if (roomRef.current) {
-        roomRef.current.leave();
-      }
+      roomRef.current?.leave();
     };
   }, []);
 
-  // Place a bet on the selected horse
   const placeBet = () => {
-    if (selectedHorse !== null && roomRef.current) {
-      roomRef.current.send("placeBet", { horseIndex: selectedHorse });
-      setGameStatus(`Bet placed on Horse ${selectedHorse + 1}`);
+    if (selectedHorse === null || betAmount <= 0 || !roomRef.current) return;
+    if (playerCredits < betAmount) {
+      setGameStatus("Insufficient credits!");
+      return;
     }
+    roomRef.current.send("placeBet", { horseIndex: selectedHorse, amount: betAmount });
+    setGameStatus(`Bet placed on Horse ${selectedHorse + 1} for $${betAmount}`);
   };
 
-  // Start the race
   const startRace = () => {
     if (roomRef.current) {
       roomRef.current.send("startRace");
@@ -184,43 +185,106 @@ const HorseRacingGame = () => {
 
   return (
     <div className="horse-racing-container">
-      <div className="controls">
-        <button
-          onClick={placeBet}
-          disabled={selectedHorse === null}
-          className="bet-button"
-        >
-          Place Bet on Horse {selectedHorse !== null ? selectedHorse + 1 : ""}
-        </button>
-        <button onClick={startRace} className="start-button">
-          Start Race
-        </button>
-      </div>
-      <div className="game-status">{gameStatus}</div>
-      <div id="game-container" className="game-area" />
-      <div className="bets-table">
-        <div className="bets-table">
+      <header className="controls">
+        <div className="credits">Credits: ${playerCredits}</div>
+        <div className="bet-section">
+          <select
+            value={selectedHorse ?? ""}
+            onChange={(e) => setSelectedHorse(parseInt(e.target.value) || null)}
+            disabled={gameStatus !== "waiting"}
+          >
+            <option value="">Select Horse</option>
+            {horseStats.map((horse) => (
+              <option key={horse.id} value={horse.id}>
+                Horse {parseInt(horse.id) + 1} (Odds: {horse.odds})
+              </option>
+            ))}
+          </select>
+          <input
+            type="number"
+            min="1"
+            value={betAmount}
+            onChange={(e) => setBetAmount(Math.max(1, parseInt(e.target.value) || 0))}
+            disabled={gameStatus !== "waiting"}
+          />
+          <button
+            onClick={placeBet}
+            disabled={selectedHorse === null || gameStatus !== "waiting"}
+            className="bet-button"
+          >
+            Place Bet
+          </button>
+          <button
+            onClick={startRace}
+            disabled={gameStatus !== "waiting"}
+            className="start-button"
+          >
+            Start Race
+          </button>
+        </div>
+      </header>
+      <section className="game-status">{gameStatus}</section>
+      <main id="game-container" className="game-area" />
+      <footer className="info-section">
+        <div className="horse-stats">
+          <h3>Horse Stats</h3>
           <table>
             <thead>
               <tr>
-                <th>Player ID</th>
                 <th>Horse</th>
+                <th>Stamina</th>
+                <th>Accel.</th>
+                <th>Consist.</th>
+                <th>Odds</th>
               </tr>
             </thead>
             <tbody>
-              {bets.map((bet, index) => (
-                <tr key={index}>
-                  <td>
-                    {roomRef.current?.state.players.get(bet.clientId) ||
-                      "Anonymous"}
-                  </td>
-                  <td>Horse {bet.horseIndex + 1}</td>
+              {horseStats.map((horse) => (
+                <tr key={horse.id}>
+                  <td>Horse {parseInt(horse.id) + 1}</td>
+                  <td>{horse.stats.stamina.toFixed(2)}</td>
+                  <td>{horse.stats.acceleration.toFixed(2)}</td>
+                  <td>{horse.stats.consistency.toFixed(2)}</td>
+                  <td>{horse.odds}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-      </div>
+        <div className="bets-table">
+          <h3>Bets</h3>
+          <table>
+            <thead>
+              <tr>
+                <th>Player</th>
+                <th>Horse</th>
+                <th>Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bets.map((bet, index) => (
+                <tr key={index}>
+                  <td>{roomRef.current?.state.players.get(bet.clientId)?.name || "Anonymous"}</td>
+                  <td>Horse {bet.horseIndex + 1}</td>
+                  <td>${bet.amount}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {raceResult && (
+          <div className="race-result">
+            <h3>Race Results</h3>
+            <p>Winner: Horse {parseInt(raceResult.winners[0]) + 1}</p>
+            {raceResult.payouts[roomRef.current?.sessionId] && (
+              <p>
+                You {raceResult.payouts[roomRef.current.sessionId].won ? "won" : "lost"}: $
+                {raceResult.payouts[roomRef.current.sessionId].amount}
+              </p>
+            )}
+          </div>
+        )}
+      </footer>
     </div>
   );
 };

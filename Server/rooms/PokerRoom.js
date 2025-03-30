@@ -10,7 +10,14 @@ const {
 const { ArraySchema } = require("@colyseus/schema");
 
 class PokerRoom extends Room {
+  constructor(firestore) {
+    super();
+    this.firestore = firestore;
+  }
+
   onCreate(options) {
+    this.customRoomId = options.customRoomId;
+
     this.autoDispose = false;
     this.setState(new PokerState());
 
@@ -19,6 +26,8 @@ class PokerRoom extends Room {
 
     this.suits = [ "hearts", "diamonds", "clubs", "spades" ];
     this.ranks = [ "2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace", ];
+
+    this.winner;
 
     // Add timeout that destroys room if no players join (needed for /create-room endpoint). Disabled for lobby implementation.
     /*
@@ -55,6 +64,7 @@ class PokerRoom extends Room {
         player.totalCredits -= message.value - player.bet
         this.state.pot += message.value - player.bet
         player.bet = message.value
+        this.changeMoney(player)
         if (player.bet > this.state.highestBet) {
           this.state.highestBet = player.bet
           player.lastAction = 'raise'
@@ -142,8 +152,37 @@ class PokerRoom extends Room {
           this.broadcast("playerJoin", { sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
         }
       }
-      this.broadcast('newGame', { waitingRoom: this.state.waitingRoom })
+      this.broadcast('newGame', { players: this.state.players, waitingRoom: this.state.waitingRoom })
     })
+  }
+
+  changeMoney(player) {
+    if (player && player.fireBaseId) 
+      {
+        firestore.collection('users').doc(player.fireBaseId).get()
+          .then(doc => {
+            if (!doc.exists) 
+            {
+              console.warn(`User doc not found for ${player.fireBaseId}`);
+              return;
+            }
+  
+            return firestore.collection('users').doc(player.fireBaseId).update({
+              balance: player.totalCredits,
+            });
+          })
+          .then(() => {
+            console.log(`Balance updated for ${player.fireBaseId}`);
+          })
+          .catch((error) => {
+            console.error(`Error updating user ${player.fireBaseId}:`, error);
+          });
+  
+      } 
+      else 
+      {
+        console.warn(`Player missing ${client.sessionId}`);
+      }
   }
 
   // creatig and shuffling the deck
@@ -217,6 +256,7 @@ class PokerRoom extends Room {
       if (smallBlind) {
         smallBlind.bet = 5
         smallBlind.totalCredits -= smallBlind.bet
+        this.changeMoney(smallBlind)
         this.state.pot += smallBlind.bet
       }
 
@@ -224,6 +264,7 @@ class PokerRoom extends Room {
       if (bigBlind) {
         bigBlind.bet = 10
         bigBlind.totalCredits -= bigBlind.bet
+        this.changeMoney(bigBlind)
         this.state.pot += bigBlind.bet
       }
 
@@ -236,7 +277,7 @@ class PokerRoom extends Room {
     };
 
     dealCards();
-    this.broadcast('gameStart', { hands, players: this.state.players, dealerHand: this.state.dealer.hand, currentTurn: this.state.currentTurn, gamePhase: this.state.gamePhase })
+    this.broadcast('gameStart', { hands, players: this.state.players, dealerHand: this.state.dealer.hand, currentTurn: this.state.currentTurn, gamePhase: this.state.gamePhase, pot: this.state.pot })
   }
 
   // allowing the next client in line to go
@@ -320,8 +361,8 @@ class PokerRoom extends Room {
                 return;
               }
     
-              const previousBalance = doc.data().balance || 0;
-              const result = player.totalCredits - previousBalance;
+              // FIGURE OUT HOW TO SAVE THE RESULT
+              const result = player.totalCredits - player.startingCredits;
     
               const historyEntry = {
                 date: new Date(),
@@ -330,12 +371,11 @@ class PokerRoom extends Room {
               };
     
               return firestore.collection('users').doc(player.fireBaseId).update({
-                balance: player.totalCredits,
                 gameHistory: FieldValue.arrayUnion(historyEntry)
               });
             })
             .then(() => {
-              console.log(`Balance and game history updated for ${player.fireBaseId}`);
+              console.log(`Game history updated for ${player.fireBaseId}`);
             })
             .catch((error) => {
               console.error(`Error updating user ${player.fireBaseId}:`, error);
@@ -373,7 +413,9 @@ class PokerRoom extends Room {
 
         winner.totalCredits += this.state.pot
 
-        this.broadcast("endGame", { winner: winnerId, winnings: this.state.pot, result: result })
+        this.changeMoney(winner)
+
+        this.broadcast("endGame", { winnerName: winner.name, winner: winnerId, winnings: this.state.pot, result: result })
 
         this.state.pot = 0
         this.state.highestBet = 0
@@ -421,15 +463,17 @@ class PokerRoom extends Room {
     // assign new blind values to the players
     this.state.players.get(playerIds[newSbIndex]).blind = 1
     this.state.players.get(playerIds[newBbIndex]).blind = 2
+
+    console.log('blinds after rotation:', playerIds[newSbIndex], playerIds[newBbIndex])
   }
 
   evaluateHand(playerHand, communityCards) {
-    const fullHand = [...playerHand, ...communityCards]; // Combine hole + community cards
-    const suits = {}; // To track suits
-    const counts = {}; // To track card frequencies
+    const fullHand = [...playerHand, ...communityCards]; // combine river + community cards
+    const suits = {}; // to track suits
+    const counts = {}; // to track card frequencies
     let isFlush = false, isStraight = false, straightHigh = 0;
 
-    // ✅ Count occurrences of ranks & suits
+    // count occurrences of ranks & suits
     fullHand.forEach(card => {
         const rank = card.rank;
         const suit = card.suit;
@@ -437,15 +481,15 @@ class PokerRoom extends Room {
         counts[rank] = (counts[rank] || 0) + 1
         suits[suit] = (suits[suit] || 0) + 1
 
-        if (suits[suit] >= 5) isFlush = true; // Check for Flush
+        if (suits[suit] >= 5) isFlush = true; // check for flush
     });
 
-    // ✅ Convert ranks into sorted numeric values
+    // convert ranks into sorted numeric values
     let rankValues = fullHand.map(card => this.ranks.indexOf(card.rank)).sort((a, b) => b - a);
-    let highCard = rankValues[0]; // Track the highest card for tie-breaking
+    let highCard = rankValues[0]; // track the highest card for tie-breaking
     console.log(rankValues)
 
-    // ✅ Check for Straight
+    // check for straight
     let sequence = [];
     for (let i = 1; i < rankValues.length; i++) {
         if (rankValues[i] === rankValues[i - 1] - 1) sequence.push(rankValues[i]);
@@ -515,16 +559,32 @@ class PokerRoom extends Room {
     return [winner, bestHand.name];
   }
 
-
-
   // handles when a player joins
-  onJoin(client, options) {
+  async onJoin(client, options) {
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new PokerPlayer();
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
-    player.name = options.name || `Player ${client.sessionId}`;
+
+    var playerName = "";
+    if (options.playerId || this.playerId) {
+      try {
+        const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+         if (playerDoc.exists) {
+          player.fireBaseId = options.playerId;
+          playerName = playerDoc.data().name;
+          player.name = playerName;
+          console.log(`${playerName} joined!`);
+        } else {
+          console.log(`Player with ID ${options.playerId} not found.`);
+        }
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+      }
+    }
+
     player.totalCredits = options.balance || 10_000
+    player.startingCredits = player.totalCredits
 
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase.includes("playing"))
@@ -532,10 +592,14 @@ class PokerRoom extends Room {
     // otherwise add like normal, and if they're the room creator, make them the owner
     else {
       // assign blinds to players, if only 1 or 2 players exist, then set automatically
-      if (this.state.players.size == 0)
+      if (this.state.players.size == 0) {
+        console.log('p1 joined')
         player.blind = 1;
-      else if (this.state.players.size == 1)
+      }
+      else if (this.state.players.size == 1) {
+        console.log('p2 joined')
         player.blind = 2;
+      }
       else if (this.state.players.size == 2) {
         const playerIds = Array.from(this.state.players.keys());
         if (this.state.players.get(playerIds[1]).blind === 1 && this.state.players.get(playerIds[0]).blind === 2) {
@@ -549,32 +613,14 @@ class PokerRoom extends Room {
       if (this.state.owner == '' || this.state.owner === undefined) {
         this.state.owner = client.sessionId; // set the first player to join as the owner
       }
+
+      console.log()
     }
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    this.broadcast("playerJoin", { playerName: player.name, sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
-
-  // assignBlinds() {
-  //   const playerIds = Array.from(this.state.players.keys());
-  //   console.log("???")
-
-  //   if (playerIds.length < 2) {
-  //       console.log("Not enough players for blinds.");
-  //       return;
-  //   }
-
-  //   if (this.state.players.get(playerIds[0]).blind != 0 && this.state.players.get(playerIds[1]).blind != 0) {
-  //     this.state.players.forEach(player => player.blind = 0)
-
-  //     this.state.players.get(playerIds[0]).blind = 1
-  //     this.state.players.get(playerIds[1]).blind = 2
-
-  //     console.log(`New Small Blind: ${playerIds[0]}, New Big Blind: ${playerIds[1]}`)
-  //   }
-
-  // }
 
   // handles when a player leaves
   onLeave(client) {
@@ -593,7 +639,7 @@ class PokerRoom extends Room {
         nextKey = keys[(currentIndex + 1) % keys.length]
         console.log('next key', nextKey)
       }
-      // ✅ If the player was the Small Blind, shift the blinds
+      // if the player was the small blind, shift the blinds
       if (player.blind === 1) {
         console.log("Small Blind disconnected, rotating blinds...");
         if (keys.length > 1) { // More than 2 players
@@ -604,23 +650,33 @@ class PokerRoom extends Room {
             this.state.players.get(newBB).blind = 2;
         }
       }
-      // ✅ If the player was the Big Blind, shift the big blind
+      // if the player was the big blind, shift the big blind
       else if (player.blind === 2) {
           console.log("Big Blind disconnected, shifting big blind...");
-          if (keys.length > 1) { // More than 2 players
+          // If only 2 players remain, do nothing (SB remains SB)
+          if (keys.length == 2) {}
+          else if (keys.length > 1) { // More than 2 players
               const newBB = keys[(currentIndex + 1) % keys.length]; // Next player becomes Big Blind
               this.state.players.get(newBB).blind = 2;
           }
-          // If only 2 players remain, do nothing (SB remains SB)
       }
       // remove player
       this.state.players.delete(client.sessionId);
+      // Update isInGame to false
+      firestore.collection("users").doc(player.fireBaseId).update({
+        isInGame: false,
+      });
     }
-    // if not found, check the watiting room and remove from there
+    // if not found, check the waiting room and remove from there
     else {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
-      if(waitingPlayer)
+      if(waitingPlayer) {
         this.state.waitingRoom.delete(client.sessionId)
+        firestore.collection("users").doc(client.sessionId).update({
+          isInGame: false,
+        });
+        console.log(`Player with ID ${client.sessionId} has left the game.`);
+      }
     }
     // if the room owner was the one that left, then make the next guy in line the owner
     if (!this.state.players.has(this.state.owner))
@@ -644,6 +700,16 @@ class PokerRoom extends Room {
       if (this.state.gamePhase.includes('playing') && Array.from(this.state.players.values()).filter((player) => player.lastAction !== "fold").length === 1)
         this.endGame('disconnect')
     }
+  }
+
+  // handles when the room is disposed
+  onDispose() {
+    // make sure all clients are set to not in game
+    this.state.players.forEach((player) => {
+      firestore.collection("users").doc(player.fireBaseId).update({
+        isInGame: false,
+      });
+    });
   }
 }
 

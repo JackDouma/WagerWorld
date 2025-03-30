@@ -29,7 +29,6 @@ class PokerScene extends Phaser.Scene {
     this.possibleRemoveBetButtons = []
     this.totalCreditsText
     this.currentBetText
-    this.placeBetsButton
     this.currentBet = 0
     this.totalBet = 0
     this.overallHighestCurrentBet = 10
@@ -63,7 +62,7 @@ class PokerScene extends Phaser.Scene {
   }
 
   init(data) {
-    console.log("Init: ", data.roomId);
+    console.log("Init here: ", data.roomId);
     this.roomId = data.roomId;
   }
 
@@ -74,7 +73,7 @@ class PokerScene extends Phaser.Scene {
     const userRef = doc(db, "users", playerId);
     const userDoc = await getDoc(doc(db, "users", playerId));
     try{
-      if(userDoc.data().isInGame && this.roomId === null){
+      if(userDoc.exists() && userDoc.data().isInGame){
         console.log(`Player with ID is already in a game.`);
         // open popup to inform user that they are already in a game and redirect to home page
         // redirect to home page
@@ -115,13 +114,13 @@ class PokerScene extends Phaser.Scene {
         this.playerHands = message.hands
         this.started = true
         console.log(this.currentTurn)
-        this.startGame()
+        this.startGame(message.pot)
       }
     })
 
    // handling a player joining
     this.room.onMessage('playerJoin', (message) => {
-      console.log(`Player ${message.sessionId} joined the room`);
+      console.log(`Player ${message.playerName} joined the room`);
       // if cards havent been dealt yet, add the player to the table
       this.waitingRoom = message.waitingRoom
       console.log(this.waitingRoom)
@@ -136,8 +135,8 @@ class PokerScene extends Phaser.Scene {
       // if a game is in progress, show them a waiting screen
       else if (this.room.state.gamePhase.includes('playing') && this.room.sessionId in this.waitingRoom) {
         this.resultsText.setText("Waiting for Game to Finish...").setVisible(true)
-        this.startGameButton.setVisible(false).setActive(false)
-        this.leaveRoomButton.setVisible(false).setActive(false)
+        this.changeActionButtonState(false, this.startGameText, this.startGameButton, this.startGameGraphics)
+        this.changeActionButtonState(false, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
         this.isWaiting = true
       }
       // update the total credits screen
@@ -179,8 +178,12 @@ class PokerScene extends Phaser.Scene {
       this.room.send("disconnectionHandled")
       // show raise, call, check and fold buttons to the correct user
       console.log(this.currentTurn == this.room.sessionId, message.dc)
-      if (message.dc == false)
-        this.optionButtons.forEach(item => {item.setActive(this.currentTurn == this.room.sessionId).setVisible(this.currentTurn == this.room.sessionId)});
+      if (message.dc == false) {
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.raiseText, this.raiseButton, this.raiseGraphics)
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.callText, this.callButton, this.callGraphics)
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.checkText, this.checkButton, this.checkGraphics)
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.foldText, this.foldButton, this.foldGraphics)
+      }
       // if the last player diconnected, go straight to the dealer
       if (this.currentTurn == "dealer")
         this.room.send("dealerTurn")
@@ -190,8 +193,8 @@ class PokerScene extends Phaser.Scene {
     this.room.onMessage("waitForOthers", (message) => {
       if(message.user == this.room.sessionId) {
         this.resultsText.setVisible(true)
-        this.startGameButton.setVisible(false).setActive(false)
-        this.leaveRoomButton.setVisible(false).setActive(false)
+        this.changeActionButtonState(false, this.startGameText, this.startGameButton, this.startGameGraphics)
+        this.changeActionButtonState(false, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
       }
     })
 
@@ -221,8 +224,12 @@ class PokerScene extends Phaser.Scene {
           this.room.send("dealerTurn")
         }
       }
-      else
-        this.optionButtons.forEach(item => {item.setActive(this.currentTurn == this.room.sessionId).setVisible(this.currentTurn == this.room.sessionId)});
+      else {
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.raiseText, this.raiseButton, this.raiseGraphics)
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.callText, this.callButton, this.callGraphics)
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.checkText, this.checkButton, this.checkGraphics)
+        this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.foldText, this.foldButton, this.foldGraphics)
+      }
     })
 
     // dealing with dealer results from the server
@@ -232,27 +239,37 @@ class PokerScene extends Phaser.Scene {
     })
 
     this.room.onMessage("endGame", (message) => {
-      this.endGame(message.winner, message.winnings, message.result)
+      this.endGame(message.winnerName, message.winner, message.winnings, message.result)
     })
 
     // reset game message from the server
     this.room.onMessage("newGame", (message) => {
       this.started = false
-      if(this.playAgainButton) this.playAgainButton.destroy()
-      if(this.quitButton) this.quitButton.destroy()
+      if(this.playAgainButton) this.destroyButtons(this.playAgainText, this.playAgainButton, this.playAgainGraphics)
+      if(this.quitButton) this.destroyButtons(this.quitText, this.quitButton, this.quitGraphics)
       this.totalPotText.destroy()
       this.totalCreditsText.destroy()
       this.resultsText.destroy()
       this.playerHands = {}
       if(this.playerBetValues) this.playerBetValues.forEach(item => item.destroy())
       this.activeCards.forEach(item => item.destroy())
+      this.overallHighestCurrentBet = 10
+      this.highestCurrentBet = 0
+      this.players = message.players
       this.waitingRoom = message.waitingRoom
-      this.createUI(!this.isWaiting)
+      this.createUI(this.isWaiting)
     })
 
     // if the client refreshes or leaves, only alert them if the game is in play and they are not in the waiting room
     window.addEventListener("beforeunload", (event) => {
       if (this.room && (this.room.state.gamePhase.includes("playing") || this.room.state.gamePhase === "dealing") && !this.room.state.waitingRoom.has(this.room.sessionId)) { event.preventDefault(); }
+      else if (this.room) this.room.leave()
+    });
+
+    // if the client presses the back button, only alert them if the game is in play and they are not in the waiting room
+    window.addEventListener("popstate", (event) => {
+      if (this.room && (this.room.state.gamePhase.includes("playing") || this.room.state.gamePhase === "dealing") && !this.room.state.waitingRoom.has(this.room.sessionId)) { event.preventDefault(); }
+      else if (this.room) this.room.leave()
     });
 
     // loading background and audio
@@ -271,7 +288,7 @@ class PokerScene extends Phaser.Scene {
     var j = 0
     Object.keys(this.players).forEach((item) => {
       console.log(item, this.players[item].blind, j)
-      this.allPhysicalPositions[j].setText(item);
+      this.allPhysicalPositions[j].setText(this.players[item].name);
       if (this.players[item].blind === 1) {
         console.log('small blind found', this.allPhysicalPositions[j].x)
         this.smallBlind.setPosition(this.allPhysicalPositions[j].x - (this.doesRotate(j) == 2 ? -100 : 100), this.allPhysicalPositions[j].y - 100)
@@ -284,6 +301,49 @@ class PokerScene extends Phaser.Scene {
       }
       j++
     })
+  }
+
+  // method to create buttons, including text and hoverr effects
+  addActionButtons(action, x, y, onClick, size, colour) {
+    const buttonRadius = 20;
+    const buttonGraphics = this.add.graphics();
+    buttonGraphics.fillStyle(0x000000, 0.5).setVisible(false).setActive(false);
+
+    const text = this.add.text(x, y, action, { fontSize: size, fill: colour }).setOrigin(0.5, 0.5).setVisible(false)
+    text.setFontFamily("Rowdies")
+    buttonGraphics.fillRoundedRect((text.x - text.width / 2) - 10, (text.y - text.height / 2) - 10, text.width + 20, text.height + 20, buttonRadius);
+    
+    const button = this.add.zone(text.x - 10, text.y - 10, text.width + 20, text.height + 20)
+        .setOrigin(0.5, 0.5)
+        .setInteractive().on('pointerdown', () => onClick()).setVisible(false).setActive(false)
+
+    button.on('pointerover', () => {
+      buttonGraphics.clear();
+      buttonGraphics.fillStyle(0x555555, 0.7);
+      buttonGraphics.fillRoundedRect((text.x - text.width / 2) - 10, (text.y - text.height / 2) - 10, text.width + 20, text.height + 20, buttonRadius);
+    });
+
+    button.on('pointerout', () => {
+      buttonGraphics.clear();
+      buttonGraphics.fillStyle(0x000000, 0.5);
+      buttonGraphics.fillRoundedRect((text.x - text.width / 2) - 10, (text.y - text.height / 2) - 10, text.width + 20, text.height + 20, buttonRadius);
+    });
+
+    return [text, button, buttonGraphics]
+  }
+
+  // method to enable / disable the buttons
+  changeActionButtonState(state, text, button, graphics) {
+    text.setVisible(state)
+    button.setActive(state).setVisible(state)
+    graphics.setActive(state).setVisible(state)
+  }
+
+  // method to destroy the buttons
+  destroyButtons(text, button, graphics) {
+    text.destroy()
+    button.destroy()
+    graphics.destroy()
   }
 
   // adding the buttons to make a bet
@@ -368,16 +428,22 @@ class PokerScene extends Phaser.Scene {
     this.totalPotText = this.add.text(centerX - (this.scale.width / 3.5), this.scale.height / 20, `Total Pot: 0`, { fontFamily: 'Arial', fontSize: '48px', fill: '#fff' }).setOrigin(0.5, 0.5)
 
     // start / leave buttons
-    this.startGameButton = this.add.text(centerX, centerY - (this.scale.height / 6), "Start Game", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.room.send("readyUp")).setOrigin(0.5, 0.5)
-    this.leaveRoomButton = this.add.text(centerX, centerY + (this.scale.height / 6), 'Leave Room', { fontSize: '72px', fill: '#f00' }).setInteractive().on('pointerdown', () => window.location.href = '/').setOrigin(0.5, 0.5)
-    
+    const [startGameText, startGameButton, startGameGraphics] = this.addActionButtons("Start Game", centerX, centerY - (this.scale.height / 6), () => this.room.send("readyUp"), '72px', '#FFD700')
+    this.startGameText = startGameText, this.startGameButton = startGameButton, this.startGameGraphics = startGameGraphics
+    this.changeActionButtonState(true, this.startGameText, this.startGameButton, this.startGameGraphics)
+    const [leaveRoomText, leaveRoomButton, leaveRoomGraphics] = this.addActionButtons("Back To Lobby", centerX, centerY + (this.scale.height / 6), () => { 
+      if(this.room) this.room.leave()
+      history.back() }, '72px', '#f00')
+    this.leaveRoomText = leaveRoomText, this.leaveRoomButton = leaveRoomButton, this.leaveRoomGraphics = leaveRoomGraphics
+    this.changeActionButtonState(true, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
+
     // creating buttons for each possible amount that can be bet
     const numChips = this.possibleBets.length
     const numRows = 2
     const numCols = Math.ceil(numChips / numRows)
 
     const chipSpacingX = this.scale.width / (numCols + 1)
-    const chipSpacingY = this.scale.height / 3.5
+    const chipSpacingY = this.scale.height / 5
 
     this.possibleBets.forEach((item, index) => {
         const row = Math.floor(index / numCols)
@@ -390,38 +456,36 @@ class PokerScene extends Phaser.Scene {
     })
 
     // creating buttons to add / remove bets
-    this.placeBetsButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 5.5), "Place Bet", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.betAttempt()).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
-    this.cancelActionButton = this.add.text(centerX + (this.scale.width / 6), centerY + (this.scale.height / 5.5), "Cancel", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.cancelCurrentAction()).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
+    const [placeBetsText, placeBetsButton, placeBetsGraphics] = this.addActionButtons("Place Bet", centerX - (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => this.betAttempt(), '72px', '#FFD700')
+    this.placeBetsText = placeBetsText, this.placeBetsButton = placeBetsButton, this.placeBetsGraphics = placeBetsGraphics
+    
+    const [cancelText, cancelButton, cancelGraphics] = this.addActionButtons("Cancel", centerX + (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => this.cancelCurrentAction(), '72px', '#FFD700')
+    this.cancelText = cancelText, this.cancelButton = cancelButton, this.cancelGraphics = cancelGraphics
 
-    this.confirmCheckButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 5.5), "Confirm", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.confirmCheck()).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
-    this.confirmFoldButton = this.add.text(centerX - (this.scale.width / 6), centerY + (this.scale.height / 5.5), "Confirm", { fontSize: '72px', fill: '#FFD700' }).setInteractive().on('pointerdown', () => this.confirmFold()).setOrigin(0.5, 0.5).setActive(false).setVisible(false)
+    const [confirmCheckText, confirmCheckButton, confirmCheckGraphics] = this.addActionButtons("Confirm", centerX - (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => this.confirmCheck(), '72px', '#FFD700')
+    this.confirmCheckText = confirmCheckText, this.confirmCheckButton = confirmCheckButton, this.confirmCheckGraphics = confirmCheckGraphics
 
+    const [confirmFoldText, confirmFoldButton, confirmFoldGraphics] = this.addActionButtons("Confirm", centerX - (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => this.confirmFold(), '72px', '#FFD700')
+    this.confirmFoldText = confirmFoldText, this.confirmFoldButton = confirmFoldButton, this.confirmFoldGraphics = confirmFoldGraphics
+    
     // results text for the player
     this.resultsText = this.add.text(centerX, centerY - (this.scale.height / 10), 'Waiting for others...', { fontSize: '60px', fill: '#fff' }).setOrigin(0.5, 0.5).setVisible(false)
 
     // creating the raise, call, check and fold buttons
-    this.raiseButton = this.add
-      .text(centerX - (this.scale.width / 3.5), centerY + (this.scale.height / 7), 'Raise', { fontSize: '48px', fill: '#0f0' })
-      .setInteractive()
-      .on('pointerdown', () => this.raise()).setOrigin(0.5,0.5).setActive(false).setVisible(false)
-
-    this.callButton = this.add
-      .text(centerX - (this.scale.width / 9), centerY + (this.scale.height / 7), 'Call', { fontSize: '48px', fill: '#0f0' })
-      .setInteractive()
-      .on('pointerdown', () => this.call()).setOrigin(0.5,0.5).setVisible(false).setActive(false)
-
-    this.checkButton = this.add
-      .text(centerX + (this.scale.width / 9), centerY + (this.scale.height / 7), 'Check', { fontSize: '48px', fill: '#0f0' })
-      .setInteractive()
-      .on('pointerdown', () => this.check()).setOrigin(0.5,0.5).setVisible(false).setActive(false)
-
-    this.foldButton = this.add
-      .text(centerX + (this.scale.width / 3.5), centerY + (this.scale.height / 7), 'Fold', { fontSize: '48px', fill: '#f00' })
-      .setInteractive()
-      .on('pointerdown', () => this.fold()).setOrigin(0.5,0.5).setVisible(false).setActive(false)
+    const [raiseText, raiseButton, raiseGraphics] = this.addActionButtons("Raise", centerX - (this.scale.width / 3.5), centerY + (this.scale.height / 7), () => this.raise(), '48px', '#0f0')
+    this.raiseText = raiseText, this.raiseButton = raiseButton, this.raiseGraphics = raiseGraphics
     
-    this.optionButtons = [this.raiseButton, this.callButton, this.checkButton, this.foldButton]
+    const [callText, callButton, callGraphics] = this.addActionButtons("Call", centerX - (this.scale.width / 9), centerY + (this.scale.height / 7), () => this.call(), '48px', '#0f0')
+    this.callText = callText, this.callButton = callButton, this.callGraphics = callGraphics
+
+    const [checkText, checkButton, checkGraphics] = this.addActionButtons("Check", centerX + (this.scale.width / 9), centerY + (this.scale.height / 7), () => this.check(), '48px', '#0f0')
+    this.checkText = checkText, this.checkButton = checkButton, this.checkGraphics = checkGraphics
     
+    const [foldText, foldButton, foldGraphics] = this.addActionButtons("Fold", centerX + (this.scale.width / 3.5), centerY + (this.scale.height / 7), () => this.fold(), '48px', '#f00')
+    this.foldText = foldText, this.foldButton = foldButton, this.foldGraphics = foldGraphics
+
+    this.optionTexts = [raiseText, callText, checkText, foldText]
+        
     // Loading custom font from Google
     WebFontLoader.default.load({
       google: {
@@ -431,15 +495,15 @@ class PokerScene extends Phaser.Scene {
         this.totalCreditsText.setFontFamily('"Rowdies"')
         this.totalPotText.setFontFamily('"Rowdies')
         this.resultsText.setFontFamily('"Rowdies"')
-        this.startGameButton.setFontFamily('"Rowdies')
-        this.leaveRoomButton.setFontFamily('"Rowdies')
+        this.startGameText.setFontFamily('"Rowdies')
+        this.leaveRoomText.setFontFamily('"Rowdies')
         this.possibleRemoveBetButtons.forEach((item) => {item.setFontFamily('"Rowdies')})
         this.allPhysicalPositions.forEach((item) => {item.setFontFamily('"Rowdies')})
-        this.optionButtons.forEach((item => item.setFontFamily('"Rowdies"')))
-        this.placeBetsButton.setFontFamily('"Rowdies"')
-        this.confirmCheckButton.setFontFamily('"Rowdies"')
-        this.confirmFoldButton.setFontFamily('"Rowdies"')
-        this.cancelActionButton.setFontFamily('"Rowdies"')
+        this.optionTexts.forEach(item => item.setFontFamily('"Rowdies"'))
+        this.placeBetsText.setFontFamily('"Rowdies"')
+        this.confirmCheckText.setFontFamily('"Rowdies"')
+        this.confirmFoldText.setFontFamily('"Rowdies"')
+        this.cancelText.setFontFamily('"Rowdies"')
       }
     })
   }
@@ -467,7 +531,7 @@ class PokerScene extends Phaser.Scene {
   }
 
   // method to show the amount of money each player has bet total during the game
-  showWagers(){
+  showWagers(pot){
     this.playerBetValues = []
     var i = 0
     Object.keys(this.players).forEach((item) => {
@@ -488,11 +552,11 @@ class PokerScene extends Phaser.Scene {
       }
       i++
     })
-    this.totalPotText.setText(`Total Pot: ${this.room.state.pot}`)
+    this.totalPotText.setText(`Total Pot: ${pot}`)
     console.log(this.playerBetValues);
   }
 
-  startGame(){
+  startGame(pot){
     const centerX = this.cameras.main.centerX
     const centerY = this.cameras.main.centerY
 
@@ -500,8 +564,8 @@ class PokerScene extends Phaser.Scene {
     this.resultsText.setVisible(false)
     
     // remove the start and quit buttons
-    this.startGameButton.destroy()
-    this.leaveRoomButton.setVisible(false).setActive(false)
+    this.destroyButtons(this.startGameText, this.startGameButton, this.startGameGraphics)
+    this.changeActionButtonState(false, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
 
     // dealing cards to all the players
     // this.room.state.players.keys().forEach((item) => this.playerHands.set(item, this.room.state.players.get(item).hand))
@@ -525,7 +589,7 @@ class PokerScene extends Phaser.Scene {
     }
 
     // showing all wagers (each starts at 0, except for big and small blinds)
-    this.showWagers()
+    this.showWagers(pot)
 
     // for testing purposes
     this.b = true
@@ -552,8 +616,12 @@ class PokerScene extends Phaser.Scene {
       ease: 'Cubic.easeOut',
       // do this once the animation is done
       onComplete: () => {
-        if (this.currentTurn == this.room.sessionId && last)
-          this.optionButtons.forEach((item => item.setVisible(true).setActive(true)))
+        if (this.currentTurn == this.room.sessionId && last) {
+          this.changeActionButtonState(true, this.raiseText, this.raiseButton, this.raiseGraphics)
+          this.changeActionButtonState(true, this.callText, this.callButton, this.callGraphics)
+          this.changeActionButtonState(true, this.checkText, this.checkButton, this.checkGraphics)
+          this.changeActionButtonState(true, this.foldText, this.foldButton, this.foldGraphics)
+        }
         // make another animation to make it flip over, only for the player's cards though
         if (newTexture != 'card') {
           // make another animation to make it flip over
@@ -600,7 +668,11 @@ class PokerScene extends Phaser.Scene {
       // once its done we change the image used, and make it fully flip
       onComplete: () => {
         // Change the texture to the new card face
-        card.setTexture(newTexture)
+        try { // Fix for race condition. I haven't replicated it in poker but it was happening in blackjack so I've added this just in case.
+          card.setTexture(newTexture)
+        } catch (e) {
+          return;
+        }
         // Flip back to full size
         this.tweens.add({
           targets: card,
@@ -656,8 +728,8 @@ class PokerScene extends Phaser.Scene {
     this.totalCreditsText.setText(`Credits: ${this.playerCredits}`)
     this.currentBet = 0
     this.resultsText.setVisible(false)
-    this.confirmCheckButton.setVisible(false).setActive(false)
-    this.confirmFoldButton.setVisible(false).setActive(false)
+    this.changeActionButtonState(false, this.confirmCheckText, this.confirmCheckButton, this.confirmCheckGraphics)
+    this.changeActionButtonState(false, this.confirmFoldText, this.confirmFoldButton, this.confirmFoldGraphics)
     this.changeBettingOptions(false, true)
   }
 
@@ -698,14 +770,16 @@ class PokerScene extends Phaser.Scene {
 
   // method to show or remove the betting options (0 ~ 10k, and place bets / cancel buttons)
   changeBettingOptions(option, raise){
-    this.optionButtons.forEach((item => item.setVisible(!option).setActive(!option)))
-
+    this.changeActionButtonState(!option, this.raiseText, this.raiseButton, this.raiseGraphics)
+    this.changeActionButtonState(!option, this.callText, this.callButton, this.callGraphics)
+    this.changeActionButtonState(!option, this.checkText, this.checkButton, this.checkGraphics)
+    this.changeActionButtonState(!option, this.foldText, this.foldButton, this.foldGraphics)
     if (raise) {
       this.possibleBetButtons.forEach((item) => {item.setVisible(option).setActive(option)})
       this.possibleRemoveBetButtons.forEach((item) => {item.setVisible(option).setActive(option)})  
     }
-    this.placeBetsButton.setVisible(option).setActive(option)
-    this.cancelActionButton.setVisible(option).setActive(option)
+    this.changeActionButtonState(option, this.placeBetsText, this.placeBetsButton, this.placeBetsGraphics)
+    this.changeActionButtonState(option, this.cancelText, this.cancelButton, this.cancelGraphics)
   }
 
   // method for the designated player to make a raise to the pot (not yet fully implemented)
@@ -731,17 +805,20 @@ class PokerScene extends Phaser.Scene {
     if(this.totalBet != this.overallHighestCurrentBet)
       this.resultsText.setVisible(true).setText("Cannot Check")
     else {
-      this.optionButtons.forEach((item => item.setVisible(false).setActive(false)))
+      this.changeActionButtonState(false, this.raiseText, this.raiseButton, this.raiseGraphics)
+      this.changeActionButtonState(false, this.callText, this.callButton, this.callGraphics)
+      this.changeActionButtonState(false, this.checkText, this.checkButton, this.checkGraphics)
+      this.changeActionButtonState(false, this.foldText, this.foldButton, this.foldGraphics)
       this.resultsText.setVisible(true).setText("Check to the next player?")
-      this.confirmCheckButton.setVisible(true).setActive(true)
-      this.cancelActionButton.setVisible(true).setActive(true)
+      this.changeActionButtonState(true, this.confirmCheckText, this.confirmCheckButton, this.confirmCheckGraphics)
+      this.changeActionButtonState(true, this.cancelText, this.cancelButton, this.cancelGraphics)
     }
   }
 
   confirmCheck(){
     if (this.currentTurn != this.room.sessionId) return
     if(this.totalBet == this.overallHighestCurrentBet) {
-      this.confirmCheckButton.setActive(false).setVisible(false)
+      this.changeActionButtonState(false, this.confirmCheckText, this.confirmCheckButton, this.confirmCheckGraphics)
       this.room.send('check')
     }
   }
@@ -749,16 +826,18 @@ class PokerScene extends Phaser.Scene {
   // method for the designated player to fold
   fold(){
     if (this.currentTurn != this.room.sessionId) return
-
-    this.optionButtons.forEach((item => item.setVisible(false).setActive(false)))
+    this.changeActionButtonState(false, this.raiseText, this.raiseButton, this.raiseGraphics)
+    this.changeActionButtonState(false, this.callText, this.callButton, this.callGraphics)
+    this.changeActionButtonState(false, this.checkText, this.checkButton, this.checkGraphics)
+    this.changeActionButtonState(false, this.foldText, this.foldButton, this.foldGraphics)
     this.resultsText.setVisible(true).setText("Are you sure you want to fold?")
-    this.confirmFoldButton.setVisible(true).setActive(true)
-    this.cancelActionButton.setVisible(true).setActive(true)
+    this.changeActionButtonState(true, this.confirmFoldText, this.confirmFoldButton, this.confirmFoldGraphics)
+    this.changeActionButtonState(true, this.cancelText, this.cancelButton, this.cancelGraphics)
   }
 
   confirmFold(){
     if (this.currentTurn != this.room.sessionId) return
-    this.confirmFoldButton.setActive(false).setVisible(false)
+    this.changeActionButtonState(false, this.confirmFoldText, this.confirmFoldButton, this.confirmFoldGraphics)
     this.room.send('fold')
   }
 
@@ -786,14 +865,16 @@ class PokerScene extends Phaser.Scene {
     }
     // set the next turn, and prompt them to go
     this.currentTurn = nextTurn
-    this.optionButtons.forEach(item => {item.setActive(this.currentTurn == this.room.sessionId).setVisible(this.currentTurn == this.room.sessionId)});
-
+    this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.raiseText, this.raiseButton, this.raiseGraphics)
+    this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.callText, this.callButton, this.callGraphics)
+    this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.checkText, this.checkButton, this.checkGraphics)
+    this.changeActionButtonState(this.currentTurn == this.room.sessionId, this.foldText, this.foldButton, this.foldGraphics)
     // send message back to signal end of dealer's turn
     this.room.send('dealerTurnHandled')
   }
 
   // method to end the game
-  endGame(winner, winnings, result) {
+  endGame(winnerName, winner, winnings, result) {
     if(this.room.state.waitingRoom.has(this.room.sessionId)) return
     this.currentTurn = "none"
     const centerX = this.cameras.main.centerX
@@ -815,30 +896,40 @@ class PokerScene extends Phaser.Scene {
       this.totalCreditsText.setText(`Credits: ${this.playerCredits}`)
     }
     else
-      this.resultsText.setText(`${winner} won this round${message}`).setVisible(true)
+      this.resultsText.setText(`${winnerName} won this round${message}`).setVisible(true)
 
     this.activeCards.keys().forEach(item => {
       if(this.activeCards.get(item).texture.key.includes('card'))
         this.flipCard(this.activeCards.get(item), item, item.height < item.width)
     })
 
-    this.optionButtons.forEach(item => {item.setActive(false).setVisible(false)});
-    this.cancelActionButton.setActive(false).setVisible(false)
-    this.playAgainButton = this.add
-      .text(centerX - (this.scale.width / 5), centerY + (this.scale.height / 6), 'Play Again', { fontSize: '48px', fill: '#0f0' })
-      .setInteractive()
-      .on('pointerdown', () => {
+    this.changeActionButtonState(false, this.raiseText, this.raiseButton, this.raiseGraphics)
+    this.changeActionButtonState(false, this.callText, this.callButton, this.callGraphics)
+    this.changeActionButtonState(false, this.checkText, this.checkButton, this.checkGraphics)
+    this.changeActionButtonState(false, this.foldText, this.foldButton, this.foldGraphics)
+    this.changeActionButtonState(false, this.cancelText, this.cancelButton, this.cancelGraphics)
+
+    const [playAgainText, playAgainButton, playAgainGraphics] = this.addActionButtons("Play Again", centerX - (this.scale.width / 6), centerY + (this.scale.height / 6.5), 
+      () => {
         this.resultsText.setText('Waiting for room owner...')
-        this.playAgainButton.destroy()
-        this.quitButton.destroy()
+        this.destroyButtons(this.playAgainText, this.playAgainButton, this.playAgainGraphics)
+        this.destroyButtons(this.quitText, this.quitButton, this.quitGraphics)
         if (this.room.sessionId == this.room.state.owner)
           this.room.send("newGame")
-      }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
+      }, '72px', '#0f0')
+    this.playAgainText = playAgainText
+    this.playAgainButton = playAgainButton
+    this.playAgainGraphics = playAgainGraphics
 
-    this.quitButton = this.add
-      .text(centerX + (this.scale.width / 5), centerY + (this.scale.height / 6), 'Quit', { fontSize: '48px', fill: '#f00' })
-      .setInteractive()
-      .on('pointerdown', () => window.location.href = '/').setOrigin(0.5, 0.5).setFontFamily('"Rowdies"')
+    const [quitText, quitButton, quitGraphics] = this.addActionButtons("Back To Lobby", centerX + (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => { 
+      if(this.room) this.room.leave()
+      history.back() }, '72px', '#f00')
+    this.quitText = quitText
+    this.quitButton = quitButton
+    this.quitGraphics = quitGraphics
+
+    this.changeActionButtonState(true, playAgainText, playAgainButton, playAgainGraphics)
+    this.changeActionButtonState(true, quitText, quitButton, quitGraphics)
   }
 }
 
