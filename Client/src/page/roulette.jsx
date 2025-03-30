@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
+import { Client, Room } from 'colyseus.js'
 import Phaser from 'phaser'
 
 // wheel animation based off https://phaser.io/news/2018/08/wheel-of-fortune-tutorial
@@ -23,6 +24,8 @@ class RouletteScene extends Phaser.Scene{
 
     constructor(){
         super("RouletteScene");
+        this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`)
+        this.room = Room
     }
  
     preload(){
@@ -35,7 +38,13 @@ class RouletteScene extends Phaser.Scene{
         this.load.image("chip", "/roulette/chip.png")
     }
  
-    create(){
+    async create(){
+        try {
+            this.room = await this.client.joinOrCreate("roulette")
+            console.log("Joined successfully!")
+        } catch (e) {
+            console.error(e)
+        }
         // ************************--TO-DO--************************ //
         // get user balance from db
         this.userBal = 10000
@@ -44,18 +53,19 @@ class RouletteScene extends Phaser.Scene{
 
         // get window size
         const sceneWidth = this.scale.width
-        const sceneHeight = this.scale.width
+        const sceneHeight = this.scale.height
 
+        const centerX = this.scale.width / 2
         const scaleFactor = Math.min(sceneWidth / 1920, sceneHeight / 1080)
 
         // scene container
-        this.sceneContainer = this.add.container(0, 0);
+        this.sceneContainer = this.add.container(centerX, 0);
         this.sceneContainer.setScale(scaleFactor)
-        //this.scale.on('resize', this.resizeScene, this);
+        //this.scale.on('resize', this.resizeScene, this); // not doing anything... why?
 
         // roulette_wheel @ @ https://www.vexels.com/png-svg/preview/151205/roulette-wheel-icon
         // set for input and add circular hit area
-		this.roulette_wheel = this.add.sprite(960, 299, "wheel").setInteractive(new Phaser.Geom.Circle(240.5, 240.5, 235), Phaser.Geom.Circle.Contains);
+		this.roulette_wheel = this.add.sprite(0, 299, "wheel").setInteractive(new Phaser.Geom.Circle(240.5, 240.5, 235), Phaser.Geom.Circle.Contains);
 		this.roulette_wheel.setScale(0.8)
         this.sceneContainer.add(this.roulette_wheel)
         // listener to call spinWheel
@@ -64,12 +74,12 @@ class RouletteScene extends Phaser.Scene{
         })
 
 		// roulette_wheel_bg
-		this.roulette_wheel_bg = this.add.image(960, 299, "wheel-bg");
+		this.roulette_wheel_bg = this.add.image(0, 299, "wheel-bg");
 		this.roulette_wheel_bg.setScale(0.77)
         this.sceneContainer.add(this.roulette_wheel_bg)
 
 		// betTable @ https://stock.adobe.com/search?k=roulette+table&asset_id=409514024
-		this.betTable = this.add.image(960, 700, "betTable");
+		this.betTable = this.add.image(0, 700, "betTable");
 		this.betTable.setScale(0.85)
 		//this.betTable.angle = 90; // used with first version where p1's bet table is vertical on the left
         this.sceneContainer.add(this.betTable)
@@ -81,21 +91,21 @@ class RouletteScene extends Phaser.Scene{
         this.sceneContainer.add(this.txt_info)
 
         // user balance text field
-        this.txt_userBal = this.add.text(800, 10, `Balance: ${this.userBal} credits`, {})
+        this.txt_userBal = this.add.text(-160, 10, `Balance: ${this.userBal} credits`, {})
         this.txt_userBal.setStyle({"align": "center", "fontSize": "24px"})
         this.sceneContainer.add(this.txt_userBal)
 
         // result of roulette spin text field
-        this.txt_spinResult = this.add.text(930, 82, "", {})
+        this.txt_spinResult = this.add.text(-30, 82, "", {})
         this.sceneContainer.add(this.txt_spinResult)
         
         // arrays for betting logic
         this.straightUp = new Array(36) //35:1
-        this.split = new Array(57) //17:1
-        this.street = new Array(12) //11:1
-        this.cornerBet = new Array(22) //8:1
-        this.fiveNumber //6:1
-        this.line = new Array(11) //5:1
+        //this.split = new Array(57) //17:1
+        //this.street = new Array(12) //11:1
+        //this.cornerBet = new Array(22) //8:1
+        //this.fiveNumber //6:1
+        //this.line = new Array(11) //5:1
         this.dozensCols = new Array(6) //2:1
         this.evenMoney = new Array(6)
 
@@ -115,6 +125,7 @@ class RouletteScene extends Phaser.Scene{
         var y = chipOffsetY;
         var chipScale = 0.20
         
+        /* add all chip images to bet table */
         // straight-up bet chips
         for (let i = 0; i < 12; i++) {
             for (let j = 0; j < 3; j++) { 
@@ -219,12 +230,12 @@ class RouletteScene extends Phaser.Scene{
 
         /* other players */
         // betting tables
-        this.p2BetTable = this.add.image(500, 295, "betTable");
+        this.p2BetTable = this.add.image(-460, 295, "betTable");
 		this.p2BetTable.setScale(0.85)
 		this.p2BetTable.angle = 90;
         this.sceneContainer.add(this.p2BetTable)
 
-        this.p3BetTable = this.add.image(1420, 295, "betTable");
+        this.p3BetTable = this.add.image(460, 295, "betTable");
 		this.p3BetTable.setScale(0.85)
 		this.p3BetTable.angle = -90;
         this.sceneContainer.add(this.p3BetTable)
@@ -389,18 +400,18 @@ class RouletteScene extends Phaser.Scene{
         for (let i = 0; i < this.straightUp.length; i++) {
             this.straightUp[i] = 0;
         }
-        for (let i = 0; i < this.split.length; i++) {
-            this.split[i] = 0;
-        }
-        for (let i = 0; i < this.street.length; i++) {
-            this.street[i] = 0;
-        }
-        for (let i = 0; i < this.cornerBet.length; i++) {
-            this.cornerBet[i] = 0;
-        }
-        for (let i = 0; i < this.line.length; i++) {
-            this.line[i] = 0;
-        }
+        // for (let i = 0; i < this.split.length; i++) {
+        //     this.split[i] = 0;
+        // }
+        // for (let i = 0; i < this.street.length; i++) {
+        //     this.street[i] = 0;
+        // }
+        // for (let i = 0; i < this.cornerBet.length; i++) {
+        //     this.cornerBet[i] = 0;
+        // }
+        // for (let i = 0; i < this.line.length; i++) {
+        //     this.line[i] = 0;
+        // }
         for (let i = 0; i < this.dozensCols.length; i++) {
             this.dozensCols[i] = 0;
         }
@@ -532,7 +543,7 @@ class RouletteScene extends Phaser.Scene{
     }
 
     resizeScene(gameSize) {
-        const scaleFactor = Math.min(gameSize.width / 1150, gameSize.height / 600)
+        const scaleFactor = Math.min(gameSize.width / 1920, gameSize.height / 1080)
         this.sceneContainer.setScale(scaleFactor)
     }
 }

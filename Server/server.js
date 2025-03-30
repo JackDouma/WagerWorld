@@ -8,6 +8,7 @@ const { MyRoom } = require('./rooms/MyRoom');
 const { CardRoom } = require('./rooms/CardRoom');
 const { BlackjackRoom } = require('./rooms/BlackjackRoom');
 const HorseRacingRoom = require('./rooms/HorseBettingRoom');
+const { RouletteRoom } = require('./rooms/RouletteRoom');
 
 const app = express();
 const port = process.env.PORT || 2567;
@@ -27,6 +28,7 @@ gameServer.define('card_room', CardRoom);
 
 gameServer.define('blackjack', BlackjackRoom);
 gameServer.define('horse_racing', HorseRacingRoom);
+gameServer.define('roulette', RouletteRoom);
 
 // Use JSON body parsing
 app.use(express.json());
