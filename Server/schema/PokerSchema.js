@@ -18,51 +18,57 @@ schema.defineTypes(Card, {
     faceUp: "boolean"
 });
 
-class BlackjackPlayer extends Schema {
+class PokerPlayer extends Schema {
     constructor() {
         super();
         this.name = '';
-        this.fireBaseId = '';
         this.hand = new ArraySchema();
+        this.fireBaseId = ''
         this.isReady = false;
+        this.lastAction = "none"
+        this.blind = 0;
         this.bet = 0;
-        this.handValue = 0;
         this.totalCredits = 0;
         this.startingCredits = 0;
     }
 }
-schema.defineTypes(BlackjackPlayer, {
+schema.defineTypes(PokerPlayer, {
     name: "string",
     hand: [ Card ],
     isReady: "boolean",
+    lastAction: "string",
+    blind: "number",
     bet: "number",
-    handValue: "number",
     totalCredits: "number",
     startingCredits: "number"
 });
 
-class BlackjackState extends Schema {
+class PokerState extends Schema {
     constructor() {
         super();
         this.players = new MapSchema();
         this.waitingRoom = new MapSchema();
-        this.dealer = new BlackjackPlayer();
+        this.dealer = new ArraySchema();
         this.deck = new ArraySchema();
         this.currentTurn = '';
         this.gamePhase = 'waiting';
         this.owner = '';
+        this.pot = 0;
+        this.highestBet = 0;
         this.disconnectCheck = false;
     }
 }
-schema.defineTypes(BlackjackState, {
-    players: { map: BlackjackPlayer },
-    waitingRoom: { map: BlackjackPlayer },
-    dealer: BlackjackPlayer,
+schema.defineTypes(PokerState, {
+    players: { map: PokerPlayer },
+    waitingRoom: { map: PokerPlayer },
+    dealer: [ Card ],
     deck: [ Card ],
     currentTurn: "string",
     gamePhase: "string",
     owner: "string",
+    pot: "number",
+    highestBet: "number",
     disconnectCheck: "boolean"
 });
 
-module.exports = { Card, BlackjackPlayer, BlackjackState };
+module.exports = { Card, PokerPlayer, PokerState };

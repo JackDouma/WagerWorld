@@ -3,11 +3,12 @@ import { useParams, useNavigate } from "react-router-dom";
 import { doc, getDoc, updateDoc, deleteDoc, getFirestore } from "firebase/firestore";
 import { auth } from "../../firebase";
 import { signOut, deleteUser, onAuthStateChanged } from "firebase/auth";
+import { Typography, Box, TextField, Button, Card, TableContainer, Table, TableHead, TableRow, TableCell, TableBody, TablePagination, TableSortLabel } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
 const db = getFirestore();
 
-function ViewUserById() 
-{
+function ViewUserById() {
     const { userId } = useParams();
     const navigate = useNavigate();
 
@@ -18,43 +19,41 @@ function ViewUserById()
     const [editMode, setEditMode] = useState(false);
     const [isAccountOwner, setIsAccountOwner] = useState(false);
     const [gameHistory, setGameHistory] = useState([]);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [order, setOrder] = useState("desc");
+    const theme = useTheme();
 
     useEffect(() => {
         // check if user is the account owner
         const unsubscribe = onAuthStateChanged(auth, (user) => {
-            if (user?.uid === userId) 
-            {
+            if (user?.uid === userId) {
                 setIsAccountOwner(true);
             }
         });
 
-        async function fetchUser() 
-        {
+        async function fetchUser() {
             try {
                 const userDoc = await getDoc(doc(db, "users", userId));
 
                 // found user
-                if (userDoc.exists()) 
-                {
+                if (userDoc.exists()) {
                     const userData = userDoc.data();
                     setUserName(userData.name || "");
                     setUserEmail(userData.email || "");
                     setUserOrg(userData.org || "");
                     setGameHistory(userData.gameHistory || []);
-                } 
+                }
                 // user not found
-                else 
-                {
+                else {
                     console.error("User not found");
                     navigate("/");
                 }
-            } 
-            catch (error) 
-            {
+            }
+            catch (error) {
                 console.error("Error fetching user:", error);
-            } 
-            finally 
-            {
+            }
+            finally {
                 setLoading(false);
             }
         }
@@ -63,110 +62,261 @@ function ViewUserById()
 
     // update name
     const handleSaveName = async () => {
-        try 
-        {
+        try {
+            // update user collection
             await updateDoc(doc(db, "users", userId), { name: userName });
-            setEditMode(false);
-            alert("Name updated!");
+    
+            // update org collection
+            const orgRef = doc(db, "orgs", userOrg.orgId);
+            const orgDoc = await getDoc(orgRef);
+    
+            if (orgDoc.exists()) 
+            {
+                const members = orgDoc.data().member;
+                const memberIndex = members.findIndex(m => m.id === userId);
+    
+                // if member found, update and save
+                if (memberIndex !== -1) 
+                {
+                    const updatedMembers = [...members];
+                    updatedMembers[memberIndex] = { ...updatedMembers[memberIndex], name: userName };
+    
+                    await updateDoc(orgRef, { member: updatedMembers });
+    
+                    setEditMode(false);
+                    alert("Name updated!");
+                } 
+            } 
         } 
         catch (error) 
         {
             console.error("ERROR: ", error);
         }
     };
+    
 
     // Delete user account
     const handleDeleteAccount = async () => {
         const confirmDelete = window.confirm("Are you sure you want to delete your account? This action cannot be undone.");
 
-        if (!confirmDelete)
-        {
+        if (!confirmDelete) {
             return;
         }
 
-        try 
-        {
+        try {
             await deleteDoc(doc(db, "users", userId));
             await deleteUser(auth.currentUser);
             alert("Account deleted.");
             navigate("/");
-        } 
-        catch (error) 
-        {
+        }
+        catch (error) {
             console.error("Error deleting account:", error);
         }
     };
 
     // Sign out user
     const handleLogout = async () => {
-        try 
-        {
+        try {
             await signOut(auth);
             alert("Signed out.");
-            navigate("/signin");
-        } 
-        catch (error) 
-        {
+            navigate("/");
+        }
+        catch (error) {
             console.error("ERROR: ", error);
         }
     };
 
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
+    const handleSort = () => {
+        setOrder((prevOrder) => (prevOrder === "asc" ? "desc" : "asc"));
+    };
+
+    const sortedGameHistory = [...gameHistory].sort((a, b) => {
+        const dateA = a.date.toDate();
+        const dateB = b.date.toDate();
+        return order === "asc" ? dateA - dateB : dateB - dateA;
+    });
+
+    useEffect(() => {
+        document.body.style.backgroundColor = "#ffe5bd";
+        return () => {
+            document.body.style.backgroundColor = '';
+        };
+    }, []);
+
     if (loading) return <p>Loading...</p>;
 
     return (
-        <main>
-        <h1>User Profile</h1>
-        
-        <div>
-            {isAccountOwner && editMode ? (
-                
-                <>
-                    <input 
-                        type="text" 
-                        value={userName} 
-                        onChange={(e) => setUserName(e.target.value)}
-                    />
-                    <button onClick={handleSaveName}>Save</button>
-                </>
+        <Box component="main">
+            <Card
+                sx={{
+                    padding: '30px',
+                    borderRadius: '12px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                }}
+            >
+
+                <Typography variant="heading"
+                    sx={{
+                        fontSize: '2.5vw',
+                        color: theme.palette.primary.main,
+                    }}
+                >
+                    User Profile
+                </Typography>
+
+                {isAccountOwner && editMode ? (
+                    <Box display='flex' justifyContent='center' alignItems='center' flexDirection='row' sx={{ marginBottom: '10px' }}>
+                        <TextField label="Name" margin="dense" variant="outlined" type="text" value={userName} onChange={(e) => setUserName(e.target.value)}
+                            sx={{
+                                '& .MuiInputLabel-root': {
+                                    ...theme.typography.general,
+                                    '&.Mui-focused, &.MuiFormLabel-filled': {
+                                        transform: 'translate(14px, -10px) scale(0.85)',
+                                    },
+                                },
+                                '& .MuiInputBase-input': {
+                                    ...theme.typography.general,
+                                }
+                            }}
+                        />
+                        <Button variant="contained" size="large" onClick={handleSaveName}
+                            sx={{
+                                backgroundColor: theme.palette.secondary.main,
+                                color: theme.palette.secondary.contrastText,
+                                "&:hover": { backgroundColor: "#FFC700" },
+                                borderRadius: "40px",
+                                textTransform: "none",
+                                fontSize: "1.5rem",
+                                marginLeft: '10px',
+                                height: '46px',
+                            }}
+                        >
+                            <Typography variant="btn">Save</Typography>
+                        </Button>
+
+                    </Box>
                 ) : (
-                <>
-                    <h2>Name: {userName}</h2>
-                    {isAccountOwner && <button onClick={() => setEditMode(true)}>Edit Name</button>}
-                </>
-            )}
+                    <Typography variant="general" sx={{ fontSize: '1.5rem', marginBottom: '10px', marginTop: '10px' }} >
+                        <strong>Name:</strong> {userName} {isAccountOwner && <i className="far fa-edit" style={{ cursor: 'pointer' }} onClick={() => setEditMode(true)}></i>}
+                    </Typography>
+                )}
 
-            {isAccountOwner && (
-                <h2>Email: {userEmail}</h2>
-            )}
-        </div>
+                {isAccountOwner && (
+                    <Typography variant="general" sx={{ fontSize: '1.5rem', marginBottom: '30px', }}><strong>Email:</strong> {userEmail}</Typography>
+                )}
 
-        <h2>Game History</h2>
-        <table>
-            <thead>
-            <tr>
-                <th>Game</th>
-                <th>Result</th>
-                <th>Date</th>
-            </tr>
-            </thead>
-            <tbody>
-            {gameHistory.map((game, index) => (
-                <tr key={index}>
-                    <td>{game.gameName}</td>
-                    <td>{game.result}</td>
-                    <td>{game.date.toDate().toLocaleString()}</td>
-                </tr>
-            ))}
-            </tbody>
-        </table>
+                <Typography variant="heading"
+                    sx={{
+                        fontSize: '1.5vw',
+                        color: theme.palette.primary.main,
+                        marginBottom: '10px',
+                    }}
+                >
+                    Game History
+                </Typography>
 
-        {isAccountOwner && (
-            <>
-                <button onClick={handleLogout}>Log Out</button>
-                <button onClick={handleDeleteAccount} style={{ background: "red" }}>Delete Account</button>
-            </>
-        )}
-        </main>
+                <TableContainer sx={{ borderRadius: '8px' }}>
+                    <Table size="small">
+                        <TableHead>
+                            <TableRow sx={{ backgroundColor: theme.palette.secondary.main }}>
+                                <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Game</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>Result</TableCell>
+                                <TableCell sx={{ fontWeight: 'bold', fontFamily: 'Source Code Pro' }}>
+                                    <TableSortLabel active direction={order} onClick={handleSort}>Date</TableSortLabel>
+                                </TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {sortedGameHistory
+                                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage) // pagination
+                                .map((game, index) => (
+                                    <TableRow
+                                        key={index}
+                                        sx={{
+                                            backgroundColor: "#fffced",
+                                            '&:last-child td, &:last-child th': { border: 0 },
+                                        }}
+                                    >
+                                        <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{game.gameName}</TableCell>
+                                        <TableCell
+                                            sx={{
+                                                fontFamily: 'Source Code Pro',
+                                                backgroundColor: game.result == 0 ? "#def2ff" : (game.result > 0 ? "#d4f8d4" : "#f8d4d4"), // light green for positive, light red for negative
+                                                textAlign: 'right',
+                                            }}
+                                        >
+                                            {game.result.toLocaleString()}
+                                        </TableCell>
+                                        <TableCell sx={{ fontFamily: 'Source Code Pro' }}>{game.date.toDate().toLocaleString()}</TableCell>
+                                    </TableRow>
+                                ))}
+                        </TableBody>
+                    </Table>
+                </TableContainer>
+                <TablePagination
+                    rowsPerPageOptions={[5, 10, 25]}
+                    component="div"
+                    count={gameHistory.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                    sx={{
+                        '& .MuiTablePagination-toolbar, & .MuiTablePagination-selectLabel, & .MuiTablePagination-displayedRows, & .MuiTablePagination-select': {
+                            fontFamily: 'Source Code Pro',
+                        },
+                    }}
+                />
+
+                {isAccountOwner && (
+                    <Box display={"flex"} sx={{ marginTop: '20px' }}>
+
+                        <Button variant="contained" size="large" onClick={handleDeleteAccount}
+                            sx={{
+                                backgroundColor: 'lightgray',
+                                color: theme.palette.secondary.contrastText,
+                                "&:hover": { backgroundColor: "red" },
+                                borderRadius: "40px",
+                                textTransform: "none",
+                                padding: "5px 30px",
+                                fontSize: "1.5rem",
+                                marginTop: "20px",
+                                marginRight: '10px',
+                            }}
+                        >
+                            <Typography variant="btn">Delete Account</Typography>
+                        </Button>
+
+                        <Button variant="contained" size="large" onClick={handleLogout}
+                            sx={{
+                                backgroundColor: theme.palette.secondary.main,
+                                color: theme.palette.secondary.contrastText,
+                                "&:hover": { backgroundColor: "#FFC700" },
+                                borderRadius: "40px",
+                                textTransform: "none",
+                                padding: "5px 30px",
+                                fontSize: "1.5rem",
+                                marginTop: "20px",
+                                marginLeft: '10px',
+                            }}
+                        >
+                            <Typography variant="btn">Log Out</Typography>
+                        </Button>
+
+                    </Box>
+                )}
+            </Card>
+        </Box >
     );
 }
 
