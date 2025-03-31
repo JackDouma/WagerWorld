@@ -122,7 +122,6 @@ function RoomPage() {
     return (
         <div>
             <h1>Room ID: {roomId}</h1>
-            <h2>Room Type: {roomType}</h2>
             <h2>Select a Game:</h2>
             
             <div className="games">
