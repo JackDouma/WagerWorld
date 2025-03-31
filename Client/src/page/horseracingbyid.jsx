@@ -71,7 +71,7 @@ const HorseRacingGame = () => {
               );
               if (gameHorse) {
                 gameHorse.x = horse.x;
-                gameHorse.setTint(parseInt(horse.color.replace("#", ""), 16));
+               // gameHorse.setTint(parseInt(horse.color.replace("#", ""), 16));
                 horse.speed > 0 ? gameHorse.anims.play("gallop", true) : gameHorse.anims.pause();
               }
             });
@@ -132,7 +132,7 @@ const HorseRacingGame = () => {
         create() {
           this.anims.create({
             key: "gallop",
-            frames: this.anims.generateFrameNumbers("horse", { start: 0, end: 4 }),
+            frames: this.anims.generateFrameNumbers("horse", { start: 4, end: 0 }),
             frameRate: 12,
             repeat: -1,
           });
@@ -146,7 +146,7 @@ const HorseRacingGame = () => {
             horse.anims.play("gallop");
             horse.anims.pause();
             horse.on("pointerdown", () => setSelectedHorse(i));
-            this.add.text(10, (i + 1) * 80 - 40, `Horse ${i + 1}`, {
+            this.add.text(350, (i + 1) * 80 - 40, `Horse ${i + 1}`, {
               color: "#000",
               fontSize: "16px",
             });
