@@ -88,6 +88,9 @@ class RouletteScene extends Phaser.Scene{
 
         try {
             const firestoreBalance = userDoc.data().balance || 10000;
+            console.log(firestoreBalance)
+            this.userBal = firestoreBalance
+            this.newUserBal = this.userBal // temp save necessary in case page is refreshed before the wheel is spun     
 
             this.room = await this.client.joinById(this.roomId, { playerId: playerId || "anonymous", balance: firestoreBalance});
             console.log("Joined successfully!")
@@ -97,9 +100,8 @@ class RouletteScene extends Phaser.Scene{
 
         // ************************--TO-DO--************************ //
         // get user balance from db
-        this.userBal = 10000
         // ********************************************************* //
-        this.newUserBal = 10000 // temp save necessary in case page is refreshed before the wheel is spun     
+        // this.newUserBal = 10000 // temp save necessary in case page is refreshed before the wheel is spun     
 
         // get window size
         const sceneWidth = this.scale.width
@@ -522,6 +524,7 @@ class RouletteScene extends Phaser.Scene{
             this.newUserBal += payout
 
             var profit = this.newUserBal - this.userBal
+            console.log(this.newUserBal, this.userBal, profit)
 
             // ******************************************************* //
             // update user balance in db
