@@ -277,13 +277,14 @@ class RouletteScene extends Phaser.Scene{
             this.sessionID = payload.sessionId
             console.log(`Session ID: ${this.sessionID}`)
             if (payload.otherPlayers[0] != null) {
-                console.log(`P2: ${payload.otherPlayers[0]}`)
+                //console.log(`P2: ${payload.otherPlayers[0]}`)
                 this.player2 = payload.otherPlayers[0].sessionId
                 this.updateBetTables(this.p2Container, payload.otherPlayers[0].chipAlphas)
-            } else if (payload.otherPlayers[1] != null) {
-                console.log(`P3: ${payload.otherPlayers[1]}`)
-                this.player2 = payload.otherPlayers[1].sessionId
-                this.updateBetTables(this.p2Container, payload.otherPlayers[1].chipAlphas)
+            }
+            if (payload.otherPlayers[1] != null) {
+                //console.log(`P3: ${payload.otherPlayers[1]}`)
+                this.player3 = payload.otherPlayers[1].sessionId
+                this.updateBetTables(this.p3Container, payload.otherPlayers[1].chipAlphas)
             }
         })
         this.room.state.players.onAdd((player, sessionId) => {
@@ -291,7 +292,6 @@ class RouletteScene extends Phaser.Scene{
             else {
                 if (this.player2 == null) {
                     this.player2 = sessionId
-                    
                 }
                 else if (this.player3 == null) {
                     this.player3 = sessionId
@@ -311,13 +311,13 @@ class RouletteScene extends Phaser.Scene{
                 this.p3Container.getAt(index).alpha = 100
         })
         this.room.onMessage("playerLeft", (payload) => {
-            if (payload.sessionID == this.player2) {
+            if (payload.sessionId == this.player2) {
                 this.player2 = null
                 this.p2Container.getAll().forEach(chip => {
                     chip.alpha = 0.01
                 })
             }
-            else if (payload.sessionID == this.player3) {
+            else if (payload.sessionId == this.player3) {
                 this.player3 = null
                 this.p3Container.getAll().forEach(chip => {
                     chip.alpha = 0.01

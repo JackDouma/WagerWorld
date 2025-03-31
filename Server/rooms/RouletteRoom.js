@@ -101,7 +101,7 @@ class RouletteRoom extends Room {
         }
         else {
           // send session ID and what his current bet table looks like
-          console.log(sessionId, Array.from(player.chipAlphas))
+          //console.log(sessionId, Array.from(player.chipAlphas))
           otherPlayers.push({
             sessionId: sessionId,
             chipAlphas: Array.from(player.chipAlphas)})
