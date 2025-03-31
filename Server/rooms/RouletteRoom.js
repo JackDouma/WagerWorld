@@ -10,6 +10,11 @@ const { ArraySchema } = require("@colyseus/schema");
 //const { default: RouletteGame } = require("../../Client/src/page/roulette");
 
 class RouletteRoom extends Room {
+  constructor(firestore) {
+    super();
+    this.firestore = firestore;
+  }
+
   onCreate(options) {
     this.setState(new RouletteState());
 
@@ -103,6 +108,7 @@ class RouletteRoom extends Room {
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME
     player.name = options.name || client.sessionId;
     player.total = 0 // this is total profit/loss on session
+    player.fireBaseId = options.playerId;
     
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase == "playing")
@@ -151,12 +157,22 @@ class RouletteRoom extends Room {
     if (player) {
       // remove player
       this.state.players.delete(client.sessionId);
+
+      // Update isInGame to false
+      firestore.collection("users").doc(player.fireBaseId).update({
+          isInGame: false,
+      });
     }
     // if not found, check the watiting room and remove from there
     else {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
       if(waitingPlayer)
+      {
         this.state.waitingRoom.delete(client.sessionId)
+        firestore.collection("users").doc(client.sessionId).update({
+          isInGame: false,
+        });
+      }
     }
     // if the room owner was the once that left, then make the next guy in line the owner
     if (!this.state.players.has(this.state.owner))
@@ -174,6 +190,17 @@ class RouletteRoom extends Room {
     else
       this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players});
   }
+
+  // handles when the room is disposed
+  onDispose() {
+      // make sure all clients are set to not in game
+      this.state.players.forEach((player) => {
+        firestore.collection("users").doc(player.fireBaseId).update({
+          isInGame: false,
+        });
+      });
+  }
+
 }
 
 module.exports = { RouletteRoom };
