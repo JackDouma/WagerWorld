@@ -17,16 +17,17 @@ class RouletteRoom extends Room {
 
   onCreate(options) {
     this.setState(new RouletteState());
+    this.autoDispose = false;
 
     this.maxClients = options.maxPlayers || 3;
 
     // Add timeout that destroys room if no players join (needed for /create-room endpoint)
-    this.emptyRoomTimeout = setTimeout(() => {
-      if (this.clients.length === 0) {
-        console.log(`Room ${this.roomId} destroyed due to inactivity.`);
-        this.disconnect();
-      }
-    }, 30000);
+    // this.emptyRoomTimeout = setTimeout(() => {
+    //   if (this.clients.length === 0) {
+    //     console.log(`Room ${this.roomId} destroyed due to inactivity.`);
+    //     this.disconnect();
+    //   }
+    // }, 30000);
 
     // Add logging to track player count
     console.log(`Room created. Current player count: ${this.state.players.size}`);
@@ -46,9 +47,31 @@ class RouletteRoom extends Room {
     // a player readied up
     this.onMessage("ready", (client) => {
       const player = this.state.players.get(client.sessionId);
-      player.isReady = true
-      this.broadcast("playerReady", {sessionId: client.sessionId, isReady: player.isReady})
-      this.checkGameStart()
+      if (player) {
+        console.log(player.totalCredits)
+        player.totalCredits -= player.bet
+        console.log(player.totalCredits)
+        firestore.collection('users').doc(player.fireBaseId).get()
+        .then(doc => {
+          if (!doc.exists) 
+          {
+            console.warn(`User doc not found for ${player.fireBaseId}`);
+            return;
+          }
+          return firestore.collection('users').doc(player.fireBaseId).update({
+            balance: player.totalCredits,
+          });
+        })
+        .then(() => {
+          console.log(`Balance updated for ${player.fireBaseId}`);
+        })
+        .catch((error) => {
+          console.error(`Error updating user ${player.fireBaseId}:`, error);
+        });
+        player.isReady = true
+        this.broadcast("playerReady", {sessionId: client.sessionId, isReady: player.isReady})
+        this.checkGameStart()      
+      }
     })
 
     // once the game is reset, reset the owner as well
@@ -56,9 +79,41 @@ class RouletteRoom extends Room {
       console.log("Resetting Game...")
       this.state.owner = ''
       const player = this.state.players.get(client.sessionId);
+      player.startingCredits += payload.profit
+      firestore.collection('users').doc(player.fireBaseId).get()
+          .then(doc => {
+            if (!doc.exists) 
+            {
+              console.warn(`User doc not found for ${player.fireBaseId}`);
+              return;
+            }
+  
+            const result = player.totalCredits - player.startingCredits;
+  
+            const historyEntry = {
+              date: new Date(),
+              gameName: "Roulette",
+              result: result
+            };
+
+            console.log(player.startingCredits, payload.profit, result)
+  
+            return firestore.collection('users').doc(player.fireBaseId).update({
+              balance: player.startingCredits,
+              gameHistory: FieldValue.arrayUnion(historyEntry)
+            });
+          })
+          .then(() => {
+            console.log(`Balance and game history updated for ${player.fireBaseId}`);
+          })
+          .catch((error) => {
+            console.error(`Error updating user ${player.fireBaseId}:`, error);
+          });
+
       player.isReady = false
       player.bet = 0
       player.total += payload.profit
+      player.startingCredits = player.totalCredits
       for (var i=0; i<48; i++) {
         player.chipAlphas[i] = 0.01
       }
@@ -100,15 +155,31 @@ class RouletteRoom extends Room {
   }
 
   // handles when a player joins
-  onJoin(client, options) {
+  async onJoin(client, options) {
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new RoulettePlayer();
 
-    // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME
-    player.name = options.name || client.sessionId;
-    player.total = 0 // this is total profit/loss on session
-    player.fireBaseId = options.playerId;
+    var playerName = "";
+    if (options.playerId || this.playerId) {
+      try {
+        const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+        if (playerDoc.exists) {
+          player.fireBaseId = options.playerId;
+          playerName = playerDoc.data().name;
+          player.name = playerName;
+          player.total = 0 // this is total profit/loss on session
+          console.log(`${playerName} joined!`);
+        } else {
+          console.log(`Player with ID ${options.playerId} not found.`);
+        }
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+      }
+    }
+
+    player.totalCredits = options.balance || 10_000
+    player.startingCredits = player.totalCredits
     
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase == "playing")
@@ -116,7 +187,7 @@ class RouletteRoom extends Room {
     // otherwise add like normal, and if they're the room creator, make them the owner
     else {
       this.state.players.set(client.sessionId, player);
-      if (this.state.owner == '') {
+      if (this.state.owner == '' || this.state.owner === undefined) {
         this.state.owner = client.sessionId; // set the first player to join as the owner
       }
     }
@@ -181,26 +252,26 @@ class RouletteRoom extends Room {
     console.log(`Player left. Remaining players: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
 
     // if there is nobody remaining in the room, then destroy it
-    if(this.state.players.size == 0) {
-      console.log("No players remain, destroying room")
-      this.broadcast("roomDestroyed")
-      this.disconnect()
-    }
+    // if(this.state.players.size == 0) {
+    //   console.log("No players remain, destroying room")
+    //   this.broadcast("roomDestroyed")
+    //   this.disconnect()
+    // }
     // otherwise tell the clients that someone left
-    else
-      this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players});
+    // else
+    this.broadcast("playerLeft", { sessionId: client.sessionId, players: this.state.players});
   }
 
   // handles when the room is disposed
   onDispose() {
-      // make sure all clients are set to not in game
-      this.state.players.forEach((player) => {
-        firestore.collection("users").doc(player.fireBaseId).update({
-          isInGame: false,
-        });
+    console.log("Here disposing...")
+    // make sure all clients are set to not in game
+    this.state.players.forEach((player) => {
+      firestore.collection("users").doc(player.fireBaseId).update({
+        isInGame: false,
       });
+    });
   }
-
 }
 
 module.exports = { RouletteRoom };
