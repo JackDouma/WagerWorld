@@ -9,6 +9,7 @@ const { CardRoom } = require('./rooms/CardRoom');
 const { BlackjackRoom } = require('./rooms/BlackjackRoom');
 const { admin, firestore, auth } = require('./firebase'); 
 const HorseRacingRoom = require('./rooms/HorseBettingRoom');
+const { RouletteRoom } = require('./rooms/RouletteRoom');
 const { PokerRoom } = require('./rooms/PokerRoom');
 const { Lobby } = require('./rooms/Lobby');
 const endpoints = require('./endpoints');
@@ -41,6 +42,7 @@ const gameServer = new Server({
 gameServer.define('card_room', CardRoom);
 gameServer.define('blackjack', BlackjackRoom).enableRealtimeListing();
 gameServer.define('horse_racing', HorseRacingRoom);
+gameServer.define('roulette', RouletteRoom);
 gameServer.define('poker', PokerRoom);
 gameServer.define('lobby', Lobby);
 
