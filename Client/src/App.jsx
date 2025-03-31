@@ -25,6 +25,7 @@ import HorseRacing from './page/horseRacing.jsx';
 import HorseRacingById from './page/horseracingbyid.jsx';
 import Poker from './page/poker.jsx';
 import Roulette from './page/roulette.jsx';
+import RouletteById from './page/roulettebyid.jsx';
 import PokerById from './page/pokerbyid.jsx';
 import OrgRequest from './page/orgrequest.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
@@ -77,6 +78,12 @@ function AppContent() {
             title = 'Create Org - WW Admin';
         } else if (pathname.startsWith('/editorg')) {
             title = "Edit Org - WW Admin";
+        }
+        else if (pathname.startsWith('/roulette')) {
+            title = "Roulette - WagerWorld";
+        }
+        else if (pathname.startsWith('/roulettebyid')) {
+            title = "Roulette - WagerWorld";
         }
         else if (pathname.startsWith('/leaderboard')) {
             title = "Leaderboard - WagerWorld";
@@ -161,6 +168,13 @@ function AppContent() {
                     <Route
                         path=":roomId"
                         element={<><Header /><PokerById /></>}
+                    />
+                </Route>
+                <Route path="/roulette">
+                    <Route index element={<><Header /><Roulette /></>} />
+                    <Route
+                        path=":roomId"
+                        element={<><Header /><RouletteById /></>}
                     />
                 </Route>
 
