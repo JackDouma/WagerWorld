@@ -27,8 +27,8 @@ class RouletteScene extends Phaser.Scene{
         this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`)
         this.room = Room
         this.sessionID
-        this.player2 = null
-        this.player3 = null
+        this.player2 = {sessionId: null, name: null, isReady: false, bet: 0, total: 0, lastSpin: 0}
+        this.player3 = {sessionId: null, name: null, isReady: false, bet: 0, total: 0, lastSpin: 0}
         this.ready = false
     }
 
@@ -76,7 +76,7 @@ class RouletteScene extends Phaser.Scene{
         //this.scale.on('resize', this.resizeScene, this); // not doing anything... why?
 
         // logo
-        this.logo = this.add.image(0, 40, "logo")
+        this.logo = this.add.image(0, 50, "logo")
         this.logo.setScale(0.5)
         this.sceneContainer.add(this.logo)
 
@@ -135,7 +135,7 @@ class RouletteScene extends Phaser.Scene{
                     this.room.send("ready")
             })
         this.sceneContainer.add(this.txt_readyBtn)
-        
+
         // arrays for betting logic
         this.straightUp = new Array(36) //35:1
         //this.split = new Array(57) //17:1
@@ -277,6 +277,34 @@ class RouletteScene extends Phaser.Scene{
 		this.p3BetTable.angle = -90;
         this.sceneContainer.add(this.p3BetTable)
 
+        // text fields
+        this.txt_p2Name = this.add.text(-770, 50, "[NO PLAYER]", {
+            fontSize: '28px',
+            fontStyle: 'bold',
+            wordWrap: {width: 210}
+        })
+        this.sceneContainer.add(this.txt_p2Name)
+
+        this.txt_p2Info = this.add.text(-770, 110, "", {
+            fontSize: '24px',
+            wordWrap: {width: 210}
+        })
+        this.sceneContainer.add(this.txt_p2Info)
+
+        this.txt_p3Name = this.add.text(575, 50, "[NO PLAYER]", {
+            fontSize: '28px',
+            fontStyle: 'bold',
+            wordWrap: {width: 210}
+        })
+        this.sceneContainer.add(this.txt_p3Name)
+
+        this.txt_p3Info = this.add.text(575, 110, "", {
+            fontSize: '24px',
+            wordWrap: {width: 210}
+        })
+        this.sceneContainer.add(this.txt_p3Info)
+
+
         // chip containers
         // *************** BROKEN: positioning and scaling no bueno. orientation is correct though... ************** //
         this.p2Container = this.add.container(this.p2BetTable.x, this.p2BetTable.y)
@@ -292,53 +320,143 @@ class RouletteScene extends Phaser.Scene{
 
         this.reset() // all bets=0 and hide chips
 
-        // get session ID
+
+        // get session ID and other players' states
         this.room.onMessage("joinConfirm", (payload) => {
             this.sessionID = payload.sessionId
             console.log(`Session ID: ${this.sessionID}`)
             if (payload.otherPlayers[0] != null) {
-                //console.log(`P2: ${payload.otherPlayers[0]}`)
-                this.player2 = payload.otherPlayers[0].sessionId
-                this.updateBetTables(this.p2Container, payload.otherPlayers[0].chipAlphas)
+                var player = payload.otherPlayers[0]
+                // update p2 data structure
+                this.player2.sessionId = player.sessionId
+                this.player2.name = player.name
+                this.player2.isReady = player.isReady
+                this.player2.bet = player.bet
+                this.player2.total = player.total
+                // update info text
+                this.updateP2Txt(this.player2.lastSpin)
+                // reveal chips already on p2's bet table
+                this.updateBetTables(this.p2Container, player.chipAlphas)
             }
             if (payload.otherPlayers[1] != null) {
-                //console.log(`P3: ${payload.otherPlayers[1]}`)
-                this.player3 = payload.otherPlayers[1].sessionId
-                this.updateBetTables(this.p3Container, payload.otherPlayers[1].chipAlphas)
+                var player = payload.otherPlayers[1]
+                // update p3 data structure
+                this.player3.sessionId = player.sessionId
+                this.player3.name = player.name
+                this.player3.isReady = player.isReady
+                this.player3.bet = player.bet
+                this.player3.total = player.total
+                // update info text
+                this.updateP3Txt(this.player3.lastSpin)
+                // reveal chips already on p3's bet table
+                this.updateBetTables(this.p3Container, player.chipAlphas)
             }
         })
+
+        // add new players who join
         this.room.state.players.onAdd((player, sessionId) => {
             if (this.sessionID == null) return // if it's its own connection response
             else {
-                if (this.player2 == null) {
-                    this.player2 = sessionId
+                if (this.player2.sessionId == null) {
+                    this.player2.sessionId = sessionId
+                    this.player2.name = player.name
+                    this.player2.isReady = player.isReady
+                    this.player2.bet = player.bet
+                    this.player2.total = player.total
+                    this.updateP2Txt(this.player2.lastSpin)
                 }
-                else if (this.player3 == null) {
-                    this.player3 = sessionId
+                else if (this.player3.sessionId == null) {
+                    this.player3.sessionId = sessionId
+                    this.player3.name = player.name
+                    this.player3.isReady = player.isReady
+                    this.player3.bet = player.bet
+                    this.player3.total = player.total
+                    this.updateP3Txt(this.player3.lastSpin)
                 }
-                console.log(`P2: ${this.player2}\nP3: ${this.player3}`)
+                console.log(`P2: ${this.player2.sessionId}\nP3: ${this.player3.sessionId}`)
             }
         })
+
+        // receive updated info
         this.room.onMessage("betPlaced", (payload) => {
             // update betting tables
-            const player = payload.player
+            const sessionId = payload.sessionId
             const index = payload.chipIndex
-            // [use player name to determine which betting table (container to reference) to update ]
-            if (player == this.player2)
+            // update player corresponding to sessionId passed
+            if (sessionId == this.player2.sessionId) {
                 // reveal chip
                 this.p2Container.getAt(index).alpha = 100
-            else if (player == this.player3)
+                this.player2.bet = payload.bet
+                this.updateP2Txt(this.player2.lastSpin)
+            }
+            else if (sessionId == this.player3.sessionId) {
                 this.p3Container.getAt(index).alpha = 100
+                this.player3.bet = payload.bet
+                this.updateP3Txt(this.player3.lastSpin)
+            }
         })
+
+        // update player ready status
+        this.room.onMessage("playerReady", (payload) => {
+            // update player info
+            const sessionId = payload.sessionId
+            const isReady = payload.isReady
+            // update player corresponding to sessionId passed
+            if (sessionId == this.player2.sessionId) {
+                this.player2.isReady = isReady
+                this.updateP2Txt(this.player2.lastSpin)
+            }
+            else if (sessionId == this.player3.sessionId) {
+                this.player3.isReady = isReady
+                this.updateP3Txt(this.player3.lastSpin)
+            }
+        })
+
+        // done spinning wheel
+        this.room.onMessage("resetGame", (payload) => {
+            // update player info
+            const sessionId = payload.sessionId
+            const profit = payload.profit
+            const total = payload.total
+            // update player corresponding to sessionId passed
+            if (sessionId == this.player2.sessionId) {
+                this.player2.isReady = false
+                this.player2.bet = 0
+                this.player2.total = total
+                this.player2.lastSpin = profit
+                this.updateP2Txt(this.player2.lastSpin)
+            }
+            else if (sessionId == this.player3.sessionId) {
+                this.player3.isReady = false
+                this.player3.bet = 0
+                this.player3.total = total
+                this.player3.lastSpin = profit
+                this.updateP3Txt(this.player3.lastSpin)
+            }
+        })
+
+        // clear bet table and info of player who left
         this.room.onMessage("playerLeft", (payload) => {
-            if (payload.sessionId == this.player2) {
-                this.player2 = null
+            if (payload.sessionId == this.player2.sessionId) {
+                this.player2.sessionId = null
+                this.player2.name = null
+                this.player2.isReady = false
+                this.player2.bet = 0
+                this.player2.total = 0
+                this.txt_p2Name.setText("[NO PLAYER]")
+                this.txt_p2Info.setText("")
                 this.p2Container.getAll().forEach(chip => {
                     chip.alpha = 0.01
                 })
             }
-            else if (payload.sessionId == this.player3) {
-                this.player3 = null
+            else if (payload.sessionId == this.player3.sessionId) {
+                this.player3.sessionId = null
+                this.player3.name = null
+                this.player3.isReady = false
+                this.player3.bet = 0
+                this.player3.total = 0
+                this.txt_p3Name.setText("[NO PLAYER]")
+                this.txt_p3Info.setText("")
                 this.p3Container.getAll().forEach(chip => {
                     chip.alpha = 0.01
                 })
@@ -364,6 +482,8 @@ class RouletteScene extends Phaser.Scene{
 
             var payout = this.payout(value)
             this.newUserBal += payout
+
+            var profit = this.newUserBal - this.userBal
 
             // ******************************************************* //
             // update user balance in db
@@ -403,7 +523,7 @@ class RouletteScene extends Phaser.Scene{
                     setTimeout(() => {
                         // wait a couple seconds before hiding chips and resetting bets
                         this.reset()
-                        this.room.send("resetGame")
+                        this.room.send("resetGame", {profit: profit})
                     }, 3000)
                 }
             });
@@ -593,8 +713,7 @@ class RouletteScene extends Phaser.Scene{
                 totalPayout += this.evenMoney[2]*2
             }
         }
-
-        this.userBal += totalPayout
+        
         return totalPayout
     }
 
@@ -659,8 +778,55 @@ class RouletteScene extends Phaser.Scene{
         })
     }
 
+    updateP2Txt(spinResult) {
+        // name
+        this.txt_p2Name.setText(this.player2.name)
+        // info
+        var txt = ""
+        // isReady
+        if (this.player2.isReady) {
+            txt += "READY!\n"
+        } else {
+            txt += "Not Ready.\n"
+        }
+        // bet
+        txt += `\nTotal wager:\n${this.player2.bet}\n`
+        // total
+        txt += `\nSession total:\n${this.player2.total}\n`
+        // win
+        txt += `\nLast spin:\n${spinResult}`
+        if (spinResult > 0) {
+            txt += " credit profit!"
+        }
+        // update text field
+        this.txt_p2Info.setText(txt)
+    }
+    updateP3Txt(spinResult) {
+        // name
+        this.txt_p3Name.setText(this.player3.name)
+        // info
+        var txt = ""
+        // isReady
+        if (this.player3.isReady) {
+            txt += "READY!\n"
+        } else {
+            txt += "Not Ready.\n"
+        }
+        // bet
+        txt += `\nTotal wager:\n${this.player3.bet}\n`
+        // total
+        txt += `\nSession total:\n${this.player3.total}\n`
+        // win
+        txt += `\nLast spin:\n${spinResult}`
+        if (spinResult > 0) {
+            txt += " credit profit!"
+        }
+        // update text field
+        this.txt_p3info.setText(txt)
+    }
+
     resizeScene(gameSize) {
-        const scaleFactor = Math.min(gameSize.width / 1920, gameSize.height / 1080)
+        const scaleFactor = Math.min(gameSize.width / 1600, gameSize.height / 850)
         this.sceneContainer.setScale(scaleFactor)
     }
 }

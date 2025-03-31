@@ -9,7 +9,7 @@ class RoulettePlayer extends Schema {
         this.isReady = false;
         this.chipAlphas = new ArraySchema(0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01,0.01)
         this.bet = 0;
-        this.totalCredits = 0;
+        this.total = 0; // winnings over session
     }
 }
 schema.defineTypes(RoulettePlayer, {
@@ -17,7 +17,7 @@ schema.defineTypes(RoulettePlayer, {
     isReady: "boolean",
     chipAlphas: ["number"],
     bet: "number",
-    totalCredits: "number"
+    total: "number"
 });
 
 class RouletteState extends Schema {

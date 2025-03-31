@@ -29,31 +29,32 @@ class RouletteRoom extends Room {
         console.log(client.sessionId + " placed chip at " + payload.chipIndex)
         const player = this.state.players.get(client.sessionId);
         if (player) {
-          player.bet = 0
-          player.totalCredits -= 10
+          player.bet += 10
           player.chipAlphas[payload.chipIndex] = 100
         }
-        this.broadcast("betPlaced", {player: client.sessionId, chipIndex: payload.chipIndex})
+        this.broadcast("betPlaced", {sessionId: client.sessionId, bet: player.bet, chipIndex: payload.chipIndex})
     })
 
     // a player readied up
     this.onMessage("ready", (client) => {
       const player = this.state.players.get(client.sessionId);
       player.isReady = true
+      this.broadcast("playerReady", {sessionId: client.sessionId, isReady: player.isReady})
       this.checkGameStart()
     })
 
     // once the game is reset, reset the owner as well
-    this.onMessage("resetGame", (client) => {
+    this.onMessage("resetGame", (client, payload) => {
       console.log("Resetting Game...")
       this.state.owner = ''
       const player = this.state.players.get(client.sessionId);
       player.isReady = false
       player.bet = 0
+      player.total += payload.profit
       for (var i=0; i<48; i++) {
         player.chipAlphas[i] = 0.01
       }
-      //this.broadcast("resetGame", {client: client.sessionId})
+      this.broadcast("resetGame", {sessionId: client.sessionId, profit: payload.profit, total: player.total})
     })
   }
 
@@ -96,9 +97,9 @@ class RouletteRoom extends Room {
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new RoulettePlayer();
 
-    // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
+    // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME
     player.name = options.name || client.sessionId;
-    player.totalCredits = options.balance || 10_000
+    player.total = 0 // this is total profit/loss on session
     
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase == "playing")
@@ -121,8 +122,12 @@ class RouletteRoom extends Room {
         }
         else {
           // send session ID and what his current bet table looks like
-          //console.log(sessionId, Array.from(player.chipAlphas))
+          console.log(player.name)
           otherPlayers.push({
+            name: player.name,
+            isReady: player.isReady,
+            bet: player.bet,
+            total: player.total,
             sessionId: sessionId,
             chipAlphas: Array.from(player.chipAlphas)})
         }
