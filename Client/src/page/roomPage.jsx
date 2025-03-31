@@ -31,7 +31,7 @@ function RoomPage() {
                     setGamePhase(state.gamePhase);
                 });
 
-                joinedRoom.onLeave(() => navigate("/"));
+                joinedRoom.onLeave(() => navigate("/signin")); // redirects to org page if signed in
 
                 joinedRoom.onMessage('owner', () => {
                     setIsOwner(true);
@@ -81,6 +81,7 @@ function RoomPage() {
     function destroyRoom() {
         var token = localStorage.getItem("firebaseIdToken");
         room.send('destroyLobby', { playerId: token });
+        navigate('/signin');
     }
 
     /*
