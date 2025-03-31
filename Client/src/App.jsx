@@ -24,6 +24,7 @@ import BlackJackById from './page/blackjackbyid.jsx';
 import HorseRacing from './page/horseRacing.jsx';
 import HorseRacingById from './page/horseracingbyid.jsx';
 import Poker from './page/poker.jsx';
+import Roulette from './page/roulette.jsx';
 import PokerById from './page/pokerbyid.jsx';
 import OrgRequest from './page/orgrequest.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute

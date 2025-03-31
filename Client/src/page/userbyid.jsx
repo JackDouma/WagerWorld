@@ -63,14 +63,37 @@ function ViewUserById() {
     // update name
     const handleSaveName = async () => {
         try {
+            // update user collection
             await updateDoc(doc(db, "users", userId), { name: userName });
-            setEditMode(false);
-            alert("Name updated!");
-        }
-        catch (error) {
+    
+            // update org collection
+            const orgRef = doc(db, "orgs", userOrg.orgId);
+            const orgDoc = await getDoc(orgRef);
+    
+            if (orgDoc.exists()) 
+            {
+                const members = orgDoc.data().member;
+                const memberIndex = members.findIndex(m => m.id === userId);
+    
+                // if member found, update and save
+                if (memberIndex !== -1) 
+                {
+                    const updatedMembers = [...members];
+                    updatedMembers[memberIndex] = { ...updatedMembers[memberIndex], name: userName };
+    
+                    await updateDoc(orgRef, { member: updatedMembers });
+    
+                    setEditMode(false);
+                    alert("Name updated!");
+                } 
+            } 
+        } 
+        catch (error) 
+        {
             console.error("ERROR: ", error);
         }
     };
+    
 
     // Delete user account
     const handleDeleteAccount = async () => {
