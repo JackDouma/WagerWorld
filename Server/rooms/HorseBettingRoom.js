@@ -232,7 +232,7 @@ class HorseRacingRoom extends Room {
   async updatePlayerFirestore(clientId, player, won, betAmount, payout) {
     try {
       const result = won ? payout - betAmount : -betAmount;
-      await admin.firestore().collection("users").doc(clientId).update({
+      await admin.firestore.collection("users").doc(clientId).update({
         balance: player.totalCredits,
         gameHistory: FieldValue.arrayUnion({
           date: new Date(),
@@ -273,7 +273,7 @@ class HorseRacingRoom extends Room {
 
     const player = new Player();
     try {
-      const playerDoc = await admin.firestore()
+      const playerDoc = await admin.firestore
         .collection("users")
         .doc(options.playerId)
         .get();
@@ -287,7 +287,7 @@ class HorseRacingRoom extends Room {
         this.state.players.set(client.sessionId, player);
         console.log(`${player.name} joined! Credits: ${player.totalCredits}`);
         
-        await admin.firestore()
+        await admin.firestore
           .collection("users")
           .doc(client.sessionId)
           .update({ isInGame: true });
@@ -310,7 +310,7 @@ class HorseRacingRoom extends Room {
       this.state.players.delete(client.sessionId);
       this.state.bets.delete(client.sessionId);
       
-      admin.firestore().collection("users").doc(player.firebaseId).update({
+      admin.firestore.collection("users").doc(player.firebaseId).update({
         isInGame: false
       });
       
