@@ -144,7 +144,7 @@ class PokerRoom extends Room {
           this.broadcast("playerJoin", { sessionId: nextPlayerId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
         }
       }
-      this.broadcast('newGame', { waitingRoom: this.state.waitingRoom })
+      this.broadcast('newGame', { players: this.state.players, waitingRoom: this.state.waitingRoom })
     })
   }
 
@@ -238,7 +238,7 @@ class PokerRoom extends Room {
     };
 
     dealCards();
-    this.broadcast('gameStart', { hands, players: this.state.players, dealerHand: this.state.dealer.hand, currentTurn: this.state.currentTurn, gamePhase: this.state.gamePhase })
+    this.broadcast('gameStart', { hands, players: this.state.players, dealerHand: this.state.dealer.hand, currentTurn: this.state.currentTurn, gamePhase: this.state.gamePhase, pot: this.state.pot })
   }
 
   // allowing the next client in line to go
@@ -277,6 +277,7 @@ class PokerRoom extends Room {
 
   // handling the dealer's turn
   dealerTurn() {
+    console.log("HERE", this.dealerRaceCheck)
     if (!this.dealerRaceCheck) {
       const gamePhase = parseInt(this.state.gamePhase.replace(/\D/g, ""), 10)
       if (gamePhase < 4) {
@@ -396,7 +397,7 @@ class PokerRoom extends Room {
         console.log("Error: Winner not found in state.");
     }
     
-    onGameFinished()
+    this.onGameFinished()
   }
 
   rotateBlinds() {
@@ -422,6 +423,8 @@ class PokerRoom extends Room {
     // assign new blind values to the players
     this.state.players.get(playerIds[newSbIndex]).blind = 1
     this.state.players.get(playerIds[newBbIndex]).blind = 2
+
+    console.log('blinds after rotation:', playerIds[newSbIndex], playerIds[newBbIndex])
   }
 
   evaluateHand(playerHand, communityCards) {
@@ -464,8 +467,6 @@ class PokerRoom extends Room {
     const threeOfAKind = Object.entries(counts).filter(([rank, count]) => count === 3).map(([rank]) => rank)
     const fourOfAKind = Object.entries(counts).filter(([rank, count]) => count === 4).map(([rank]) => rank)
     const fullHouse = threeOfAKind.size > 0 && pairs.size > 0;
-
-    highCard = this.ranks[highCard]
 
     if (isFlush && isStraight && straightHigh === 12) return { rank: 1, name: "Royal Flush", highCard };
     if (isFlush && isStraight) return { rank: 2, name: "Straight Flush", highCard: straightHigh };
@@ -518,40 +519,32 @@ class PokerRoom extends Room {
     return [winner, bestHand.name];
   }
 
-
-
   // handles when a player joins
   async onJoin(client, options) {
     // ignore if a duplicate ID shows up, otherwise create a new player
     if(this.state.players.has(client.sessionId) || this.state.waitingRoom.has(client.sessionId)) return
     const player = new PokerPlayer();
-    console.log(options)
     // NEED TO LINK TO THE FIREBASE AUTH TO GET ACTUAL NAME AND BALANCE
+
     var playerName = "";
     if (options.playerId || this.playerId) {
-          try {
-            const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+      try {
+        const playerDoc = await firestore.collection("users").doc(options.playerId).get();
+         if (playerDoc.exists) {
+          player.fireBaseId = options.playerId;
+          playerName = playerDoc.data().name;
+          player.name = playerName;
+          console.log(`${playerName} joined!`);
+        } else {
+          console.log(`Player with ID ${options.playerId} not found.`);
+        }
+      } catch (error) {
+        console.error("Error fetching player data:", error);
+      }
+    }
 
-            if (playerDoc.exists) {
-              player.fireBaseId = options.playerId;
-              playerName = playerDoc.data().name;
-              player.name = playerName;
-              console.log(`${playerName} joined!`);
-            } else {
-              console.log(`Player with ID ${options.playerId} not found.`);
-            }
-          } catch (error) {
-            console.error("Error fetching player data:", error);
-          }
-          player.totalCredits = options.balance || 10_000
-  // log and broadcast that a new player has joined
-  console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-  console.log(player.totalCredits);
-  this.broadcast("playerJoin", { playerName: player.name,  sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
-          }
-      
-        
-        
+    player.totalCredits = options.balance || 10_000
+
     // if the game is currently in progress, put them in the waiting room
     if(this.state.gamePhase.includes("playing"))
       this.state.waitingRoom.set(client.sessionId, player);
@@ -572,35 +565,15 @@ class PokerRoom extends Room {
 
       this.state.players.set(client.sessionId, player);
 
-      if (this.state.owner == '') {
+      if (this.state.owner == '' || this.state.owner === undefined) {
         this.state.owner = client.sessionId; // set the first player to join as the owner
       }
     }
 
     // log and broadcast that a new player has joined
     console.log(`Player joined: ${player.name}. Current player count: ${this.state.players.size}. Current Waiting Room count: ${this.state.waitingRoom.size}. Room owner is ${this.state.owner}`);
-    this.broadcast("playerJoin", { sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
+    this.broadcast("playerJoin", { playerName: player.name, sessionId: client.sessionId, totalCredits: player.totalCredits, players: this.state.players, waitingRoom: this.state.waitingRoom });
   }
-
-  // assignBlinds() {
-  //   const playerIds = Array.from(this.state.players.keys());
-  //   console.log("???")
-
-  //   if (playerIds.length < 2) {
-  //       console.log("Not enough players for blinds.");
-  //       return;
-  //   }
-
-  //   if (this.state.players.get(playerIds[0]).blind != 0 && this.state.players.get(playerIds[1]).blind != 0) {
-  //     this.state.players.forEach(player => player.blind = 0)
-
-  //     this.state.players.get(playerIds[0]).blind = 1
-  //     this.state.players.get(playerIds[1]).blind = 2
-
-  //     console.log(`New Small Blind: ${playerIds[0]}, New Big Blind: ${playerIds[1]}`)
-  //   }
-
-  // }
 
   // handles when a player leaves
   onLeave(client) {
@@ -619,7 +592,7 @@ class PokerRoom extends Room {
         nextKey = keys[(currentIndex + 1) % keys.length]
         console.log('next key', nextKey)
       }
-      // ✅ If the player was the Small Blind, shift the blinds
+      // if the player was the small blind, shift the blinds
       if (player.blind === 1) {
         console.log("Small Blind disconnected, rotating blinds...");
         if (keys.length > 1) { // More than 2 players
@@ -630,7 +603,7 @@ class PokerRoom extends Room {
             this.state.players.get(newBB).blind = 2;
         }
       }
-      // ✅ If the player was the Big Blind, shift the big blind
+      // if the player was the big blind, shift the big blind
       else if (player.blind === 2) {
           console.log("Big Blind disconnected, shifting big blind...");
           if (keys.length > 1) { // More than 2 players
@@ -642,7 +615,7 @@ class PokerRoom extends Room {
       // remove player
       this.state.players.delete(client.sessionId);
     }
-    // if not found, check the watiting room and remove from there
+    // if not found, check the waiting room and remove from there
     else {
       const waitingPlayer = this.state.waitingRoom.get(client.sessionId);
       if(waitingPlayer)
