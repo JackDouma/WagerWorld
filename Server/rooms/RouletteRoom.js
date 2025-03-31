@@ -1,4 +1,7 @@
 const { Room } = require("@colyseus/core");
+const { firestore, admin } = require("../firebase");
+const FieldValue = require('firebase-admin').firestore.FieldValue;
+
 const {
   RoulettePlayer,
   RouletteState,
