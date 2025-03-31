@@ -32,9 +32,15 @@ class RouletteRoom extends Room {
           player.bet = 0
           player.totalCredits -= 10
           player.chipAlphas[payload.chipIndex] = 100
-          this.checkGameStart(client.sessionId);
         }
-        this.broadcast("betPlaced", {player: player.name, chipIndex: payload.chipIndex})
+        this.broadcast("betPlaced", {player: client.sessionId, chipIndex: payload.chipIndex})
+    })
+
+    // a player readied up
+    this.onMessage("ready", (client) => {
+      const player = this.state.players.get(client.sessionId);
+      player.isReady = true
+      this.checkGameStart()
     })
 
     // once the game is reset, reset the owner as well
@@ -42,15 +48,17 @@ class RouletteRoom extends Room {
       console.log("Resetting Game...")
       this.state.owner = ''
       const player = this.state.players.get(client.sessionId);
+      player.isReady = false
+      player.bet = 0
       for (var i=0; i<48; i++) {
         player.chipAlphas[i] = 0.01
       }
-      this.broadcast("resetGame", {client: client.sessionId})
+      //this.broadcast("resetGame", {client: client.sessionId})
     })
   }
 
   // make sure each player is ready before starting
-  checkGameStart(sessionId) {
+  checkGameStart() {
     // boolean expression to see if each player is ready
     const allReady = Array.from(this.state.players.values()).every((player) => player.isReady);
     // check which players are ready
@@ -58,16 +66,28 @@ class RouletteRoom extends Room {
       console.log(`Player ${player.name} is ready: ${player.isReady}`);
     }
     console.log(`All players ready: ${allReady}`);
-    // if all are ready, signal to the clients to start the game
+    // if all are ready, call spinWheel function
     if (allReady) {
-      console.log("Starting game...");
-      this.startGame();
+      console.log("Spinning wheel...");
+      this.spinWheel();
     }
-    // otherwise, signal the client that readied up to wait for everyone else
-    else {
-      console.log("waiting...")
-      this.broadcast("waitForOthers", { user: sessionId })
-    }
+  }
+
+  getRandInt(min, max) {
+    return Math.floor(Math.random() * (max-min+1)) + min
+  }
+  // "spin the wheel": randomly select values to pass to and signal clients to start the wheel animation
+  spinWheel() {
+    // number of "slices" around wheel
+    var slices = 37
+    // number of rotations
+    var rounds = this.getRandInt(2, 4);
+    // randomly selected stopping point
+    var degrees = this.getRandInt(0, 360);
+    var spinResult = slices - 1 - Math.floor(degrees / (360 / slices));
+
+    // send data to clients; animation and payout will be handled at clients
+    this.broadcast("spinWheel", {rounds: rounds, degrees: degrees, spinResult: spinResult})
   }
 
   // handles when a player joins

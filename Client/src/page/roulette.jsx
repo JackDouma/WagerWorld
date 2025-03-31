@@ -29,6 +29,7 @@ class RouletteScene extends Phaser.Scene{
         this.sessionID
         this.player2 = null
         this.player3 = null
+        this.ready = false
     }
 
     // index, of chip clicked, to be passed to server
@@ -101,8 +102,8 @@ class RouletteScene extends Phaser.Scene{
 		//this.betTable.angle = 90; // used with first version where p1's bet table is vertical on the left
         this.sceneContainer.add(this.betTable)
 
-        // log text field (centered horizontally relative to roulette wheel)
-        this.txt_info = this.add.text(this.roulette_wheel.x, 537, "", {})
+        // info text field (centered horizontally relative to roulette wheel)
+        this.txt_info = this.add.text(this.roulette_wheel.x, 525, "", {})
         this.txt_info.setStyle({"align": "center", "fontSize": "24px"})
         this.txt_info.setOrigin(0.5, 0)
         this.sceneContainer.add(this.txt_info)
@@ -115,6 +116,25 @@ class RouletteScene extends Phaser.Scene{
         // result of roulette spin text field
         this.txt_spinResult = this.add.text(-30, 82, "", {})
         this.sceneContainer.add(this.txt_spinResult)
+
+        // ready button
+        this.graphics = this.add.graphics();
+        this.graphics.fillStyle(0xFFA500, 1);
+        this.graphics.fillRoundedRect(160, 525, 125, 50, 10);
+        this.sceneContainer.add(this.graphics)
+        // inner text
+        this.txt_readyBtn = this.add.text(180, 538, 'READY', {
+            fontSize: '28px',
+            fontStyle: 'bold',
+            align: 'center'
+        })
+            .setInteractive()
+            .on("pointerdown", () => {
+                this.txt_readyBtn.setStyle({color: '#BF7C00'})
+                if (this.betsPlaced && !this.ready)
+                    this.room.send("ready")
+            })
+        this.sceneContainer.add(this.txt_readyBtn)
         
         // arrays for betting logic
         this.straightUp = new Array(36) //35:1
@@ -159,7 +179,7 @@ class RouletteScene extends Phaser.Scene{
                 chip.index = index
                 chip.setInteractive()
                 chip.on("pointerdown", () => {
-                    if (this.canSpin)
+                    if (this.canSpin && !this.ready)
                         this.onChipClicked(chip)
                 })
 
@@ -187,7 +207,7 @@ class RouletteScene extends Phaser.Scene{
             chip.index = i
             chip.setInteractive(new Phaser.Geom.Rectangle(66, -75, 160, 900), Phaser.Geom.Rectangle.Contains)
             chip.on("pointerdown", () =>{
-                if (this.canSpin)
+                if (this.canSpin && !this.ready)
                     chip.alpha = 0.01
                     this.onChipClicked(chip)
             })
@@ -210,7 +230,7 @@ class RouletteScene extends Phaser.Scene{
             chip.index = i
             chip.setInteractive()
             chip.on("pointerdown", () =>{
-                if (this.canSpin)
+                if (this.canSpin && !this.ready)
                     chip.alpha = 0.01
                     this.onChipClicked(chip)
             })
@@ -234,7 +254,7 @@ class RouletteScene extends Phaser.Scene{
             chip.index = i
             chip.setInteractive(new Phaser.Geom.Rectangle(66, -110, 160, 450), Phaser.Geom.Rectangle.Contains)
             chip.on("pointerdown", () =>{
-                if (this.canSpin)
+                if (this.canSpin && !this.ready)
                     chip.alpha = 0.01
                     this.onChipClicked(chip)
             })
@@ -324,15 +344,20 @@ class RouletteScene extends Phaser.Scene{
                 })
             }
         })
+
+        // all players have readied up, calculations made, and its time to spin that wheel
+        this.room.onMessage("spinWheel", (payload) => {
+            this.spinWheel(payload.rounds, payload.degrees, payload.spinResult)
+        })
     }
 
-    spinWheel(){
+    spinWheel(rounds, degrees, spinResult){
         if(this.canSpin && this.betsPlaced){
-            // number of rotations
-            var rounds = Phaser.Math.Between(2, 4);
-            // randomly selected stopping point
-            var degrees = Phaser.Math.Between(0, 360);
-            var spinResult = gameOptions.slices - 1 - Math.floor(degrees / (360 / gameOptions.slices));
+            // // number of rotations
+            // var rounds = Phaser.Math.Between(2, 4);
+            // // randomly selected stopping point
+            // var degrees = Phaser.Math.Between(0, 360);
+            // var spinResult = gameOptions.slices - 1 - Math.floor(degrees / (360 / gameOptions.slices));
             var value = gameOptions.sliceValues[spinResult]
 
             this.canSpin = false;
@@ -378,6 +403,7 @@ class RouletteScene extends Phaser.Scene{
                     setTimeout(() => {
                         // wait a couple seconds before hiding chips and resetting bets
                         this.reset()
+                        this.room.send("resetGame")
                     }, 3000)
                 }
             });
@@ -508,6 +534,9 @@ class RouletteScene extends Phaser.Scene{
         this.txt_info.setText("")
         this.txt_spinResult.setText("")
 
+        this.txt_readyBtn.setStyle({color: '#FFFFFF'})
+
+        this.ready = false
         this.canSpin = true
         this.betsPlaced = false
     }
