@@ -84,7 +84,8 @@ function Header() {
       // all game paths to go here
       !location.pathname.startsWith('/blackjack') &&
       !location.pathname.startsWith('/horseracing') &&
-      !location.pathname.startsWith('/poker')
+      !location.pathname.startsWith('/poker') && 
+      !location.pathname.startsWith('/roulette')
     ) &&
     (
       // header for non-game pages

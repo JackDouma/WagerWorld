@@ -29,6 +29,7 @@ class PokerPlayer extends Schema {
         this.blind = 0;
         this.bet = 0;
         this.totalCredits = 0;
+        this.startingCredits = 0;
     }
 }
 schema.defineTypes(PokerPlayer, {
@@ -38,7 +39,8 @@ schema.defineTypes(PokerPlayer, {
     lastAction: "string",
     blind: "number",
     bet: "number",
-    totalCredits: "number"
+    totalCredits: "number",
+    startingCredits: "number"
 });
 
 class PokerState extends Schema {
