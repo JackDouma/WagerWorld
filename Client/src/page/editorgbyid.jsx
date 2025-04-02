@@ -19,6 +19,7 @@ function EditOrgById() {
     const [allowPoker, setAllowPoker] = useState(false);
     const [allowRoulette, setAllowRoulette] = useState(false);
     const [allowHorseRacing, setAllowHorseRacing] = useState(false);
+    const [allowBaccarat, setAllowBaccarat] = useState(false);
     const [error, setError] = useState('');
     const theme = useTheme();
 
@@ -39,6 +40,7 @@ function EditOrgById() {
                     setAllowPoker(orgData.allowPoker);
                     setAllowRoulette(orgData.allowRoulette);
                     setAllowHorseRacing(orgData.allowHorseRacing);
+                    setAllowBaccarat(orgData.allowBaccarat);
                 }
             }
             catch (error) {
@@ -76,7 +78,8 @@ function EditOrgById() {
                 allowCrazy8s,
                 allowPoker,
                 allowRoulette,
-                allowHorseRacing
+                allowHorseRacing,
+                allowBaccarat
             });
 
             navigate("/admin");
@@ -153,6 +156,7 @@ function EditOrgById() {
                             <Grid container spacing={1} justifyContent={"center"}>
                                 <FormControlLabel control={<Checkbox />} label="Horse Racing" id="allowHorseRacing" checked={allowHorseRacing} onChange={(e) => setAllowHorseRacing(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Roulette" id="allowRoulette" checked={allowRoulette} onChange={(e) => setAllowRoulette(e.target.checked)} />
+                                <FormControlLabel control={<Checkbox />} label="Baccarat" id="allowBaccarat" checked={allowBaccarat} onChange={(e) => setAllowBaccarat(e.target.checked)} />
                             </Grid>
                         </FormGroup>
 

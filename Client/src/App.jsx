@@ -27,6 +27,8 @@ import Poker from './page/poker.jsx';
 import Roulette from './page/roulette.jsx';
 import RouletteById from './page/roulettebyid.jsx';
 import PokerById from './page/pokerbyid.jsx';
+import Baccarat from './page/baccarat.jsx';
+import BaccaratById from './page/baccaratbyid.jsx';
 import OrgRequest from './page/orgrequest.jsx';
 import OrgRestrictedRoute from './component/OrgRestrictedRoute.jsx';  // Import OrgRestrictedRoute
 import ViewLeaderboard from './page/leaderboard.jsx';
@@ -64,6 +66,8 @@ function AppContent() {
             title = 'Horse Racing - WagerWorld';
         } else if (pathname.startsWith('/poker')) {
             title = 'Poker - WagerWorld';
+        } else if (pathname.startsWith('/baccarat')) {
+            title = "Baccarat - WagerWorld";
         } else if (pathname === '/signin') {
             title = 'Sign In - WagerWorld';
         } else if (pathname === '/signup') {
@@ -88,7 +92,6 @@ function AppContent() {
         else if (pathname.startsWith('/leaderboard')) {
             title = "Leaderboard - WagerWorld";
         }
-        // TODO: Add more titles as needed
 
         document.title = title;
     }, [location]);
@@ -168,6 +171,13 @@ function AppContent() {
                     <Route
                         path=":roomId"
                         element={<><Header /><PokerById /></>}
+                    />
+                </Route>
+                <Route path="/baccarat">
+                    <Route index element={<><Header /><Baccarat /></>} />
+                    <Route
+                        path=":roomId"
+                        element={<><Header /><BaccaratById /></>}
                     />
                 </Route>
                 <Route path="/roulette">
