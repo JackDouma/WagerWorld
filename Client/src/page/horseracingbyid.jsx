@@ -15,18 +15,26 @@ const HorseRacingGame = () => {
   const [bets, setBets] = useState([]);
   const [gameStatus, setGameStatus] = useState("waiting");
   const [horseStats, setHorseStats] = useState([]);
-  const [playerCredits, setPlayerCredits] = useState(1000);
+  const [playerCredits, setPlayerCredits] = useState();
   const [raceResult, setRaceResult] = useState(null);
   const { roomId } = useParams();
 
   useEffect(() => {
     const client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
 
+    /**
+     * connectToRoom runs when the player joins
+     * It connects to the room and sets up the game state
+     * It connects the messages from the server to the client
+     * it gets the players balance from the firestore
+     * 
+     */
     const connectToRoom = async () => {
       try {
         const playerId = localStorage.getItem("firebaseIdToken");
         const userRef = doc(db, "users", playerId);
         const userDoc = await getDoc(userRef);
+        const firestoreBalance = userDoc.data().balance || 10000;
 
         if (userDoc.exists() && userDoc.data().isInGame) {
           console.log("Player is already in a game.");
@@ -37,18 +45,12 @@ const HorseRacingGame = () => {
         await updateDoc(userRef, { isInGame: true });
         const room = await client.joinOrCreate("horse_racing", {
           playerId: playerId || "anonymous",
+          balance: firestoreBalance,
         });
 
         roomRef.current = room;
 
-        room.state.players.onAdd = (player, sessionId) => {
-          if (sessionId === room.sessionId) setPlayerCredits(player.totalCredits);
-        };
-
-        // Sync player credits
-        room.state.players.onAdd = (player, sessionId) => {
-          if (sessionId === room.sessionId) setPlayerCredits(player.totalCredits);
-        };
+        setPlayerCredits(firestoreBalance);
 
         // Sync bets from server state
         room.state.bets.onAdd = (betStr, clientId) => {
@@ -92,9 +94,9 @@ const HorseRacingGame = () => {
 
         room.onMessage("raceResult", (message) => {
           setRaceResult(message);
-          if (message.payouts[room.sessionId]?.won) {
-            setPlayerCredits((prev) => prev + message.payouts[room.sessionId].amount);
-          }
+          // go through all players and update their balance
+          
+          
         });
 
         room.onMessage("raceReset", (message) => {
@@ -103,6 +105,16 @@ const HorseRacingGame = () => {
           setSelectedHorse(null);
           setHorseStats(message.horseStats);
           setGameStatus("waiting");
+          const userBalance = userDoc.data().balance || 10000;
+          console.log("userBalance", userBalance);
+          setPlayerCredits(userBalance);
+        });
+
+        room.onMessage("playerUpdate", (message) => {
+          console.log("playerUpdate", message);
+            console.log("playerUpdate", message.totalCredits);
+            setPlayerCredits(message.totalCredits);
+          
         });
 
         room.onMessage("playerJoin", (message) => {
@@ -115,6 +127,8 @@ const HorseRacingGame = () => {
         console.error("Could not connect to room:", error);
       }
     };
+
+    // Initialize Phaser game
 
     const config = {
       type: Phaser.AUTO,
@@ -129,6 +143,7 @@ const HorseRacingGame = () => {
             frameHeight: 66,
           });
         },
+        // Create the horses and track with lines 
         create() {
           this.anims.create({
             key: "gallop",
@@ -136,7 +151,7 @@ const HorseRacingGame = () => {
             frameRate: 12,
             repeat: -1,
           });
-
+          
           for (let i = 0; i < 5; i++) {
             this.add.line(0, (i + 1) * 80, 0, 0, 800, 0, 0xffffff).setLineWidth(2).setOrigin(0);
             const horse = this.add
