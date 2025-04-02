@@ -1,6 +1,7 @@
 const { Room } = require("@colyseus/core");
 const { Schema, type, MapSchema, ArraySchema } = require("@colyseus/schema");
 const admin = require("../firebase");
+const { firestore } = require("firebase-admin");
 const FieldValue = require('firebase-admin').firestore.FieldValue;
 
 class Horse extends Schema {
@@ -86,6 +87,13 @@ class HorseRacingRoom extends Room {
     }
     this.calculateOdds();
 
+    /**
+     * when server recieves a placeBet message from the client
+     *  checks if the game phase is waiting
+     * checks if the horse index is valid
+     * checks if the bet amount is valid
+     * checks if the player has enough credits
+     */
     this.onMessage("placeBet", (client, data) => {
       if (this.state.gamePhase === "waiting" && 
           data.horseIndex >= 0 && 
@@ -133,6 +141,10 @@ class HorseRacingRoom extends Room {
     });
   }
 
+  /**
+   * returns the stats and odds of all horses
+   * used to sync the stats with the client
+   **/ 
   getHorseStatsAndOdds() {
     return this.state.horses.map(horse => ({
       id: horse.id,
@@ -145,7 +157,10 @@ class HorseRacingRoom extends Room {
       odds: horse.odds
     }));
   }
-
+  /**
+   * checks if all players are ready
+   * if waiting for bets is true broadcasts the number of players
+   **/
   checkRaceStart() {
     const allReady = Array.from(this.state.players.values()).every(p => p.isReady);
     if (allReady && this.state.players.size > 0) {
@@ -154,7 +169,12 @@ class HorseRacingRoom extends Room {
       this.broadcast("waitingForBets", { readyCount: Array.from(this.state.players.values()).filter(p => p.isReady).length });
     }
   }
-
+  /**
+   * updates state of game
+   * sets the game phase to racing
+   * constantly updates the horses position 
+   * and speed
+   */
   startRace() {
     this.state.gamePhase = "racing";
     this.state.raceStarted = true;
@@ -195,7 +215,11 @@ class HorseRacingRoom extends Room {
       }
     }, 50);
   }
-
+  /**
+   * calls after rands ends
+   * broadcasts the result to all players
+   * updates the players balance in firestore
+   */
   endRace() {
     this.state.gamePhase = "results";
     
@@ -231,7 +255,11 @@ class HorseRacingRoom extends Room {
 
   async updatePlayerFirestore(clientId, player, won, betAmount, payout) {
     try {
+      // Update the player's balance and game history in Firestore
+      // do the result based on if the player won or lost 
+      // if won, add the payout to the balance, else subtract the bet amount
       const result = won ? payout - betAmount : -betAmount;
+      player.totalCredits += result;
       await admin.firestore.collection("users").doc(clientId).update({
         balance: player.totalCredits,
         gameHistory: FieldValue.arrayUnion({
@@ -242,12 +270,24 @@ class HorseRacingRoom extends Room {
           payout: won ? payout : 0
         })
       });
+      const client = this.clients.find(c => c.sessionId === clientId);
+      this.broadcast("playerUpdate", {
+        sessionId: client.sessionId,
+        totalCredits: player.totalCredits,
+      });
     } catch (error) {
       console.error(`Error updating player ${clientId}:`, error);
     }
   }
-
-  resetRace() {
+  /**
+   * sets game phase to waiting
+   * resets the horses positions
+   * resets the bets and winners  
+   * resets the players bets
+   * calculates the odds
+   * broadcasts the horse stats to all players
+   */
+  async resetRace() {
     this.state.gamePhase = "waiting";
     this.state.raceStarted = false;
     this.state.bets.clear();
@@ -261,13 +301,23 @@ class HorseRacingRoom extends Room {
       horse.consistency = Math.random() * 0.5 + 0.9;
     });
     this.calculateOdds();
-    this.state.players.forEach(player => {
+    
+    this.state.players.forEach(async player => {
       player.betAmount = 0;
       player.isReady = false;
+
     });
     this.broadcast("raceReset", { horseStats: this.getHorseStatsAndOdds() });
   }
 
+  /**
+   * called when a player joins
+   * checks if the player is already in the game
+   * if not, adds the player to the state
+   * updates the firestore
+   * broadcasts the player join event to all players
+   * sends the horse stats to the player
+   **/
   async onJoin(client, options) {
     if (this.state.players.has(client.sessionId)) return;
 
@@ -281,7 +331,7 @@ class HorseRacingRoom extends Room {
       if (playerDoc.exists) {
         const data = playerDoc.data();
         player.name = data.name;
-        player.totalCredits = data.balance || 1000;
+        player.totalCredits = options.balance || 10_000;
         player.firebaseId = options.playerId;
         client.sessionId = options.playerId;
         this.state.players.set(client.sessionId, player);
@@ -304,6 +354,12 @@ class HorseRacingRoom extends Room {
     });
   }
 
+  /**
+   * called when a player leaves
+   * removes the player from the state
+   * updates the firestore
+   * broadcasts the player leave event to all players
+   */
   onLeave(client) {
     const player = this.state.players.get(client.sessionId);
     if (player) {

@@ -91,8 +91,6 @@ class BlackjackScene extends Phaser.Scene {
         try{
         if(userDoc.data().isInGame && this.roomId === null){
                     console.log(`Player with ID is already in a game.`);
-                    // open popup to inform user that they are already in a game and redirect to home page
-                    // redirect to home page
                     window.location.href = "/";
                     return
                   }
