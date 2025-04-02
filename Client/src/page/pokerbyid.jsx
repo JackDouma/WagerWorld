@@ -73,7 +73,7 @@ class PokerScene extends Phaser.Scene {
     const userRef = doc(db, "users", playerId);
     const userDoc = await getDoc(doc(db, "users", playerId));
     try{
-      if(userDoc.data().isInGame && this.roomId === null){
+      if(userDoc.exists() && userDoc.data().isInGame){
         console.log(`Player with ID is already in a game.`);
         // open popup to inform user that they are already in a game and redirect to home page
         // redirect to home page
@@ -239,7 +239,7 @@ class PokerScene extends Phaser.Scene {
     })
 
     this.room.onMessage("endGame", (message) => {
-      this.endGame(message.winner, message.winnings, message.result)
+      this.endGame(message.winnerName, message.winner, message.winnings, message.result)
     })
 
     // reset game message from the server
@@ -253,6 +253,8 @@ class PokerScene extends Phaser.Scene {
       this.playerHands = {}
       if(this.playerBetValues) this.playerBetValues.forEach(item => item.destroy())
       this.activeCards.forEach(item => item.destroy())
+      this.overallHighestCurrentBet = 10
+      this.highestCurrentBet = 0
       this.players = message.players
       this.waitingRoom = message.waitingRoom
       this.createUI(this.isWaiting)
@@ -261,6 +263,13 @@ class PokerScene extends Phaser.Scene {
     // if the client refreshes or leaves, only alert them if the game is in play and they are not in the waiting room
     window.addEventListener("beforeunload", (event) => {
       if (this.room && (this.room.state.gamePhase.includes("playing") || this.room.state.gamePhase === "dealing") && !this.room.state.waitingRoom.has(this.room.sessionId)) { event.preventDefault(); }
+      else if (this.room) this.room.leave()
+    });
+
+    // if the client presses the back button, only alert them if the game is in play and they are not in the waiting room
+    window.addEventListener("popstate", (event) => {
+      if (this.room && (this.room.state.gamePhase.includes("playing") || this.room.state.gamePhase === "dealing") && !this.room.state.waitingRoom.has(this.room.sessionId)) { event.preventDefault(); }
+      else if (this.room) this.room.leave()
     });
 
     // loading background and audio
@@ -422,7 +431,9 @@ class PokerScene extends Phaser.Scene {
     const [startGameText, startGameButton, startGameGraphics] = this.addActionButtons("Start Game", centerX, centerY - (this.scale.height / 6), () => this.room.send("readyUp"), '72px', '#FFD700')
     this.startGameText = startGameText, this.startGameButton = startGameButton, this.startGameGraphics = startGameGraphics
     this.changeActionButtonState(true, this.startGameText, this.startGameButton, this.startGameGraphics)
-    const [leaveRoomText, leaveRoomButton, leaveRoomGraphics] = this.addActionButtons("Leave Room", centerX, centerY + (this.scale.height / 6), () => window.location.href = '/', '72px', '#f00')
+    const [leaveRoomText, leaveRoomButton, leaveRoomGraphics] = this.addActionButtons("Back To Lobby", centerX, centerY + (this.scale.height / 6), () => { 
+      if(this.room) this.room.leave()
+      history.back() }, '72px', '#f00')
     this.leaveRoomText = leaveRoomText, this.leaveRoomButton = leaveRoomButton, this.leaveRoomGraphics = leaveRoomGraphics
     this.changeActionButtonState(true, this.leaveRoomText, this.leaveRoomButton, this.leaveRoomGraphics)
 
@@ -863,7 +874,7 @@ class PokerScene extends Phaser.Scene {
   }
 
   // method to end the game
-  endGame(winner, winnings, result) {
+  endGame(winnerName, winner, winnings, result) {
     if(this.room.state.waitingRoom.has(this.room.sessionId)) return
     this.currentTurn = "none"
     const centerX = this.cameras.main.centerX
@@ -885,7 +896,7 @@ class PokerScene extends Phaser.Scene {
       this.totalCreditsText.setText(`Credits: ${this.playerCredits}`)
     }
     else
-      this.resultsText.setText(`${winner} won this round${message}`).setVisible(true)
+      this.resultsText.setText(`${winnerName} won this round${message}`).setVisible(true)
 
     this.activeCards.keys().forEach(item => {
       if(this.activeCards.get(item).texture.key.includes('card'))
@@ -910,7 +921,9 @@ class PokerScene extends Phaser.Scene {
     this.playAgainButton = playAgainButton
     this.playAgainGraphics = playAgainGraphics
 
-    const [quitText, quitButton, quitGraphics] = this.addActionButtons("Quit", centerX + (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => window.location.href = '/', '72px', '#f00')
+    const [quitText, quitButton, quitGraphics] = this.addActionButtons("Back To Lobby", centerX + (this.scale.width / 6), centerY + (this.scale.height / 6.5), () => { 
+      if(this.room) this.room.leave()
+      history.back() }, '72px', '#f00')
     this.quitText = quitText
     this.quitButton = quitButton
     this.quitGraphics = quitGraphics

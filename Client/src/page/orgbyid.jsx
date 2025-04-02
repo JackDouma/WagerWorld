@@ -23,6 +23,7 @@ function ViewOrgById() {
         allowBlackJack: false,
         allowPoker: false,
         allowHorseRacing: false,
+        allowRoulette: false,
     });
     const [lobbyType, setLobbyType] = useState("Public");
     const [defaultBalance, setDefaultBalance] = useState(0);
@@ -69,6 +70,7 @@ function ViewOrgById() {
                         allowBlackJack: orgData.allowBlackJack,
                         allowPoker: orgData.allowPoker,
                         allowHorseRacing: orgData.allowHorseRacing,
+                        allowRoulette: orgData.allowRoulette,
                     });
                 }
             }
@@ -114,6 +116,7 @@ function ViewOrgById() {
         blackjack: 0,
         poker: 0,
         horseRacing: 0,
+        roulette: 0,
     });
 
     // open game selection screen when user presses create room
@@ -123,7 +126,7 @@ function ViewOrgById() {
 
     // when the user is okay with the games selected
     const handleConfirm = async () => {
-        const totalRooms = gameSelections.blackjack + gameSelections.poker + gameSelections.horseRacing;
+        const totalRooms = gameSelections.blackjack + gameSelections.poker + gameSelections.horseRacing + gameSelections.roulette;
         const currentUser = auth.currentUser;
 
         // if no games are chosen, return and give error message
@@ -139,7 +142,8 @@ function ViewOrgById() {
                 owner: localStorage.getItem("firebaseIdToken"),
                 blackjack: gameSelections.blackjack,
                 poker: gameSelections.poker,
-                horseracing: gameSelections.horseRacing
+                horseracing: gameSelections.horseRacing,
+                roulette: gameSelections.roulette
             }
         };
 
@@ -584,6 +588,21 @@ function ViewOrgById() {
 
                         {allowedGames.allowHorseRacing && (
                             <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Horse Racing (0-3)" value={gameSelections.horseRacing} onChange={(e) => handleGameChange("horseRacing", e.target.value)}
+                                sx={{
+                                    backgroundColor: 'white',
+                                    '& .MuiInputLabel-root': {
+                                        ...theme.typography.general,
+                                        fontSize: "0.80rem",
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        ...theme.typography.general,
+                                    },
+                                }}
+                            />
+                        )}
+
+                        {allowedGames.allowRoulette && (
+                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Roulette (0-3)" value={gameSelections.roulette} onChange={(e) => handleGameChange("roulette", e.target.value)}
                                 sx={{
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {

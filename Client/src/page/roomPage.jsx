@@ -63,6 +63,14 @@ function RoomPage() {
                             ]);
                         }
                     }
+                    if (typeof message.roulette !== 'undefined' && message.roulette.length > 0) {
+                        for (let i = 0; i < message.roulette.length; i++) {
+                            setGames(prevGames => [
+                                ...prevGames,
+                                { name: "Roulette", path: `/roulette/${message.roulette[i]}` }
+                            ]);
+                        }
+                    }
                     setLoading(false);
                 });
                 
