@@ -309,9 +309,13 @@ class PlaceBetsScene extends Phaser.Scene {
                 if (this.selectedBetOption === '..') {
                     this.betMessageText.setText('Choose where to place your bet before proceeding.');
                 } else {
-                    const betMessage = `${this.betAmount} on ${this.selectedBetOption}`;
-                    this.room.send('bet', { value: betMessage });
-                    this.scene.start('GameScene');
+                    // const betMessage = `${this.betAmount} on ${this.selectedBetOption}`;
+                    // this.room.send('bet', { value: betMessage });
+                    // this.scene.start('GameScene');
+                    this.room.send('bet', { playerId: playerId, playerName: userDoc.data().name, betAmount: this.betAmount, betOption: this.selectedBetOption });
+                    playButtonText.setText('Waiting for other players...');
+                    playButtonGraphics.clear();
+                    playButtonContainer.disableInteractive();
                 }
             })
             .on('pointerover', () => {
@@ -324,6 +328,11 @@ class PlaceBetsScene extends Phaser.Scene {
                 playButtonGraphics.fillStyle(0x000000, 0.5);
                 playButtonGraphics.fillRoundedRect(-playButtonWidth / 2, -buttonHeight / 2, playButtonWidth, buttonHeight, buttonRadius);
             });
+
+        // when all players have placed bets
+        this.room.onMessage('allBetsPlaced', (message) => {
+            this.scene.start('GameScene', { room: this.room });
+        })
     }
 
     updateBetMessage() {
@@ -339,12 +348,16 @@ class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
         this.cardScale = 0.3; // Adjust the scale as needed
-        // this.activeCards = [];
         this.playerCards = [];
         this.bankerCards = [];
-        this.values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"]
-        this.suits = ["spades", "clubs", "diamonds", "hearts"]
         this.gameMessageText = null;
+        this.bets = [];
+        this.cardsDealt = false;
+    }
+
+    init(data) {
+        this.room = data.room;
+        console.log("Room passed to GameScene:", this.room);
     }
 
     preload() {
@@ -352,28 +365,27 @@ class GameScene extends Phaser.Scene {
             google: {
                 families: ['Rowdies']
             },
-            // active: () => {
-            //     this.totalCredits.setFontFamily('"Rowdies"')
-            //     this.currentBetText.setFontFamily('"Rowdies"')
-            //     this.resultsText.setFontFamily('"Rowdies"')
-            //     this.placeBetsButton.setFontFamily('"Rowdies"')
-            //     this.possibleRemoveBetButtons.forEach((item) => { item.setFontFamily('"Rowdies') })
-            //     this.allPhysicalPositions.forEach((item) => { item.setFontFamily('"Rowdies') })
-            // }
         })
 
         this.load.image('bg', '/table.jpg');
         this.load.image('card', '/card-back.png');
 
-        this.suits.forEach((suit) => {
-            this.values.forEach((value) => {
+        const values = ["2", "3", "4", "5", "6", "7", "8", "9", "10", "jack", "queen", "king", "ace"]
+        const suits = ["spades", "clubs", "diamonds", "hearts"]
+        suits.forEach((suit) => {
+            values.forEach((value) => {
                 const fileName = `${value}_of_${suit}.png`;
-                this.load.image(fileName, `/Cards/${fileName}`);
+                const filePath = `/Cards/${fileName}`;
+                this.load.image(fileName, filePath);
             });
         });
     }
 
     async create() {
+        const playerId = localStorage.getItem("firebaseIdToken");
+        const userRef = doc(db, "users", playerId);
+        const userDoc = await getDoc(doc(db, "users", playerId));
+
         const centerX = this.cameras.main.centerX;
         const centerY = this.cameras.main.centerY;
 
@@ -405,203 +417,225 @@ class GameScene extends Phaser.Scene {
         // manages all delays in the game
         let delayAccumulator = 0;
 
-        // game message
-        this.time.delayedCall(delayAccumulator += 1000, () => {
-            this.gameMessageText.setText("Dealing cards...");
-        });
+        this.room.send('getPlayerBets', {});
 
-        // (logically) deal player and banker 2 cards each
-        for (let i = 0; i < 2; i++) {
-            this.playerCards.push(this.generateRandomCard());
-            this.bankerCards.push(this.generateRandomCard());
-        }
+        this.room.onMessage('playerBets', (message) => {
+            this.bets = message.bets;
 
-        // deal cards animations
-        const playerCard0 = this.animateCard(centerX - 350, centerY / 2 - 50, delayAccumulator += 1000);
-        const bankerCard0 = this.animateCard(centerX - 350, centerY / 2 + 250, delayAccumulator += 750);
-        const playerCard1 = this.animateCard(centerX - 50, centerY / 2 - 50, delayAccumulator += 750);
-        const bankerCard1 = this.animateCard(centerX - 50, centerY / 2 + 250, delayAccumulator += 750);
-
-        // PLAYER'S TURN
-
-        // game message
-        this.time.delayedCall(delayAccumulator += 2500, () => {
-            this.gameMessageText.setText("Player's turn!");
-        });
-
-
-        // flip player cards
-        this.flipCard(playerCard0, `${this.playerCards[0]}.png`, delayAccumulator += 1000);
-        this.flipCard(playerCard1, `${this.playerCards[1]}.png`, delayAccumulator += 500);
-
-        // calculate player cards total
-        // add cards together, drop the tens digit if exists
-        let initialPlayerTotal = this.calculateCardsTotal(this.playerCards);
-        let finalPlayerTotal = initialPlayerTotal;
-
-        let playerStands = false;
-
-        // if score of 8 or 9, no more cards dealt. ("natural")
-        // game message
-        if (initialPlayerTotal >= 8 && initialPlayerTotal <= 9) {
-            this.time.delayedCall(delayAccumulator += 1000, () => {
-                this.gameMessageText.setText(`Player has a score of ${initialPlayerTotal}, a "natural"!`);
-            });
-        }
-
-        // if score 6, 7, no more cards dealt and player stands
-        else if (initialPlayerTotal >= 6 && initialPlayerTotal <= 7) {
-            playerStands = true;
-
-            // game message
-            this.time.delayedCall(delayAccumulator += 1000, () => {
-                this.gameMessageText.setText(`Player has an initial score of ${initialPlayerTotal}, so they stand.`);
-            });
-        }
-        // if score 0-5, draw a third card
-        else if (initialPlayerTotal >= 0 && initialPlayerTotal <= 5) {
-
-            // game message
-            this.time.delayedCall(delayAccumulator += 1000, () => {
-                this.gameMessageText.setText(`Player has an initial score of ${initialPlayerTotal}, so they will draw a third card.`);
-            });
-
-            this.playerCards.push(this.generateRandomCard());
-            const playerCard2 = this.animateCard(centerX + 250, centerY / 2 - 50, delayAccumulator += 2000);
-            this.flipCard(playerCard2, `${this.playerCards[2]}.png`, delayAccumulator += 1500);
-            finalPlayerTotal = this.calculateCardsTotal(this.playerCards)
-        }
-
-        // show the player's final score after all animations run
-        this.time.delayedCall(delayAccumulator += 2000, () => {
-            this.add.text(centerX + 700, centerY / 2 - 50, `Score: ${finalPlayerTotal}`, {
-                fontSize: '80px',
+            // Display bets in the bottom left corner
+            const betsText = this.bets.map(bet => `${bet.playerName}: ${bet.betAmount} on ${bet.betOption}`).join('\n');
+            this.add.text(20, this.scale.height - 100, betsText, {
+                fontSize: '20px',
                 fill: '#fff',
-            }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');
-            this.gameMessageText.setText(`Player has a final score of ${finalPlayerTotal}.`);
-        });
+                align: 'left',
+            }).setOrigin(0, 1).setFontFamily('"Rowdies"');
 
 
+            this.room.send('dealInitial', {});
+
+            // deal initial cards
+            this.room.onMessage('initialCardsDealt', (message) => {
+                if (this.cardsDealt) return; // prevent duplicate handling
+                this.cardsDealt = true;
 
 
-
-
-        // BANKER'S TURN
-
-        // game message
-        this.time.delayedCall(delayAccumulator += 4000, () => {
-            this.gameMessageText.setText(`Banker's turn!`);
-        });
-
-        this.flipCard(bankerCard0, `${this.bankerCards[0]}.png`, delayAccumulator += 1000);
-        this.flipCard(bankerCard1, `${this.bankerCards[1]}.png`, delayAccumulator += 500);
-
-        let initialBankerTotal = this.calculateCardsTotal(this.bankerCards);
-        let finalBankerTotal = initialBankerTotal;
-
-
-
-
-        if ((playerStands) && (initialBankerTotal >= 0 && initialBankerTotal <= 5)) {
-
-            // game message
-            this.time.delayedCall(delayAccumulator += 1000, () => {
-                this.gameMessageText.setText(`Banker has an initial score of ${initialBankerTotal}, so they will draw a third card.`);
-            });
-
-            // take third card
-            this.bankerCards.push(this.generateRandomCard());
-            const bankerCard2 = this.animateCard(centerX + 250, centerY / 2 + 250, delayAccumulator += 1000);
-            this.flipCard(bankerCard2, `${this.bankerCards[2]}.png`, delayAccumulator += 1500);
-            finalBankerTotal = this.calculateCardsTotal(this.bankerCards);
-
-        }
-        else if (this.playerCards.length > 2) {
-            // calculate value of the player's third card
-            const playerCard2Value = this.getCardValueFromName(this.playerCards[2]);
-
-            if ((initialBankerTotal >= 0 && initialBankerTotal <= 2) || (initialBankerTotal >= 3 && initialBankerTotal <= 6 && playerCard2Value != 8)) {
+                this.playerCards.push(message.playerCard1);
+                this.playerCards.push(message.playerCard2);
+                this.playerCards.push(message.playerCard3);
+                this.bankerCards.push(message.bankerCard1);
+                this.bankerCards.push(message.bankerCard2);
+                this.bankerCards.push(message.bankerCard3);
 
                 // game message
                 this.time.delayedCall(delayAccumulator += 1000, () => {
-                    this.gameMessageText.setText(`Banker has an initial score of ${initialBankerTotal}, so they will draw a third card.`);
+                    this.gameMessageText.setText("Dealing cards...");
                 });
 
-                // take third card
-                this.bankerCards.push(this.generateRandomCard());
-                const bankerCard2 = this.animateCard(centerX + 250, centerY / 2 + 250, delayAccumulator += 1000);
-                this.flipCard(bankerCard2, `${this.bankerCards[2]}.png`, delayAccumulator += 1500);
-                finalBankerTotal = this.calculateCardsTotal(this.bankerCards);
-            }
-            else {
+                // deal cards animations
+                const playerCard0 = this.animateCard(centerX - 350, centerY / 2 - 50, delayAccumulator += 1000);
+                const bankerCard0 = this.animateCard(centerX - 350, centerY / 2 + 250, delayAccumulator += 750);
+                const playerCard1 = this.animateCard(centerX - 50, centerY / 2 - 50, delayAccumulator += 750);
+                const bankerCard1 = this.animateCard(centerX - 50, centerY / 2 + 250, delayAccumulator += 750);
+
+                // PLAYER'S TURN
+
                 // game message
-                this.time.delayedCall(delayAccumulator += 1000, () => {
-                    this.gameMessageText.setText(`Banker has a score of ${finalBankerTotal}, so they stand.`);
+                this.time.delayedCall(delayAccumulator += 2500, () => {
+                    this.gameMessageText.setText("Player's turn!");
                 });
-            }
-        }
-        else {
-            // game message
-            this.time.delayedCall(delayAccumulator += 1000, () => {
-                this.gameMessageText.setText(`Banker has a score of ${finalBankerTotal}, so they stand.`);
+
+
+                // flip player cards
+                this.flipCard(playerCard0, `${this.playerCards[0]}.png`, delayAccumulator += 1000);
+                this.flipCard(playerCard1, `${this.playerCards[1]}.png`, delayAccumulator += 500);
+
+                // calculate player cards total
+                // add cards together, drop the tens digit if exists
+                let initialPlayerTotal = this.calculateCardsTotal(this.playerCards.slice(0, 2));
+                let finalPlayerTotal = initialPlayerTotal;
+
+                let playerStands = false;
+
+                // if score of 8 or 9, no more cards dealt. ("natural")
+                // game message
+                if (initialPlayerTotal >= 8 && initialPlayerTotal <= 9) {
+                    this.time.delayedCall(delayAccumulator += 1000, () => {
+                        this.gameMessageText.setText(`Player has a score of ${initialPlayerTotal}, a "natural"!`);
+                    });
+                }
+
+                // if score 6, 7, no more cards dealt and player stands
+                else if (initialPlayerTotal >= 6 && initialPlayerTotal <= 7) {
+                    playerStands = true;
+
+                    // game message
+                    this.time.delayedCall(delayAccumulator += 1000, () => {
+                        this.gameMessageText.setText(`Player has an initial score of ${initialPlayerTotal}, so they stand.`);
+                    });
+                }
+                // if score 0-5, draw a third card
+                else if (initialPlayerTotal >= 0 && initialPlayerTotal <= 5) {
+
+                    // game message
+                    this.time.delayedCall(delayAccumulator += 1000, () => {
+                        this.gameMessageText.setText(`Player has an initial score of ${initialPlayerTotal}, so they will draw a third card.`);
+                    });
+
+                    const playerCard2 = this.animateCard(centerX + 250, centerY / 2 - 50, delayAccumulator += 2000);
+                    this.flipCard(playerCard2, `${this.playerCards[2]}.png`, delayAccumulator += 1500);
+                    finalPlayerTotal = this.calculateCardsTotal(this.playerCards)
+                }
+
+                // show the player's final score after all animations run
+                this.time.delayedCall(delayAccumulator += 2000, () => {
+                    this.add.text(centerX + 700, centerY / 2 - 50, `Score: ${finalPlayerTotal}`, {
+                        fontSize: '80px',
+                        fill: '#fff',
+                    }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');
+                    this.gameMessageText.setText(`Player has a final score of ${finalPlayerTotal}.`);
+                });
+
+
+
+
+
+
+                // BANKER'S TURN
+
+                // game message
+                this.time.delayedCall(delayAccumulator += 4000, () => {
+                    this.gameMessageText.setText(`Banker's turn!`);
+                });
+
+                this.flipCard(bankerCard0, `${this.bankerCards[0]}.png`, delayAccumulator += 1000);
+                this.flipCard(bankerCard1, `${this.bankerCards[1]}.png`, delayAccumulator += 500);
+
+                let initialBankerTotal = this.calculateCardsTotal(this.bankerCards.slice(0, 2));
+                let finalBankerTotal = initialBankerTotal;
+
+
+
+
+                if ((playerStands) && (initialBankerTotal >= 0 && initialBankerTotal <= 5)) {
+
+                    // game message
+                    this.time.delayedCall(delayAccumulator += 1000, () => {
+                        this.gameMessageText.setText(`Banker has an initial score of ${initialBankerTotal}, so they will draw a third card.`);
+                    });
+
+                    // take third card
+                    const bankerCard2 = this.animateCard(centerX + 250, centerY / 2 + 250, delayAccumulator += 1000);
+                    this.flipCard(bankerCard2, `${this.bankerCards[2]}.png`, delayAccumulator += 1500);
+                    finalBankerTotal = this.calculateCardsTotal(this.bankerCards);
+
+                }
+                else if (this.playerCards.length > 2) {
+                    // calculate value of the player's third card
+                    const playerCard2Value = this.getCardValueFromName(this.playerCards[2]);
+
+                    if ((initialBankerTotal >= 0 && initialBankerTotal <= 2) || (initialBankerTotal >= 3 && initialBankerTotal <= 6 && playerCard2Value != 8)) {
+
+                        // game message
+                        this.time.delayedCall(delayAccumulator += 1000, () => {
+                            this.gameMessageText.setText(`Banker has an initial score of ${initialBankerTotal}, so they will draw a third card.`);
+                        });
+
+                        // take third card
+                        const bankerCard2 = this.animateCard(centerX + 250, centerY / 2 + 250, delayAccumulator += 1000);
+                        this.flipCard(bankerCard2, `${this.bankerCards[2]}.png`, delayAccumulator += 1500);
+                        finalBankerTotal = this.calculateCardsTotal(this.bankerCards);
+                    }
+                    else {
+                        // game message
+                        this.time.delayedCall(delayAccumulator += 1000, () => {
+                            this.gameMessageText.setText(`Banker has a score of ${finalBankerTotal}, so they stand.`);
+                        });
+                    }
+                }
+                else {
+                    // game message
+                    this.time.delayedCall(delayAccumulator += 1000, () => {
+                        this.gameMessageText.setText(`Banker has a score of ${finalBankerTotal}, so they stand.`);
+                    });
+                }
+
+                // show the banker's final score after all animations run
+                this.time.delayedCall(delayAccumulator += 2000, () => {
+                    this.add.text(centerX + 700, centerY / 2 + 250, `Score: ${finalBankerTotal}`, {
+                        fontSize: '80px',
+                        fill: '#fff',
+                    }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');
+                    this.gameMessageText.setText(`Banker has a final score of ${finalBankerTotal}.`);
+                });
+
+
+                // game message
+                this.time.delayedCall(delayAccumulator += 2000, () => {
+                    if (finalPlayerTotal > finalBankerTotal) {
+                        this.gameMessageText.setText(`Player wins!`);
+                    }
+                    else if (finalBankerTotal > finalPlayerTotal) {
+                        this.gameMessageText.setText("Banker wins!")
+                    }
+                    else {
+                        this.gameMessageText.setText("It's a tie!")
+                    }
+                });
+
+                // // Listen for game state updates
+                // this.room.onMessage('gameStart', (message) => {
+                //     console.log('Game started:', message);
+                //     this.startGame();
+                // });
+
+                // this.room.onMessage('waitForOthers', (message) => {
+                //     console.log('Waiting for others:', message);
+                //     this.gameMessageText.setText('Waiting for other players to be ready...');
+                // });
+
+                // this.room.onMessage('newGame', (message) => {
+                //     console.log('New game started:', message);
+                //     this.scene.restart();
+                // });
+
+                // // Listen for player join updates
+                // this.room.onMessage('playerJoin', (message) => {
+                //     console.log('Player joined:', message);
+                //     this.updatePlayerList(message.players);
+                // });
+
+                // // Listen for the winning bet type
+                // this.room.onMessage('setWinningBetType', (message) => {
+                //     console.log('Winning bet type:', message);
+                //     this.gameMessageText.setText(`Winning Bet: ${message}`);
+                // });
+
+                // this.room.onMessage('newGame', (message) => {
+                //     console.log('New game message received:', message);
+                //     this.resetGame();
+                // });
             });
-        }
-
-        // show the banker's final score after all animations run
-        this.time.delayedCall(delayAccumulator += 2000, () => {
-            this.add.text(centerX + 700, centerY / 2 + 250, `Score: ${finalBankerTotal}`, {
-                fontSize: '80px',
-                fill: '#fff',
-            }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');
-            this.gameMessageText.setText(`Banker has a final score of ${finalBankerTotal}.`);
         });
-
-
-        // game message
-        this.time.delayedCall(delayAccumulator += 2000, () => {
-            if (finalPlayerTotal > finalBankerTotal) {
-                this.gameMessageText.setText(`Player wins!`);
-            }
-            else if (finalBankerTotal > finalPlayerTotal) {
-                this.gameMessageText.setText("Banker wins!")
-            }
-            else {
-                this.gameMessageText.setText("It's a tie!")
-            }
-        });
-
-        // // Listen for game state updates
-        // this.room.onMessage('gameStart', (message) => {
-        //     console.log('Game started:', message);
-        //     this.startGame();
-        // });
-
-        // this.room.onMessage('waitForOthers', (message) => {
-        //     console.log('Waiting for others:', message);
-        //     this.gameMessageText.setText('Waiting for other players to be ready...');
-        // });
-
-        // this.room.onMessage('newGame', (message) => {
-        //     console.log('New game started:', message);
-        //     this.scene.restart();
-        // });
-
-        // // Listen for player join updates
-        // this.room.onMessage('playerJoin', (message) => {
-        //     console.log('Player joined:', message);
-        //     this.updatePlayerList(message.players);
-        // });
-
-        // // Listen for the winning bet type
-        // this.room.onMessage('setWinningBetType', (message) => {
-        //     console.log('Winning bet type:', message);
-        //     this.gameMessageText.setText(`Winning Bet: ${message}`);
-        // });
-
-        // this.room.onMessage('newGame', (message) => {
-        //     console.log('New game message received:', message);
-        //     this.resetGame();
-        // });
     }
 
     resetGame() {
@@ -620,16 +654,16 @@ class GameScene extends Phaser.Scene {
         this.gameMessageText.setText(`Players:\n${playerList.join('\n')}`);
     }
 
-    generateRandomCard() {
-        let card;
-        do {
-            const cardValue = this.values[Math.floor(Math.random() * this.values.length)];
-            const cardSuit = this.suits[Math.floor(Math.random() * this.suits.length)];
-            card = `${cardValue}_of_${cardSuit}`;
-        } while (this.playerCards.includes(card) || this.bankerCards.includes(card));
+    // generateRandomCard() {
+    //     let card;
+    //     do {
+    //         const cardValue = this.values[Math.floor(Math.random() * this.values.length)];
+    //         const cardSuit = this.suits[Math.floor(Math.random() * this.suits.length)];
+    //         card = `${cardValue}_of_${cardSuit}`;
+    //     } while (this.playerCards.includes(card) || this.bankerCards.includes(card));
 
-        return card;
-    }
+    //     return card;
+    // }
 
     getCardValueFromName(cardName) {
         let valueString = cardName.substring(0, cardName.indexOf("_"));
