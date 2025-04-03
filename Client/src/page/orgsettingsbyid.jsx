@@ -74,7 +74,7 @@ function OrgSettingsById() {
                 allowPoker,
                 allowRoulette,
                 allowHorseRacing,
-                defaultBalance
+                defaultBalance: Number(defaultBalance)
             });
 
             navigate(`/org/${orgId}`);
