@@ -106,8 +106,6 @@ const HorseRacingGame = () => {
           setHorseStats(message.horseStats);
           setGameStatus("waiting");
           const userBalance = userDoc.data().balance || 10000;
-          console.log("userBalance", userBalance);
-          setPlayerCredits(userBalance);
         });
 
         room.onMessage("playerUpdate", (message) => {
@@ -243,24 +241,24 @@ const HorseRacingGame = () => {
       <footer className="info-section">
         <div className="horse-stats">
           <h3>Horse Stats</h3>
-          <table>
+          <table id="horseRacingTable">
             <thead>
               <tr>
-                <th>Horse</th>
-                <th>Stamina</th>
-                <th>Accel.</th>
-                <th>Consist.</th>
-                <th>Odds</th>
+                <th id="horseRacingTh">Horse</th>
+                <th id="horseRacingTh">Stamina</th>
+                <th id="horseRacingTh">Accel.</th>
+                <th id="horseRacingTh">Consist.</th>
+                <th id="horseRacingTh">Odds</th>
               </tr>
             </thead>
             <tbody>
               {horseStats.map((horse) => (
                 <tr key={horse.id}>
-                  <td>Horse {parseInt(horse.id) + 1}</td>
-                  <td>{horse.stats.stamina.toFixed(2)}</td>
-                  <td>{horse.stats.acceleration.toFixed(2)}</td>
-                  <td>{horse.stats.consistency.toFixed(2)}</td>
-                  <td>{horse.odds}</td>
+                  <td id="horseRacingTd">Horse {parseInt(horse.id) + 1}</td>
+                  <td id="horseRacingTd">{horse.stats.stamina.toFixed(2)}</td>
+                  <td id="horseRacingTd">{horse.stats.acceleration.toFixed(2)}</td>
+                  <td id="horseRacingTd">{horse.stats.consistency.toFixed(2)}</td>
+                  <td id="horseRacingTd">{horse.odds}</td>
                 </tr>
               ))}
             </tbody>
@@ -268,20 +266,20 @@ const HorseRacingGame = () => {
         </div>
         <div className="bets-table">
           <h3>Bets</h3>
-          <table>
+          <table id="horseRacingTable">
             <thead>
               <tr>
-                <th>Player</th>
-                <th>Horse</th>
-                <th>Amount</th>
+                <th id="horseRacingTh">Player</th>
+                <th id="horseRacingTh">Horse</th>
+                <th id="horseRacingTh">Amount</th>
               </tr>
             </thead>
             <tbody>
               {bets.map((bet, index) => (
                 <tr key={index}>
-                  <td>{roomRef.current?.state.players.get(bet.clientId)?.name || "Anonymous"}</td>
-                  <td>Horse {bet.horseIndex + 1}</td>
-                  <td>${bet.amount}</td>
+                  <td id="horseRacingTd">{roomRef.current?.state.players.get(bet.clientId)?.name || "Anonymous"}</td>
+                  <td id="horseRacingTd">Horse {bet.horseIndex + 1}</td>
+                  <td id="horseRacingTd">${bet.amount}</td>
                 </tr>
               ))}
             </tbody>

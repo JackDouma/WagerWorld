@@ -24,6 +24,7 @@ function ViewOrgById() {
         allowPoker: false,
         allowHorseRacing: false,
         allowRoulette: false,
+        allowBaccarat: false
     });
     const [lobbyType, setLobbyType] = useState("Public");
     const [defaultBalance, setDefaultBalance] = useState(0);
@@ -71,6 +72,7 @@ function ViewOrgById() {
                         allowPoker: orgData.allowPoker,
                         allowHorseRacing: orgData.allowHorseRacing,
                         allowRoulette: orgData.allowRoulette,
+                        allowBaccarat: orgData.allowBaccarat
                     });
                 }
             }
@@ -117,6 +119,7 @@ function ViewOrgById() {
         poker: 0,
         horseRacing: 0,
         roulette: 0,
+        baccarat: 0
     });
 
     // open game selection screen when user presses create room
@@ -126,7 +129,7 @@ function ViewOrgById() {
 
     // when the user is okay with the games selected
     const handleConfirm = async () => {
-        const totalRooms = gameSelections.blackjack + gameSelections.poker + gameSelections.horseRacing + gameSelections.roulette;
+        const totalRooms = gameSelections.blackjack + gameSelections.poker + gameSelections.horseRacing + gameSelections.roulette + gameSelections.baccarat;
         const currentUser = auth.currentUser;
 
         // if no games are chosen, return and give error message
@@ -143,7 +146,8 @@ function ViewOrgById() {
                 blackjack: gameSelections.blackjack,
                 poker: gameSelections.poker,
                 horseracing: gameSelections.horseRacing,
-                roulette: gameSelections.roulette
+                roulette: gameSelections.roulette,
+                baccarat: gameSelections.baccarat
             }
         };
 
@@ -607,7 +611,22 @@ function ViewOrgById() {
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {
                                         ...theme.typography.general,
-                                        fontSize: "0.80rem",
+                                        fontSize: "0.76rem",
+                                    },
+                                    '& .MuiInputBase-input': {
+                                        ...theme.typography.general,
+                                    },
+                                }}
+                            />
+                        )}
+
+                        {allowedGames.allowBaccarat && (
+                            <TextField variant="outlined" margin="dense" type="number" min="0" max="3" label="Baccarat (0-3)" value={gameSelections.baccarat} onChange={(e) => handleGameChange("baccarat", e.target.value)}
+                                sx={{
+                                    backgroundColor: 'white',
+                                    '& .MuiInputLabel-root': {
+                                        ...theme.typography.general,
+                                        fontSize: "0.78rem",
                                     },
                                     '& .MuiInputBase-input': {
                                         ...theme.typography.general,

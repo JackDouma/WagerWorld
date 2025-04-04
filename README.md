@@ -21,7 +21,7 @@
 </ul>
 <h5>In another terminal:</h5>
 <ul>
-  <li>cd Sever</li>
+  <li>cd Server</li>
   <li>npm i</li>
   <li>node server.js</li>
 </ul>
