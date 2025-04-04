@@ -74,7 +74,7 @@ function OrgSettingsById() {
                 allowRoulette,
                 allowHorseRacing,
                 allowBaccarat,
-                defaultBalance
+                defaultBalance: Number(defaultBalance)
             });
 
             navigate(`/org/${orgId}`);

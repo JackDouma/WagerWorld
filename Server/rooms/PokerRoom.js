@@ -71,8 +71,8 @@ class PokerRoom extends Room {
           this.nextTurn('raise')
         }
         else {
-          player.lastAction = 'call'
-          this.nextTurn('call')
+          player.lastAction = message.allIn ? 'all in' : 'call'
+          this.nextTurn(player.lastAction)
         }
       }
     })
@@ -287,7 +287,7 @@ class PokerRoom extends Room {
 
     let nextIndex = (playerIds.indexOf(this.state.currentTurn) + 1) % playerIds.length
 
-    while (this.state.players.get(playerIds[nextIndex]).lastAction === 'fold')
+    while (this.state.players.get(playerIds[nextIndex]).lastAction === 'fold' && this.state.players.get(playerIds[nextIndex]).lastAction === 'all in')
       nextIndex = (nextIndex + 1) % playerIds.length;
 
     this.state.currentTurn = playerIds[nextIndex];
@@ -309,7 +309,7 @@ class PokerRoom extends Room {
     const allHaveActed = activePlayers.every(player => player.lastAction !== "none")
     // check if all the players have an equal bet made to the highest bet
     const highestBet = Math.max(...activePlayers.map(p => p.bet || 0))
-    const allBetsEqual = activePlayers.every(player => player.bet === highestBet)
+    const allBetsEqual = activePlayers.every(player => player.bet === highestBet || player.lastAction === "all in")
     // check both conditions above, and that the game has more than 1 player in it
     return allBetsEqual && allHaveActed && activePlayers.length > 1
   }
@@ -335,7 +335,7 @@ class PokerRoom extends Room {
           if (card)
             this.state.dealer.push(card)
         }
-        const activePlayers = Array.from(this.state.players.values()).filter(player => player.lastAction !== 'fold')
+        const activePlayers = Array.from(this.state.players.values()).filter(player => player.lastAction !== 'fold' && player.lastAction !== 'all in')
         activePlayers.forEach((item) => item.lastAction = 'none')
         this.state.gamePhase = `playing${gamePhase + 1}`
         console.log(gamePhase)
