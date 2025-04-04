@@ -71,13 +71,20 @@ function RoomPage() {
                             ]);
                         }
                     }
+                    if (typeof message.baccarat !== 'undefined' && message.baccarat.length > 0) {
+                        for (let i = 0; i < message.baccarat.length; i++) {
+                            setGames(prevGames => [
+                                ...prevGames,
+                                { name: "Baccarat", path: `/baccarat/${message.baccarat[i]}` }
+                            ]);
+                        }
+                    }
                     setLoading(false);
                 });
-                
+
                 joinedRoom.send('getRooms');
-            } 
-            catch (error) 
-            {
+            }
+            catch (error) {
                 console.error("ERROR: ", error);
                 navigate(`/signin`);
             }
@@ -124,7 +131,7 @@ function RoomPage() {
             <h1>Room ID: {roomId}</h1>
             <h2>Room Type: {roomType}</h2>
             <h2>Select a Game:</h2>
-            
+
             <div className="games">
                 {!loading && games.map((game, index) => (
                     <button key={index} onClick={() => navigate(game.path)}>

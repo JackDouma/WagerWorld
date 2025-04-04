@@ -688,11 +688,19 @@ class PokerScene extends Phaser.Scene {
   // method to make a bet
   bet(value) {
     // check to make sure the user cannot go into debt
-    if (value <= this.playerCredits) {
+    if (value < this.playerCredits) {
       this.currentBet += value
       this.totalBet += value
       this.playerBetValues[this.playerIndex].setText("Betting " + this.totalBet)
       this.playerCredits -= value
+      this.totalCreditsText.setText(`Credits: ${this.playerCredits}`)
+    }
+    else if (value >= this.playerCredits) {
+      this.currentBet += this.playerCredits - this.currentBet
+      this.totalBet += this.playerCredits - this.totalBet
+      console.log(value, this.playerCredits, this.totalBet)
+      this.playerBetValues[this.playerIndex].setText("Betting " + this.totalBet)
+      this.playerCredits = 0
       this.totalCreditsText.setText(`Credits: ${this.playerCredits}`)
     }
   }
@@ -716,7 +724,7 @@ class PokerScene extends Phaser.Scene {
       if(this.betType && this.totalBet <= this.overallHighestCurrentBet)
         this.resultsText.setText("Must raise more than " + this.overallHighestCurrentBet).setVisible(true)
       else
-        this.room.send('bet', { value: this.totalBet })
+        this.room.send('bet', { value: this.totalBet, allIn: this.overallHighestCurrentBet - this.totalBet >= this.playerCredits })
     }
   }
 
@@ -724,6 +732,7 @@ class PokerScene extends Phaser.Scene {
   cancelCurrentAction() {
     this.totalBet -= this.currentBet
     this.playerBetValues[this.playerIndex].setText("Betting " + this.totalBet)
+    console.log('CB', this.currentBet)
     this.playerCredits += this.currentBet
     this.totalCreditsText.setText(`Credits: ${this.playerCredits}`)
     this.currentBet = 0
@@ -794,7 +803,8 @@ class PokerScene extends Phaser.Scene {
     if (this.currentTurn != this.room.sessionId) return
     this.betType = false
     this.bet(this.overallHighestCurrentBet - this.totalBet)
-    this.resultsText.setVisible(true).setText("Call to match " + this.overallHighestCurrentBet)
+    console.log(this.overallHighestCurrentBet - this.totalBet)
+    this.resultsText.setVisible(true).setText((this.overallHighestCurrentBet - this.totalBet >= this.playerCredits ? "Go All In " : "Call ") + "to match " + this.overallHighestCurrentBet)
     this.changeBettingOptions(true, false)
   }
 
