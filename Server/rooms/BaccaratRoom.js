@@ -70,10 +70,36 @@ class BaccaratRoom extends Room {
     });
 
     this.onMessage("bet", (client, message) => {
-      const { playerId, playerName, betAmount, betOption } = message;
+      const { playerId, playerName, betAmount, betOption, initialBalance } = message;
 
       // add the bet to the bets list
       this.bets.push({ playerId, playerName, betAmount, betOption });
+      if (playerId) 
+        {
+          firestore.collection('users').doc(playerId).get()
+            .then(doc => {
+              if (!doc.exists) 
+              {
+                console.warn(`User doc not found for ${playerId}`);
+                return;
+              }
+    
+              return firestore.collection('users').doc(playerId).update({
+                balance: initialBalance - betAmount,
+              });
+            })
+            .then(() => {
+              console.log(`Balance updated for ${playerId}}`);
+            })
+            .catch((error) => {
+              console.error(`Error updating user ${playerId}:`, error);
+            });
+    
+        } 
+        else 
+        {
+          console.warn(`Player missing ${client.sessionId}`);
+        }
 
       // check if the number of bets equals the number of ready players
       if (this.bets.length === this.readyPlayers.size) {
@@ -177,6 +203,7 @@ class BaccaratRoom extends Room {
             .update({
               balance: updatedBalance,
               gameHistory: FieldValue.arrayUnion(historyEntry),
+              isInGame: false
             });
         })
         .then(() => {
@@ -214,8 +241,7 @@ class BaccaratRoom extends Room {
         (player) => player.id === client.id
       );
       if (!playerExists) {
-        this.players.push({ id: client.id, name: playerName });
-
+        this.players.push({ id: client.id, name: playerName, firebaseID: playerId });
         this.broadcast("playerListUpdate", { players: this.players });
       }
     }
@@ -229,6 +255,9 @@ class BaccaratRoom extends Room {
       (player) => player.id === client.id
     );
     if (playerIndex !== -1) {
+      firestore.collection("users").doc(this.players[playerIndex].firebaseID).update({
+        isInGame: false,
+      });
       this.players.splice(playerIndex, 1);
     }
 
@@ -236,8 +265,19 @@ class BaccaratRoom extends Room {
     if (this.readyPlayers.has(client.id)) {
       this.readyPlayers.delete(client.id);
     }
+    
 
     this.broadcast("playerListUpdate", { players: this.players });
+  }
+
+  // handles when the room is disposed
+  onDispose() {
+    // make sure all clients are set to not in game
+    this.players.forEach((player) => {
+      firestore.collection("users").doc(player.fireBaseId).update({
+        isInGame: false,
+      });
+    });
   }
 }
 

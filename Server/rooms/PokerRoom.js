@@ -287,7 +287,7 @@ class PokerRoom extends Room {
 
     let nextIndex = (playerIds.indexOf(this.state.currentTurn) + 1) % playerIds.length
 
-    while (this.state.players.get(playerIds[nextIndex]).lastAction === 'fold' && this.state.players.get(playerIds[nextIndex]).lastAction === 'all in')
+    while (this.state.players.get(playerIds[nextIndex]).lastAction === 'fold' || this.state.players.get(playerIds[nextIndex]).lastAction === 'all in')
       nextIndex = (nextIndex + 1) % playerIds.length;
 
     this.state.currentTurn = playerIds[nextIndex];
