@@ -46,7 +46,6 @@ function CreateOrg() {
                 allowPoker: true,
                 allowRoulette: true,
                 allowBlackJack: true,
-                allowCrazy8s: true,
                 allowHorseRacing: true,
                 allowBaccarat: true,
                 defaultBalance: 100000,

@@ -11,8 +11,6 @@ class WaitingScene extends Phaser.Scene {
         super({ key: 'WaitingScene' });
         this.client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
         this.playerListText = null;
-        // this.clearPlayersCalled = false;
-        // this.playersCleared = false;
     }
 
     preload() {
@@ -21,25 +19,30 @@ class WaitingScene extends Phaser.Scene {
     }
 
     init(data) {
-        console.log("Init: ", data.roomId);
         this.roomId = data.roomId;
     }
 
     async create() {
-
-
-        // if (!localStorage.getItem('hasReloaded')) {
-        //     localStorage.setItem('hasReloaded', 'true'); // Set the flag
-        //     window.location.reload(); // Reload the page
-        //     return; // Exit the method to prevent further execution
-        // }
-
-        // window.location.reload();
-
-        console.log("Creating Scene...");
         const playerId = localStorage.getItem("firebaseIdToken");
         const userRef = doc(db, "users", playerId);
         const userDoc = await getDoc(doc(db, "users", playerId));
+
+        // // isInGame logic - this section works
+        // try {
+        //     if (userDoc.exists() && userDoc.data().isInGame) {
+        //         console.log(`Player with ID is already in a game.`);
+        //         // redirect to signin -> org page
+        //         window.location.href = "/signin";
+        //         return
+        //     }
+        //     // update isInGame to true
+        //     await updateDoc(userRef, {
+        //         isInGame: true
+        //     });
+        // }
+        // catch (error) {
+        //     console.error('Error fetching player data:', error);
+        // }
 
         this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height);
         const centerX = this.cameras.main.centerX;
@@ -95,54 +98,29 @@ class WaitingScene extends Phaser.Scene {
         });
 
         // HANDLE JOINING
-        // if room is found
-        console.log("playerId:", playerId);
         try {
             const firestoreBalance = userDoc.data().balance;
-
-            // Add a flag to track if clearPlayers has already been called
-            // if (!this.clearPlayersCalled) {
-            // this.clearPlayersCalled = true; // Set the flag to true to prevent future calls
-            // await this.room.send('clearPlayers', { roomId: this.room.id });
-            // this.room.onMessage('playersCleared', (message) => {
-            // this.room = this.client.joinById(this.roomId, { playerId: playerId, balance: firestoreBalance, playerName: userDoc.data().name });
-            // })
-            // }
-            // else {
-
-
             this.room = await this.client.joinById(this.roomId, { playerId: playerId, balance: firestoreBalance, playerName: userDoc.data().name });
-            // window.location.reload();
-            // }
-            console.log("Rejoining room:", this.roomId);
         } catch (err) {
             console.error(err);
         }
 
-        // Handle player list updates
+        // handle player list updates
         this.room.onMessage('playerListUpdate', (message) => {
-
-
-            // console.log("playerListUpdate!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
-            // // Check if the page has already been reloaded
-            // if (!localStorage.getItem('hasReloaded')) {
-            //     localStorage.setItem('hasReloaded', 'true'); // Set the flag
-            //     window.location.reload(); // Reload the page
-            //     return; // Exit the method to prevent further execution
-            // }
-
-
             const players = message.players || [];
             const playerNames = players.map(player => player.name).join('\n');
             this.playerListText.setText(playerNames);
         });
 
-        // When all players are ready
+        // when all players are ready
         this.room.onMessage('allPlayersReady', (message) => {
             this.scene.start('PlaceBetsScene', { room: this.room });
         });
 
-        // this.room.send('clearPlayers', { roomId: this.room.id });
+        this.room.onMessage("cannotJoin", (data) => {
+            alert(data.message);
+            window.location.href = "/signin";
+        });
     }
 }
 
@@ -153,14 +131,12 @@ class PlaceBetsScene extends Phaser.Scene {
         this.betAmount = 0;
         this.selectedBetOption = '..';
         this.betMessageText = null;
-        // this.playerName
         this.initialBalance
         this.room = null;
     }
 
     init(data) {
         this.room = data.room;
-        console.log("Room passed to PlaceBetsScene:", this.room);
     }
 
     preload() {
@@ -172,10 +148,7 @@ class PlaceBetsScene extends Phaser.Scene {
         const userDoc = await getDoc(doc(db, "users", playerId));
 
         if (userDoc.exists()) {
-            // this.playerName = userDoc.data().name;
-            // console.log(this.playerName);
             this.initialBalance = userDoc.data().balance;
-            // console.log(this.initialBalance);
         } else {
             console.error("User document not found.");
             window.location.href = "/";
@@ -348,9 +321,6 @@ class PlaceBetsScene extends Phaser.Scene {
                 if (this.selectedBetOption === '..') {
                     this.betMessageText.setText('Choose where to place your bet before proceeding.');
                 } else {
-                    // const betMessage = `${this.betAmount} on ${this.selectedBetOption}`;
-                    // this.room.send('bet', { value: betMessage });
-                    // this.scene.start('GameScene');
                     this.room.send('bet', { playerId: playerId, playerName: userDoc.data().name, betAmount: this.betAmount, betOption: this.selectedBetOption });
                     playButtonText.setText('Waiting for other players...');
                     playButtonGraphics.clear();
@@ -377,6 +347,8 @@ class PlaceBetsScene extends Phaser.Scene {
                 selectedBetOption: this.selectedBetOption,
             });
         })
+
+        this.room.send('startOngoingGame', {});
     }
 
     updateBetMessage() {
@@ -391,7 +363,7 @@ class PlaceBetsScene extends Phaser.Scene {
 class GameScene extends Phaser.Scene {
     constructor() {
         super({ key: 'GameScene' });
-        this.cardScale = 0.3; // Adjust the scale as needed
+        this.cardScale = 0.3;
         this.playerCards = [];
         this.bankerCards = [];
         this.gameMessageText = null;
@@ -400,16 +372,11 @@ class GameScene extends Phaser.Scene {
     }
 
     init(data) {
-        this.resetState(); // Reset the state before initializing
+        this.resetState();
         this.room = data.room;
-        this.initialBalance = data.initialBalance; // Retrieve initial balance
-        this.betAmount = data.betAmount; // Retrieve bet amount
-        this.selectedBetOption = data.selectedBetOption; // Retrieve selected bet option
-
-        console.log("Room passed to GameScene:", this.room);
-        console.log("Initial Balance:", this.initialBalance);
-        console.log("Bet Amount:", this.betAmount);
-        console.log("Selected Bet Option:", this.selectedBetOption);
+        this.initialBalance = data.initialBalance;
+        this.betAmount = data.betAmount;
+        this.selectedBetOption = data.selectedBetOption;
     }
 
     preload() {
@@ -478,16 +445,6 @@ class GameScene extends Phaser.Scene {
             align: 'center',
         }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');;
 
-
-        // const betsText = "TEST: TEST on TEST";
-        // this.add.text(400, this.scale.height - 220, betsText, {
-        //     fontSize: '24px',
-        //     fill: '#fff',
-        //     align: 'center',
-        // }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');
-
-
-
         // manages all delays in the game
         let delayAccumulator = 0;
 
@@ -498,21 +455,14 @@ class GameScene extends Phaser.Scene {
         this.room.onMessage('playerBets', (message) => {
             this.bets = message.bets;
 
-            console.log("PLAYER BETS: ", this.bets);
-
-            // Display bets in the bottom left corner
+            // display bets in the bottom left corner
             const betsText = this.bets.map(bet => `${bet.playerName}: ${bet.betAmount} on ${bet.betOption}`).join('\n');
-            // this.add.text(400, this.scale.height - 230, betsText, {
-            //     fontSize: '24px',
-            //     fill: '#fff',
-            //     align: 'center',
-            // }).setOrigin(0.5, 0).setFontFamily('"Rowdies"');
 
-            // If the text object already exists, update its content
+            // if the text object already exists, update its content
             if (betsTextObject) {
                 betsTextObject.setText(betsText);
             } else {
-                // Otherwise, create a new text object and store its reference
+                // otherwise, create a new text object and store its reference
                 betsTextObject = this.add.text(400, this.scale.height - 230, betsText, {
                     fontSize: '24px',
                     fill: '#fff',
@@ -605,11 +555,6 @@ class GameScene extends Phaser.Scene {
                     this.gameMessageText.setText(`Player has a final score of ${finalPlayerTotal}.`);
                 });
 
-
-
-
-
-
                 // BANKER'S TURN
 
                 // game message
@@ -622,9 +567,6 @@ class GameScene extends Phaser.Scene {
 
                 let initialBankerTotal = this.calculateCardsTotal(this.bankerCards.slice(0, 2));
                 let finalBankerTotal = initialBankerTotal;
-
-
-
 
                 if ((playerStands) && (initialBankerTotal >= 0 && initialBankerTotal <= 5)) {
 
@@ -698,11 +640,8 @@ class GameScene extends Phaser.Scene {
                     // update firebase balance and game history
                     this.room.send('gameFinished', { playerId: playerId, initialBalance: this.initialBalance, betAmount: this.betAmount, winningBetOption: winner });
 
-                    // Transition to GameOverScene after a delay
                     this.time.delayedCall(2000, () => {
                         const finalBalance = this.initialBalance + (winner === this.selectedBetOption ? this.betAmount : -this.betAmount);
-                        console.log('Transitioning to GameOverScene with data:', { winner, finalBalance }); // Debug log
-                        // this.scene.stop('GameScene');
                         this.scene.start('GameOverScene', { winner, finalBalance, room: this.room, });
                     });
                 });
@@ -710,32 +649,10 @@ class GameScene extends Phaser.Scene {
         });
     }
 
-    // resetGame() {
-    //     // Reset game state and UI
-    //     this.playerCards = [];
-    //     this.bankerCards = [];
-    // }
-
-    // startGame() {
-    //     // Logic to start the game
-    // }
-
     updatePlayerList(players) {
-        // Update the UI to show the list of players and their credits
         const playerList = Object.values(players).map(player => `${player.name}: ${player.totalCredits} credits`);
         this.gameMessageText.setText(`Players:\n${playerList.join('\n')}`);
     }
-
-    // generateRandomCard() {
-    //     let card;
-    //     do {
-    //         const cardValue = this.values[Math.floor(Math.random() * this.values.length)];
-    //         const cardSuit = this.suits[Math.floor(Math.random() * this.suits.length)];
-    //         card = `${cardValue}_of_${cardSuit}`;
-    //     } while (this.playerCards.includes(card) || this.bankerCards.includes(card));
-
-    //     return card;
-    // }
 
     getCardValueFromName(cardName) {
         let valueString = cardName.substring(0, cardName.indexOf("_"));
@@ -826,11 +743,9 @@ class GameOverScene extends Phaser.Scene {
     }
 
     init(data) {
-        console.log('GameOverScene initialized with data:', data); // Debug log
         this.winner = data.winner;
         this.finalBalance = data.finalBalance;
         this.room = data.room;
-        // this.playersCleared = false;
     }
 
     preload() {
@@ -848,7 +763,6 @@ class GameOverScene extends Phaser.Scene {
         if (!this.resultsListenerAdded) {
             this.room.onMessage('allResults', (message) => {
                 this.results = message.results;
-                console.log("RESULTS RECEIVED BY CLIENT:", this.results);
                 this.displayResults();
             });
             this.resultsListenerAdded = true;
@@ -866,7 +780,6 @@ class GameOverScene extends Phaser.Scene {
             fill: '#fff',
         }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');
 
-        // Conditional text based on the winner
         const resultText = this.winner === "Tie"
             ? "Game Result: Tie!"
             : `${this.winner} Wins!`;
@@ -881,28 +794,14 @@ class GameOverScene extends Phaser.Scene {
             fill: '#fff',
         }).setOrigin(0.5, 0.5).setFontFamily('"Rowdies"');
 
-        // // Add a button to return to the main menu or restart
-        // const button = this.add.text(centerX, centerY + 300, 'Return to Main Menu', {
-        //     fontSize: '36px',
-        //     fill: '#fff',
-        //     backgroundColor: '#000',
-        //     padding: { x: 20, y: 10 },
-        // }).setOrigin(0.5, 0.5).setInteractive();
-
-        // button.on('pointerdown', () => {
-        //     window.location.href = '/'; // Redirect to the main menu or home page
-        // });
-
         const buttonWidth = 300;
         const buttonHeight = 100;
         const buttonRadius = 20;
 
-        // Create a graphics object for the button background
         const buttonGraphics = this.add.graphics();
         buttonGraphics.fillStyle(0x000000, 0.5);
         buttonGraphics.fillRoundedRect(centerX - buttonWidth / 2, centerY + 300 - buttonHeight / 2, buttonWidth, buttonHeight, buttonRadius);
 
-        // Make the graphics object interactive
         const buttonZone = this.add.zone(
             centerX,
             centerY + 300,
@@ -910,28 +809,24 @@ class GameOverScene extends Phaser.Scene {
             buttonHeight
         ).setOrigin(0.5, 0.5).setInteractive();
 
-        // Create the Play Again button text
         const playAgainButton = this.add.text(centerX, centerY + 300, 'Play Again', {
             fontSize: '36px',
             fill: '#fff',
             fontFamily: '"Rowdies"',
         }).setOrigin(0.5, 0.5);
 
-        // Add hover effect for pointerover
         buttonZone.on('pointerover', () => {
             buttonGraphics.clear();
             buttonGraphics.fillStyle(0x555555, 0.7);
             buttonGraphics.fillRoundedRect(centerX - buttonWidth / 2, centerY + 300 - buttonHeight / 2, buttonWidth, buttonHeight, buttonRadius);
         });
 
-        // Add hover effect for pointerout
         buttonZone.on('pointerout', () => {
             buttonGraphics.clear();
             buttonGraphics.fillStyle(0x000000, 0.5);
             buttonGraphics.fillRoundedRect(centerX - buttonWidth / 2, centerY + 300 - buttonHeight / 2, buttonWidth, buttonHeight, buttonRadius);
         });
 
-        // Add click event for restarting the game
         buttonZone.on('pointerdown', () => {
             this.room.send("resetGame", { roomId: this.room.id });
             this.scene.start('WaitingScene', { roomId: this.room.id });
@@ -985,9 +880,8 @@ const BaccaratGame = () => {
         gameRef.current = game;
         setGameInstance(game);
 
-        // Set initial scene manually so that roomId can be passed.
+        // set initial scene manually so that roomId can be passed.
         game.scene.start('WaitingScene', { roomId });
-        // game.scene.start('GameOverScene', { roomId });
 
         setTimeout(() => {
             game.scale.resize(window.innerWidth, window.innerHeight - headerHeight);
