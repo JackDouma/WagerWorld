@@ -85,7 +85,8 @@ function Header() {
       !location.pathname.startsWith('/blackjack') &&
       !location.pathname.startsWith('/horseracing') &&
       !location.pathname.startsWith('/poker') && 
-      !location.pathname.startsWith('/roulette')
+      !location.pathname.startsWith('/roulette') &&
+      !location.pathname.startsWith('/baccarat')
     ) &&
     (
       // header for non-game pages
@@ -133,7 +134,7 @@ function Header() {
                       fontSize: "1.5rem"
                     }}
                   >
-                    {/* TOOD: Replace with room name */}
+                    {/* TODO: Replace with room name */}
                     Room: {roomId}
                   </Typography>
                   <br />

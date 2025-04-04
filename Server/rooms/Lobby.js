@@ -42,7 +42,8 @@ class Lobby extends Room {
       "blackjack": [],
       "poker": [],
       "horseracing": [],
-      "roulette": []
+      "roulette": [],
+      "baccarat": []
     }
     console.log(options.owner);
     this.owner = options.owner;
@@ -97,6 +98,9 @@ class Lobby extends Room {
               break;
             case "roulette":
               room = await matchMaker.createRoom("roulette", {});
+              break;
+            case "baccarat":
+              room = await matchMaker.createRoom("baccarat", {});
               break;
             default:
               // Key was in rooms but did not match a case. Move to next item in options.
