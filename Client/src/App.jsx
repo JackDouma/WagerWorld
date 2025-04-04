@@ -24,7 +24,6 @@ import BlackJackById from './page/blackjackbyid.jsx';
 import HorseRacing from './page/horseRacing.jsx';
 import HorseRacingById from './page/horseracingbyid.jsx';
 import Poker from './page/poker.jsx';
-import Roulette from './page/roulette.jsx';
 import RouletteById from './page/roulettebyid.jsx';
 import PokerById from './page/pokerbyid.jsx';
 import Baccarat from './page/baccarat.jsx';
@@ -181,7 +180,7 @@ function AppContent() {
                     />
                 </Route>
                 <Route path="/roulette">
-                    <Route index element={<><Header /><Roulette /></>} />
+                    <Route index element={<><Header /><RouletteById /></>} />
                     <Route
                         path=":roomId"
                         element={<><Header /><RouletteById /></>}

@@ -27,22 +27,22 @@ class WaitingScene extends Phaser.Scene {
         const userRef = doc(db, "users", playerId);
         const userDoc = await getDoc(doc(db, "users", playerId));
 
-        // // isInGame logic - this section works
-        // try {
-        //     if (userDoc.exists() && userDoc.data().isInGame) {
-        //         console.log(`Player with ID is already in a game.`);
-        //         // redirect to signin -> org page
-        //         window.location.href = "/signin";
-        //         return
-        //     }
-        //     // update isInGame to true
-        //     await updateDoc(userRef, {
-        //         isInGame: true
-        //     });
-        // }
-        // catch (error) {
-        //     console.error('Error fetching player data:', error);
-        // }
+        // isInGame logic - this section works
+        try {
+            if (userDoc.exists() && userDoc.data().isInGame) {
+                console.log(`Player with ID is already in a game.`);
+                // redirect to signin -> org page
+                window.location.href = "/signin";
+                return
+            }
+            // update isInGame to true
+            await updateDoc(userRef, {
+                isInGame: true
+            });
+        }
+        catch (error) {
+            console.error('Error fetching player data:', error);
+        }
 
         this.add.image(0, 0, 'bg').setOrigin(0, 0).setDisplaySize(this.scale.width, this.scale.height);
         const centerX = this.cameras.main.centerX;
@@ -321,7 +321,7 @@ class PlaceBetsScene extends Phaser.Scene {
                 if (this.selectedBetOption === '..') {
                     this.betMessageText.setText('Choose where to place your bet before proceeding.');
                 } else {
-                    this.room.send('bet', { playerId: playerId, playerName: userDoc.data().name, betAmount: this.betAmount, betOption: this.selectedBetOption });
+                    this.room.send('bet', { playerId: playerId, playerName: userDoc.data().name, betAmount: this.betAmount, betOption: this.selectedBetOption, initialBalance: this.initialBalance });
                     playButtonText.setText('Waiting for other players...');
                     playButtonGraphics.clear();
                     playButtonContainer.disableInteractive();
