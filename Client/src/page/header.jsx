@@ -134,8 +134,7 @@ function Header() {
                       fontSize: "1.5rem"
                     }}
                   >
-                    {/* TODO: Replace with room name */}
-                    Room: {roomId}
+                    Lobby: {roomId}
                   </Typography>
                   <br />
                   <Link variant="general" href='/signin'
@@ -144,7 +143,7 @@ function Header() {
                       textDecoration: 'underline'
                     }}
                   >
-                    Exit room
+                    Exit lobby
                   </Link>
                 </>
               }
