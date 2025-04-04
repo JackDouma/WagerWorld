@@ -106,8 +106,6 @@ const HorseRacingGame = () => {
           setHorseStats(message.horseStats);
           setGameStatus("waiting");
           const userBalance = userDoc.data().balance || 10000;
-          console.log("userBalance", userBalance);
-          setPlayerCredits(userBalance);
         });
 
         room.onMessage("playerUpdate", (message) => {
