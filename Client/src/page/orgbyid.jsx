@@ -611,7 +611,7 @@ function ViewOrgById() {
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {
                                         ...theme.typography.general,
-                                        fontSize: "0.80rem",
+                                        fontSize: "0.76rem",
                                     },
                                     '& .MuiInputBase-input': {
                                         ...theme.typography.general,
@@ -626,7 +626,7 @@ function ViewOrgById() {
                                     backgroundColor: 'white',
                                     '& .MuiInputLabel-root': {
                                         ...theme.typography.general,
-                                        fontSize: "0.85rem",
+                                        fontSize: "0.78rem",
                                     },
                                     '& .MuiInputBase-input': {
                                         ...theme.typography.general,

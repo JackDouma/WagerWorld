@@ -109,25 +109,25 @@ body {
   color: #333;
 }
 
-table {
+#horseRacingTable {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.9rem;
 }
 
-th,
-td {
+#horseRacingTh,
+#horseRacingTd {
   padding: 8px;
   text-align: center;
   border: 1px solid #ddd;
 }
 
-th {
+#horseRacingTh {
   background-color: #e9ecef;
   font-weight: bold;
 }
 
-td {
+#horseRacingTd {
   color: #555;
 }
 

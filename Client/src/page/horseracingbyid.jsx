@@ -15,18 +15,26 @@ const HorseRacingGame = () => {
   const [bets, setBets] = useState([]);
   const [gameStatus, setGameStatus] = useState("waiting");
   const [horseStats, setHorseStats] = useState([]);
-  const [playerCredits, setPlayerCredits] = useState(1000);
+  const [playerCredits, setPlayerCredits] = useState();
   const [raceResult, setRaceResult] = useState(null);
   const { roomId } = useParams();
 
   useEffect(() => {
     const client = new Client(`${import.meta.env.VITE_COLYSEUS_URL}`);
 
+    /**
+     * connectToRoom runs when the player joins
+     * It connects to the room and sets up the game state
+     * It connects the messages from the server to the client
+     * it gets the players balance from the firestore
+     * 
+     */
     const connectToRoom = async () => {
       try {
         const playerId = localStorage.getItem("firebaseIdToken");
         const userRef = doc(db, "users", playerId);
         const userDoc = await getDoc(userRef);
+        const firestoreBalance = userDoc.data().balance || 10000;
 
         if (userDoc.exists() && userDoc.data().isInGame) {
           console.log("Player is already in a game.");
@@ -37,18 +45,12 @@ const HorseRacingGame = () => {
         await updateDoc(userRef, { isInGame: true });
         const room = await client.joinOrCreate("horse_racing", {
           playerId: playerId || "anonymous",
+          balance: firestoreBalance,
         });
 
         roomRef.current = room;
 
-        room.state.players.onAdd = (player, sessionId) => {
-          if (sessionId === room.sessionId) setPlayerCredits(player.totalCredits);
-        };
-
-        // Sync player credits
-        room.state.players.onAdd = (player, sessionId) => {
-          if (sessionId === room.sessionId) setPlayerCredits(player.totalCredits);
-        };
+        setPlayerCredits(firestoreBalance);
 
         // Sync bets from server state
         room.state.bets.onAdd = (betStr, clientId) => {
@@ -71,7 +73,7 @@ const HorseRacingGame = () => {
               );
               if (gameHorse) {
                 gameHorse.x = horse.x;
-                gameHorse.setTint(parseInt(horse.color.replace("#", ""), 16));
+               // gameHorse.setTint(parseInt(horse.color.replace("#", ""), 16));
                 horse.speed > 0 ? gameHorse.anims.play("gallop", true) : gameHorse.anims.pause();
               }
             });
@@ -92,9 +94,9 @@ const HorseRacingGame = () => {
 
         room.onMessage("raceResult", (message) => {
           setRaceResult(message);
-          if (message.payouts[room.sessionId]?.won) {
-            setPlayerCredits((prev) => prev + message.payouts[room.sessionId].amount);
-          }
+          // go through all players and update their balance
+          
+          
         });
 
         room.onMessage("raceReset", (message) => {
@@ -103,6 +105,14 @@ const HorseRacingGame = () => {
           setSelectedHorse(null);
           setHorseStats(message.horseStats);
           setGameStatus("waiting");
+          const userBalance = userDoc.data().balance || 10000;
+        });
+
+        room.onMessage("playerUpdate", (message) => {
+          console.log("playerUpdate", message);
+            console.log("playerUpdate", message.totalCredits);
+            setPlayerCredits(message.totalCredits);
+          
         });
 
         room.onMessage("playerJoin", (message) => {
@@ -115,6 +125,8 @@ const HorseRacingGame = () => {
         console.error("Could not connect to room:", error);
       }
     };
+
+    // Initialize Phaser game
 
     const config = {
       type: Phaser.AUTO,
@@ -129,14 +141,15 @@ const HorseRacingGame = () => {
             frameHeight: 66,
           });
         },
+        // Create the horses and track with lines 
         create() {
           this.anims.create({
             key: "gallop",
-            frames: this.anims.generateFrameNumbers("horse", { start: 0, end: 4 }),
+            frames: this.anims.generateFrameNumbers("horse", { start: 4, end: 0 }),
             frameRate: 12,
             repeat: -1,
           });
-
+          
           for (let i = 0; i < 5; i++) {
             this.add.line(0, (i + 1) * 80, 0, 0, 800, 0, 0xffffff).setLineWidth(2).setOrigin(0);
             const horse = this.add
@@ -146,7 +159,7 @@ const HorseRacingGame = () => {
             horse.anims.play("gallop");
             horse.anims.pause();
             horse.on("pointerdown", () => setSelectedHorse(i));
-            this.add.text(10, (i + 1) * 80 - 40, `Horse ${i + 1}`, {
+            this.add.text(350, (i + 1) * 80 - 40, `Horse ${i + 1}`, {
               color: "#000",
               fontSize: "16px",
             });
@@ -228,24 +241,24 @@ const HorseRacingGame = () => {
       <footer className="info-section">
         <div className="horse-stats">
           <h3>Horse Stats</h3>
-          <table>
+          <table id="horseRacingTable">
             <thead>
               <tr>
-                <th>Horse</th>
-                <th>Stamina</th>
-                <th>Accel.</th>
-                <th>Consist.</th>
-                <th>Odds</th>
+                <th id="horseRacingTh">Horse</th>
+                <th id="horseRacingTh">Stamina</th>
+                <th id="horseRacingTh">Accel.</th>
+                <th id="horseRacingTh">Consist.</th>
+                <th id="horseRacingTh">Odds</th>
               </tr>
             </thead>
             <tbody>
               {horseStats.map((horse) => (
                 <tr key={horse.id}>
-                  <td>Horse {parseInt(horse.id) + 1}</td>
-                  <td>{horse.stats.stamina.toFixed(2)}</td>
-                  <td>{horse.stats.acceleration.toFixed(2)}</td>
-                  <td>{horse.stats.consistency.toFixed(2)}</td>
-                  <td>{horse.odds}</td>
+                  <td id="horseRacingTd">Horse {parseInt(horse.id) + 1}</td>
+                  <td id="horseRacingTd">{horse.stats.stamina.toFixed(2)}</td>
+                  <td id="horseRacingTd">{horse.stats.acceleration.toFixed(2)}</td>
+                  <td id="horseRacingTd">{horse.stats.consistency.toFixed(2)}</td>
+                  <td id="horseRacingTd">{horse.odds}</td>
                 </tr>
               ))}
             </tbody>
@@ -253,20 +266,20 @@ const HorseRacingGame = () => {
         </div>
         <div className="bets-table">
           <h3>Bets</h3>
-          <table>
+          <table id="horseRacingTable">
             <thead>
               <tr>
-                <th>Player</th>
-                <th>Horse</th>
-                <th>Amount</th>
+                <th id="horseRacingTh">Player</th>
+                <th id="horseRacingTh">Horse</th>
+                <th id="horseRacingTh">Amount</th>
               </tr>
             </thead>
             <tbody>
               {bets.map((bet, index) => (
                 <tr key={index}>
-                  <td>{roomRef.current?.state.players.get(bet.clientId)?.name || "Anonymous"}</td>
-                  <td>Horse {bet.horseIndex + 1}</td>
-                  <td>${bet.amount}</td>
+                  <td id="horseRacingTd">{roomRef.current?.state.players.get(bet.clientId)?.name || "Anonymous"}</td>
+                  <td id="horseRacingTd">Horse {bet.horseIndex + 1}</td>
+                  <td id="horseRacingTd">${bet.amount}</td>
                 </tr>
               ))}
             </tbody>
