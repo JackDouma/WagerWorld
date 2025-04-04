@@ -15,10 +15,10 @@ function EditOrgById() {
     const [domain, setDomain] = useState('');
     const [adultOnly, setAdultOnly] = useState(false);
     const [allowBlackJack, setAllowBlackJack] = useState(false);
-    const [allowCrazy8s, setAllowCrazy8s] = useState(false);
     const [allowPoker, setAllowPoker] = useState(false);
     const [allowRoulette, setAllowRoulette] = useState(false);
     const [allowHorseRacing, setAllowHorseRacing] = useState(false);
+    const [allowBaccarat, setAllowBaccarat] = useState(false);
     const [error, setError] = useState('');
     const theme = useTheme();
 
@@ -35,10 +35,10 @@ function EditOrgById() {
                     setDomain(orgData.domain);
                     setAdultOnly(orgData.adultOnly);
                     setAllowBlackJack(orgData.allowBlackJack);
-                    setAllowCrazy8s(orgData.allowCrazy8s);
                     setAllowPoker(orgData.allowPoker);
                     setAllowRoulette(orgData.allowRoulette);
                     setAllowHorseRacing(orgData.allowHorseRacing);
+                    setAllowBaccarat(orgData.allowBaccarat);
                 }
             }
             catch (error) {
@@ -73,10 +73,10 @@ function EditOrgById() {
                 domain: domain,
                 adultOnly,
                 allowBlackJack,
-                allowCrazy8s,
                 allowPoker,
                 allowRoulette,
-                allowHorseRacing
+                allowHorseRacing,
+                allowBaccarat
             });
 
             navigate("/admin");
@@ -148,11 +148,11 @@ function EditOrgById() {
                             <Grid container spacing={1} justifyContent={"center"}>
                                 <FormControlLabel control={<Checkbox />} label="Blackjack" id="allowBlackjack" checked={allowBlackJack} onChange={(e) => setAllowBlackJack(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Poker" id="allowPoker" checked={allowPoker} onChange={(e) => setAllowPoker(e.target.checked)} />
-                                <FormControlLabel control={<Checkbox />} label="Crazy 8s" id="allowCrazy8s" checked={allowCrazy8s} onChange={(e) => setAllowCrazy8s(e.target.checked)} />
                             </Grid>
                             <Grid container spacing={1} justifyContent={"center"}>
                                 <FormControlLabel control={<Checkbox />} label="Horse Racing" id="allowHorseRacing" checked={allowHorseRacing} onChange={(e) => setAllowHorseRacing(e.target.checked)} />
                                 <FormControlLabel control={<Checkbox />} label="Roulette" id="allowRoulette" checked={allowRoulette} onChange={(e) => setAllowRoulette(e.target.checked)} />
+                                <FormControlLabel control={<Checkbox />} label="Baccarat" id="allowBaccarat" checked={allowBaccarat} onChange={(e) => setAllowBaccarat(e.target.checked)} />
                             </Grid>
                         </FormGroup>
 
